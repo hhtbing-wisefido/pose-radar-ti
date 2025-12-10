@@ -1,0 +1,38 @@
+{
+    "securityType": "gp",
+    "flashIndex": "1",
+    "metaHeaderInfo": {
+        "metaImageType": "multi",
+        "pbistEnablecontrol": "0",
+        "sharedRamAllocationControl": "0",
+        "loggerClear": "0xDD"
+    },
+    "buildImages": [
+        {
+            "buildImagePath": "D:/BaiduSyncdisk/0.0 Qsync-HN/0google\u4e91\u76d8/Benson@Wisefido/7.\u9879\u76ee\u8d44\u6599/Ti\u96f7\u8fbe\u9879\u76ee/project-code/pose-fall-awrl6844/tools/../build/pose_fall_awrl6844_r5.rig",
+            "encryptEnable": "no"
+        },
+        {
+            "buildImagePath": "C:/ti/MMWAVE_L_SDK_06_01_00_01/firmware/mmwave_dfp/rfsfirmware/xWRL68xx/mmwave_rfs_patch.rig",
+            "encryptEnable": "no"
+        }
+    ],
+    "metaImageFile": "D:/BaiduSyncdisk/0.0 Qsync-HN/0google\u4e91\u76d8/Benson@Wisefido/7.\u9879\u76ee\u8d44\u6599/Ti\u96f7\u8fbe\u9879\u76ee/project-code/pose-fall-awrl6844/tools/../build/pose_fall_awrl6844.appimage",
+    "coreImages": [
+        {
+            "flatPath": "D:/BaiduSyncdisk/0.0 Qsync-HN/0google\u4e91\u76d8/Benson@Wisefido/7.\u9879\u76ee\u8d44\u6599/Ti\u96f7\u8fbe\u9879\u76ee/project-code/pose-fall-awrl6844/tools/../build/pose_fall_awrl6844_r5_coreimage_0.bin",
+            "encFilePath": "D:/BaiduSyncdisk/0.0 Qsync-HN/0google\u4e91\u76d8/Benson@Wisefido/7.\u9879\u76ee\u8d44\u6599/Ti\u96f7\u8fbe\u9879\u76ee/project-code/pose-fall-awrl6844/tools/../build/pose_fall_awrl6844_r5_coreimage_0_enc.bin",
+            "encryptEnable": "no"
+        },
+        {
+            "flatPath": "D:/BaiduSyncdisk/0.0 Qsync-HN/0google\u4e91\u76d8/Benson@Wisefido/7.\u9879\u76ee\u8d44\u6599/Ti\u96f7\u8fbe\u9879\u76ee/project-code/pose-fall-awrl6844/tools/../build/pose_fall_awrl6844_r5_coreimage_1.bin",
+            "encFilePath": "D:/BaiduSyncdisk/0.0 Qsync-HN/0google\u4e91\u76d8/Benson@Wisefido/7.\u9879\u76ee\u8d44\u6599/Ti\u96f7\u8fbe\u9879\u76ee/project-code/pose-fall-awrl6844/tools/../build/pose_fall_awrl6844_r5_coreimage_1_enc.bin",
+            "encryptEnable": "no"
+        },
+        {
+            "flatPath": "C:/ti/MMWAVE_L_SDK_06_01_00_01/firmware/mmwave_dfp/rfsfirmware/xWRL68xx/mmwave_rfs_patch_coreimage_0.bin",
+            "encFilePath": "C:/ti/MMWAVE_L_SDK_06_01_00_01/firmware/mmwave_dfp/rfsfirmware/xWRL68xx/mmwave_rfs_patch_coreimage_0_enc.bin",
+            "encryptEnable": "no"
+        }
+    ]
+}

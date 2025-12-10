@@ -1,0 +1,46 @@
+# 忽略知识库目录（只读参考资料，不需要同步）
+知识库/
+
+# 临时文件
+temp/
+*.tmp
+*.log
+
+# 编译输出
+*.o
+*.obj
+*.out
+*.elf
+*.bin
+*.hex
+*.map
+
+# IDE 配置
+.vscode/
+.idea/
+.theia/
+.cursor/
+.windsurf/
+*.code-workspace
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# CCS 项目文件
+.ccsproject
+.cproject
+.launches/
+.settings/
+Debug/
+Release/
+
+# Git 相关
+.git/
