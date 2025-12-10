@@ -9,7 +9,7 @@ echo.
 
 REM ===== 配置区域 - 请修改以下变量 =====
 REM 示例：set GITHUB_REPO=https://github.com/username/ti-radar-awrl6844.git
-set GITHUB_REPO=
+set GITHUB_REPO=https://github.com/hhtbing-wisefido/pose-radar-ti.git
 
 REM ===== 请勿修改以下内容 =====
 
