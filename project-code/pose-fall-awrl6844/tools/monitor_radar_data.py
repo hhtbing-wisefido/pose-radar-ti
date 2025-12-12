@@ -73,13 +73,38 @@ def main():
         frame_count = 0
         byte_count = 0
         start_time = time.time()
+        last_data_time = time.time()
+        TIMEOUT = 15  # 15秒超时
+        data_received = False
         
         while True:
+            # 检查超时
+            elapsed_no_data = time.time() - last_data_time
+            if not data_received and elapsed_no_data > TIMEOUT:
+                print(f"\n❌ 超时! {TIMEOUT}秒内未收到任何数据")
+                print("\n可能的问题:")
+                print("  1. SOP 开关设置不正确 (功能模式: S7=下, S8=上)")
+                print("  2. 固件未正确烧录或启动")
+                print("  3. 需要发送配置命令启动雷达")
+                print("  4. COM4 端口错误")
+                return 1
+            
+            # 显示倒计时
+            if not data_received:
+                remaining = TIMEOUT - int(elapsed_no_data)
+                print(f"\r等待数据中... 剩余 {remaining:2d} 秒 ", end='', flush=True)
+            
             # 简化逻辑：直接读取可用数据
             if port.in_waiting > 0:
                 data = port.read(port.in_waiting)
                 byte_count += len(data)
                 frame_count += 1
+                last_data_time = time.time()
+                
+                if not data_received:
+                    data_received = True
+                    print(f"\n✅ 收到数据!")
+                    print("-"*60)
                 
                 elapsed = time.time() - start_time
                 fps = frame_count / elapsed if elapsed > 0 else 0
@@ -96,7 +121,7 @@ def main():
                           f"平均 {avg_size:.1f} 字节/包, "
                           f"{fps:.2f} 包/秒")
             else:
-                time.sleep(0.01)  # 短暂休眠避免CPU占用过高
+                time.sleep(0.1)  # 短暂休眠避免CPU占用过高
         
     except serial.SerialException as e:
         print(f"\n❌ 串口错误: {e}")
