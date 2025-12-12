@@ -1,0 +1,79 @@
+{
+    "securityType": "gp",
+    "customImage": "",
+    "customImageStartAddress": "",
+    "flashIndex": "1",
+    "metaHeaderInfo": {
+        "metaImageType": "multi",
+        "pbistEnablecontrol": "0",
+        "sharedRamAllocationControl": "0",
+        "loggerClear": "0xDD"
+    },
+    "interimMetaHeaderFile": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/metaheader.bin",
+    "buildImages": [
+        {
+            "buildImagePath": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/hello_world_r5_img_system.release.rig",
+            "encryptEnable": "no"
+        },
+        {
+            "buildImagePath": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/hello_world_c66_img_system.release.rig",
+            "encryptEnable": "no"
+        },
+        {
+            "buildImagePath": "../../firmware/mmwave_dfp/rfsfirmware/xWRL68xx/mmwave_rfs_patch.rig",
+            "encryptEnable": "no"
+        }
+    ],
+    "imageEncryptionParam": {
+        "iv": "aabbccddeeaabbccaabbccddeeaabbcc",
+        "iter": "0",
+        "saltFile": "config_keys/salt.txt",
+        "keyFile": "config_keys/mek.txt"
+    },
+    "CertificateParams": {
+        "imageIntegrityOID": {
+            "shaType": "00"
+        },
+        "softwareRevisionOID": {
+            "softwareRevision": "0"
+        },
+        "keyDerivationOID": {
+            "enable": "no",
+            "saltFile": "config_keys/kdsalt.txt",
+            "infoFile": "config_keys/kdinfo.txt"
+        },
+        "debugOID": {
+            "enable": "no",
+            "uidFile": "config_keys/uid.txt",
+            "debugType": "0"
+        },
+        "interimCertDataFile": "config/x509_config.cfg",
+        "certSigningKeyFileECDSA": "config_keys/mpk_ecdsa.pem",
+        "certSigningKeyFileRSA": "config_keys/mpk.pem",
+        "signingAlgo": "RSA",
+        "signedCertificateFile": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/signed_cert.bin"
+    },
+    "metaImageFile": "../../examples/hello_world/xwrL684x-evm/system_freertos/hello_world_system.release.appimage",
+    "coreImages": [
+        {
+            "flatPath": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/hello_world_r5_img_system.release_coreimage_0.bin",
+            "encFilePath": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/hello_world_r5_img_system.release_coreimage_0_enc.bin",
+            "encryptEnable": "no"
+        },
+        {
+            "flatPath": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/hello_world_r5_img_system.release_coreimage_1.bin",
+            "encFilePath": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/hello_world_r5_img_system.release_coreimage_1_enc.bin",
+            "encryptEnable": "no"
+        },
+        {
+            "flatPath": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/hello_world_c66_img_system.release_coreimage_0.bin",
+            "encFilePath": "../../examples/hello_world/xwrL684x-evm/system_freertos/temp/hello_world_c66_img_system.release_coreimage_0_enc.bin",
+            "encryptEnable": "no"
+        },
+        {
+            "flatPath": "../../firmware/mmwave_dfp/rfsfirmware/xWRL68xx/mmwave_rfs_patch_coreimage_0.bin",
+            "encFilePath": "../../firmware/mmwave_dfp/rfsfirmware/xWRL68xx/mmwave_rfs_patch_coreimage_0_enc.bin",
+            "encryptEnable": "no"
+        }
+    ]
+}

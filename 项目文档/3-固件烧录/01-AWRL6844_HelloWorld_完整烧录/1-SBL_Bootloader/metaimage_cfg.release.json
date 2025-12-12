@@ -1,0 +1,61 @@
+{
+    "securityType": "gp",
+    "customImage": "",
+    "customImageStartAddress": "",
+    "flashIndex": "1",
+    "metaHeaderInfo": {
+        "metaImageType": "multi",
+        "pbistEnablecontrol": "0",
+        "sharedRamAllocationControl": "0",
+        "loggerClear": "0xDD"
+    },
+    "interimMetaHeaderFile": "../../examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/temp/metaheader.bin",
+    "buildImages": [
+        {
+            "buildImagePath": "../../examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl_r5_img.release.rig",
+            "encryptEnable": "no"
+        }
+    ],
+    "imageEncryptionParam": {
+        "iv": "aabbccddeeaabbccaabbccddeeaabbcc",
+        "iter": "0",
+        "saltFile": "config_keys/salt.txt",
+        "keyFile": "config_keys/mek.txt"
+    },
+    "CertificateParams": {
+        "imageIntegrityOID": {
+            "shaType": "00"
+        },
+        "softwareRevisionOID": {
+            "softwareRevision": "0"
+        },
+        "keyDerivationOID": {
+            "enable": "no",
+            "saltFile": "config_keys/kdsalt.txt",
+            "infoFile": "config_keys/kdinfo.txt"
+        },
+        "debugOID": {
+            "enable": "no",
+            "uidFile": "config_keys/uid.txt",
+            "debugType": "0"
+        },
+        "interimCertDataFile": "config/x509_config.cfg",
+        "certSigningKeyFileECDSA": "config_keys/mpk_ecdsa.pem",
+        "certSigningKeyFileRSA": "config_keys/mpk.pem",
+        "signingAlgo": "RSA",
+        "signedCertificateFile": "../../examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/temp/signed_cert.bin"
+    },
+    "metaImageFile": "../../examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl.release.appimage",
+    "coreImages": [
+        {
+            "flatPath": "../../examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl_r5_img.release_coreimage_0.bin",
+            "encFilePath": "../../examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl_r5_img.release_coreimage_0_enc.bin",
+            "encryptEnable": "no"
+        },
+        {
+            "flatPath": "../../examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl_r5_img.release_coreimage_1.bin",
+            "encFilePath": "../../examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl_r5_img.release_coreimage_1_enc.bin",
+            "encryptEnable": "no"
+        }
+    ]
+}
