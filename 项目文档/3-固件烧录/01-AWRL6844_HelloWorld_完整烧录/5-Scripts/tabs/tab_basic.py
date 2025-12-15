@@ -252,35 +252,48 @@ class BasicTab:
         self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(5, 0))
         self.app.debug_port_combo.set("COM4")
         
-        # 刷新按钮 + 测试按钮
+        # 刷新按钮 + 测试按钮 + SBL检测按钮
         button_frame = tk.Frame(port_frame, bg="#ecf0f1")
         button_frame.grid(row=2, column=0, columnspan=2, pady=(5, 0), sticky=tk.EW)
         
         tk.Button(
             button_frame,
-            text="🔄 刷新端口",
+            text="🔄 刷新",
             font=("Microsoft YaHei UI", 8),
             command=self.app.refresh_com_ports,
             bg="#3498db",
             fg="white",
             relief=tk.FLAT,
-            padx=8,
+            padx=6,
             pady=4,
             cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
         
         tk.Button(
             button_frame,
-            text="🔍 测试COM3",
+            text="🔍 测试",
             font=("Microsoft YaHei UI", 8),
             command=lambda: self.app.test_port(self.app.flash_port_combo.get()),
             bg="#27ae60",
             fg="white",
             relief=tk.FLAT,
-            padx=8,
+            padx=6,
             pady=4,
             cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(3, 0))
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
+        
+        tk.Button(
+            button_frame,
+            text="🔎 检测SBL",
+            font=("Microsoft YaHei UI", 8),
+            command=self.check_sbl,
+            bg="#9b59b6",
+            fg="white",
+            relief=tk.FLAT,
+            padx=6,
+            pady=4,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
         
         # --- 完整烧录按钮（大按钮） ---
         flash_button_frame = tk.Frame(left_col, bg="#ecf0f1")
@@ -369,6 +382,32 @@ class BasicTab:
             self.app.log_text.config(state=tk.NORMAL)
             self.app.log_text.delete(1.0, tk.END)
             self.app.log_text.config(state=tk.DISABLED)
+    
+    def check_sbl(self):
+        """检测SBL是否存在 (v1.1.0)"""
+        port = self.app.flash_port_combo.get()
+        
+        if not port:
+            from tkinter import messagebox
+            messagebox.showwarning("警告", "请先选择烧录端口（COM3）")
+            return
+        
+        # 导入SBLCheckDialog
+        import sys
+        import os
+        # 获取flash_tool.py所在目录
+        flash_tool_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if flash_tool_dir not in sys.path:
+            sys.path.insert(0, flash_tool_dir)
+        
+        # 动态导入（因为SBLCheckDialog在flash_tool.py中）
+        try:
+            import flash_tool
+            dialog = flash_tool.SBLCheckDialog(self.app.root, port)
+            self.app.root.wait_window(dialog)
+        except Exception as e:
+            from tkinter import messagebox
+            messagebox.showerror("错误", f"无法打开SBL检测对话框：{str(e)}")
 
 
 # 如果直接运行此文件，显示错误提示

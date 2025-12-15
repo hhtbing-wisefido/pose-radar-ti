@@ -137,6 +137,40 @@ class AdvancedTab:
             cursor="hand2"
         ).pack(pady=10)
         
+        # SBL检测功能 (v1.1.0)
+        sbl_check_frame = tk.LabelFrame(
+            left_col,
+            text="🔎 SBL存在性检测",
+            font=("Microsoft YaHei UI", 11, "bold"),
+            bg="#ecf0f1",
+            fg="#9b59b6",
+            relief=tk.GROOVE,
+            bd=2
+        )
+        sbl_check_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        tk.Label(
+            sbl_check_frame,
+            text="🆕 通过串口通信检测板载是否已有SBL：\n• 判断是否需要完整烧录\n• 确认SBL是否正常响应\n• 决策只烧录App还是SBL+App",
+            font=("Microsoft YaHei UI", 9),
+            bg="#ecf0f1",
+            fg="#7f8c8d",
+            justify=tk.LEFT
+        ).pack(padx=10, pady=5)
+        
+        tk.Button(
+            sbl_check_frame,
+            text="🔍 检测SBL是否存在",
+            font=("Microsoft YaHei UI", 11, "bold"),
+            command=self.check_sbl,
+            bg="#9b59b6",
+            fg="white",
+            relief=tk.FLAT,
+            padx=20,
+            pady=10,
+            cursor="hand2"
+        ).pack(pady=10)
+        
         # 超时设置
         timeout_frame = tk.LabelFrame(
             left_col,
@@ -259,6 +293,36 @@ class AdvancedTab:
         
         guide_text.insert(tk.END, guide_content)
         guide_text.config(state=tk.DISABLED)
+    
+    def check_sbl(self):
+        """检测SBL是否存在 (v1.1.0)"""
+        # 获取端口（优先从basic_tab，否则使用默认COM3）
+        if hasattr(self.app, 'flash_port_combo'):
+            port = self.app.flash_port_combo.get()
+        else:
+            port = "COM3"
+        
+        if not port:
+            from tkinter import messagebox
+            messagebox.showwarning("警告", "无法获取烧录端口，默认使用COM3")
+            port = "COM3"
+        
+        # 导入SBLCheckDialog
+        import sys
+        import os
+        # 获取flash_tool.py所在目录
+        flash_tool_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if flash_tool_dir not in sys.path:
+            sys.path.insert(0, flash_tool_dir)
+        
+        # 动态导入（因为SBLCheckDialog在flash_tool.py中）
+        try:
+            import flash_tool
+            dialog = flash_tool.SBLCheckDialog(self.app.root, port)
+            self.app.root.wait_window(dialog)
+        except Exception as e:
+            from tkinter import messagebox
+            messagebox.showerror("错误", f"无法打开SBL检测对话框：{str(e)}")
 
 
 # 如果直接运行此文件，显示错误提示

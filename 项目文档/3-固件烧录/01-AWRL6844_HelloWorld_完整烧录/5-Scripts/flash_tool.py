@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.0.9"
+VERSION = "1.1.0"
 BUILD_DATE = "2025-12-15"
 AUTHOR = "Benson@Wisefido"
 
@@ -225,6 +225,92 @@ def analyze_appimage_structure(file_path):
         print(f"分析appimage结构失败: {e}")
         return None
 
+def check_sbl_exists(port, baudrate=115200, timeout=3):
+    """
+    通过串口通信判断SBL是否存在 (v1.1.0新功能)
+    
+    原理：
+    1. 如果板载有SBL，SBL会在启动时通过串口输出信息
+    2. 尝试打开串口并读取数据，如果有响应则说明SBL存在
+    3. 发送一些常见命令尝试触发SBL响应
+    
+    Args:
+        port: 串口号（如COM3）
+        baudrate: 波特率（默认115200）
+        timeout: 超时时间（秒）
+    
+    Returns:
+        tuple: (sbl_exists, message, details)
+        - sbl_exists: bool - SBL是否存在
+        - message: str - 检测结果消息
+        - details: str - 详细信息（串口输出内容）
+    """
+    try:
+        # 打开串口
+        ser = serial.Serial(port, baudrate, timeout=1)
+        time.sleep(0.5)  # 等待串口稳定
+        
+        # 清空缓冲区
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
+        
+        details = []
+        has_response = False
+        
+        # 方法1: 读取启动时的输出（如果板子刚上电）
+        details.append("=== 检测启动输出 ===")
+        time.sleep(0.5)
+        if ser.in_waiting > 0:
+            data = ser.read(ser.in_waiting)
+            try:
+                text = data.decode('utf-8', errors='ignore')
+                details.append(f"收到数据: {text[:200]}")  # 只记录前200字符
+                if any(keyword in text.lower() for keyword in ['sbl', 'bootloader', 'ti', 'xwr', 'awrl']):
+                    has_response = True
+                    details.append("✓ 发现SBL特征字符串")
+            except:
+                details.append(f"收到非文本数据: {len(data)} 字节")
+                has_response = True
+        
+        # 方法2: 发送换行符尝试触发响应
+        details.append("\n=== 尝试命令触发 ===")
+        test_commands = [b'\r\n', b'\n', b'help\r\n', b'?\r\n']
+        
+        for cmd in test_commands:
+            ser.write(cmd)
+            time.sleep(0.3)
+            
+            if ser.in_waiting > 0:
+                data = ser.read(ser.in_waiting)
+                try:
+                    text = data.decode('utf-8', errors='ignore')
+                    details.append(f"命令 {cmd} 响应: {text[:100]}")
+                    has_response = True
+                except:
+                    details.append(f"命令 {cmd} 响应: {len(data)} 字节")
+                    has_response = True
+        
+        # 方法3: 检查端口是否可以正常打开（最基本的检测）
+        if not has_response:
+            details.append("\n=== 基础检测 ===")
+            details.append("✓ 串口可以正常打开")
+            details.append("✓ 设备已连接")
+            details.append("⚠ 未收到SBL输出（可能SBL已运行完毕或未上电复位）")
+        
+        ser.close()
+        
+        details_text = "\n".join(details)
+        
+        if has_response:
+            return True, "✅ 检测到SBL存在（串口有响应）", details_text
+        else:
+            return False, "⚠️ 未检测到SBL响应（建议复位设备后重试）", details_text
+        
+    except serial.SerialException as e:
+        return False, f"❌ 串口打开失败: {str(e)}", f"端口: {port}\n错误: {str(e)}"
+    except Exception as e:
+        return False, f"❌ 检测失败: {str(e)}", f"异常: {str(e)}"
+
 # ============================================================
 # 对话框类
 # ============================================================
@@ -274,6 +360,121 @@ class PreFlashCheckDialog(tk.Toplevel):
     def on_cancel(self):
         self.result = False
         self.destroy()
+
+class SBLCheckDialog(tk.Toplevel):
+    """SBL检测对话框 (v1.1.0)"""
+    
+    def __init__(self, parent, port, baudrate=115200):
+        super().__init__(parent)
+        self.title("SBL存在性检测")
+        self.port = port
+        self.baudrate = baudrate
+        self.geometry("600x500")
+        self.create_widgets()
+        self.start_check()
+        
+    def create_widgets(self):
+        # 标题
+        title_frame = ttk.Frame(self, padding=10)
+        title_frame.pack(fill=tk.X)
+        
+        ttk.Label(
+            title_frame,
+            text="🔍 SBL存在性检测",
+            font=('Arial', 14, 'bold')
+        ).pack()
+        
+        ttk.Label(
+            title_frame,
+            text=f"检测端口: {self.port} @ {self.baudrate} bps",
+            font=('Arial', 9),
+            foreground='gray'
+        ).pack()
+        
+        # 状态标签
+        self.status_label = ttk.Label(
+            self,
+            text="⏳ 正在检测...",
+            font=('Arial', 11),
+            foreground='blue'
+        )
+        self.status_label.pack(pady=10)
+        
+        # 详细信息区域
+        detail_frame = ttk.LabelFrame(
+            self,
+            text="📋 检测详情",
+            padding=10
+        )
+        detail_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        self.detail_text = scrolledtext.ScrolledText(
+            detail_frame,
+            height=15,
+            width=70,
+            font=('Consolas', 9),
+            bg='#f8f9fa',
+            fg='#2c3e50',
+            wrap=tk.WORD
+        )
+        self.detail_text.pack(fill=tk.BOTH, expand=True)
+        
+        # 按钮
+        button_frame = ttk.Frame(self)
+        button_frame.pack(pady=10)
+        
+        self.close_btn = ttk.Button(
+            button_frame,
+            text="关闭",
+            command=self.destroy,
+            state=tk.DISABLED
+        )
+        self.close_btn.pack()
+        
+        self.transient(parent)
+        self.grab_set()
+    
+    def start_check(self):
+        """启动检测线程"""
+        thread = threading.Thread(target=self.check_thread, daemon=True)
+        thread.start()
+    
+    def check_thread(self):
+        """检测线程"""
+        self.log("开始检测SBL...\n")
+        self.log(f"端口: {self.port}\n")
+        self.log(f"波特率: {self.baudrate}\n")
+        self.log("-" * 50 + "\n\n")
+        
+        # 执行检测
+        exists, message, details = check_sbl_exists(self.port, self.baudrate)
+        
+        # 更新UI
+        self.status_label.config(
+            text=message,
+            foreground='green' if exists else 'orange'
+        )
+        
+        self.log("\n" + "=" * 50 + "\n")
+        self.log(f"检测结果: {message}\n")
+        self.log("=" * 50 + "\n\n")
+        self.log(details + "\n")
+        
+        if exists:
+            self.log("\n✅ 结论: 板载已有SBL，可以只烧录App更新应用\n")
+        else:
+            self.log("\n⚠️ 结论: 建议执行完整烧录（SBL + App）\n")
+        
+        # 启用关闭按钮
+        self.close_btn.config(state=tk.NORMAL)
+    
+    def log(self, message):
+        """添加日志"""
+        if not self.detail_text.winfo_exists():
+            return
+        self.detail_text.insert(tk.END, message)
+        self.detail_text.see(tk.END)
+        self.update_idletasks()
 
 class SerialMonitorDialog(tk.Toplevel):
     """串口监视器对话框"""
