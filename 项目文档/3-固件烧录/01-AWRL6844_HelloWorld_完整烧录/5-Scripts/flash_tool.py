@@ -21,13 +21,13 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.1.0"
+VERSION = "1.2.5"
 BUILD_DATE = "2025-12-15"
 AUTHOR = "Benson@Wisefido"
 
 # 导入标签页模块
 try:
-    from tabs import BasicTab, AdvancedTab, MonitorTab, PortsTab
+    from tabs import BasicTab, AdvancedTab, MonitorTab, PortsTab, FirmwareLibTab
 except ImportError as e:
     messagebox.showerror(
         "模块导入错误",
@@ -37,7 +37,8 @@ except ImportError as e:
         "- tab_basic.py\n"
         "- tab_advanced.py\n"
         "- tab_monitor.py\n"
-        "- tab_ports.py"
+        "- tab_ports.py\n"
+        "- tab_firmware_lib.py"
     )
     sys.exit(1)
 
@@ -273,7 +274,7 @@ def check_sbl_exists(port, baudrate=115200, timeout=3):
                 if any(keyword in text.lower() for keyword in ['sbl', 'bootloader', 'ti', 'xwr', 'awrl']):
                     has_response = True
                     details.append("✓ 发现SBL特征字符串")
-            except:
+            except (UnicodeDecodeError, AttributeError) as e:
                 details.append(f"收到非文本数据: {len(data)} 字节")
                 has_response = True
         
@@ -291,7 +292,7 @@ def check_sbl_exists(port, baudrate=115200, timeout=3):
                     text = data.decode('utf-8', errors='ignore')
                     details.append(f"命令 {cmd} 响应: {text[:100]}")
                     has_response = True
-                except:
+                except (UnicodeDecodeError, AttributeError) as e:
                     details.append(f"命令 {cmd} 响应: {len(data)} 字节")
                     has_response = True
         
@@ -535,7 +536,7 @@ class SerialMonitorDialog(tk.Toplevel):
                     try:
                         text = data.decode('utf-8', errors='replace')
                         self.log(text)
-                    except:
+                    except (UnicodeDecodeError, AttributeError):
                         pass
                 time.sleep(0.05)
             except Exception as e:
@@ -560,7 +561,7 @@ class SerialMonitorDialog(tk.Toplevel):
         if self.serial_port:
             try:
                 self.serial_port.close()
-            except:
+            except (OSError, AttributeError):
                 pass
         self.destroy()
 
@@ -575,6 +576,12 @@ class FlashToolGUI:
         self.root = root
         self.root.title(f"Ti AWRL6844 固件烧录工具 v{VERSION}")
         self.root.geometry("1000x700")
+        
+        # 强制窗口置顶并获得焦点
+        self.root.lift()
+        self.root.focus_force()
+        self.root.attributes('-topmost', True)
+        self.root.after(100, lambda: self.root.attributes('-topmost', False))
         
         # 版本信息（供标签页模块验证）
         self.VERSION = VERSION
@@ -628,18 +635,21 @@ class FlashToolGUI:
         # 创建各个标签页的Frame
         basic_frame = ttk.Frame(self.notebook)
         advanced_frame = ttk.Frame(self.notebook)
+        firmware_lib_frame = ttk.Frame(self.notebook)
         monitor_frame = ttk.Frame(self.notebook)
         ports_frame = ttk.Frame(self.notebook)
         
         # 添加到Notebook
         self.notebook.add(basic_frame, text="  基本烧录  ")
         self.notebook.add(advanced_frame, text="  高级功能  ")
+        self.notebook.add(firmware_lib_frame, text="  固件库  ")
         self.notebook.add(monitor_frame, text="  串口监视  ")
         self.notebook.add(ports_frame, text="  端口管理  ")
         
         # 实例化各标签页模块
         self.basic_tab = BasicTab(basic_frame, self)
         self.advanced_tab = AdvancedTab(advanced_frame, self)
+        self.firmware_lib_tab = FirmwareLibTab(firmware_lib_frame, self)
         self.monitor_tab = MonitorTab(monitor_frame, self)
         self.ports_tab = PortsTab(ports_frame, self)
         

@@ -2,28 +2,30 @@
 # -*- coding: utf-8 -*-
 """
 tabs 模块 - TI毫米波雷达烧录工具标签页
-版本: v1.0.8
+版本: v1.1.1
 
 此模块包含所有标签页的实现：
 - tab_basic: 基本烧录标签页
 - tab_advanced: 高级功能标签页
+- tab_firmware_lib: 固件库标签页 (v1.1.1新增)
 - tab_monitor: 串口监视标签页
 - tab_ports: 端口管理标签页
 
 ⚠️ 注意：这些模块不能单独运行，必须从 flash_tool.py 主入口启动
 """
 
-__version__ = "v1.0.8"
+__version__ = "v1.2.0"
 __author__ = "Benson@Wisefido"
 
 # 导入所有标签页类
 try:
     from .tab_basic import BasicTab
     from .tab_advanced import AdvancedTab
+    from .tab_firmware_lib import FirmwareLibTab
     from .tab_monitor import MonitorTab
     from .tab_ports import PortsTab
     
-    __all__ = ['BasicTab', 'AdvancedTab', 'MonitorTab', 'PortsTab']
+    __all__ = ['BasicTab', 'AdvancedTab', 'FirmwareLibTab', 'MonitorTab', 'PortsTab']
 except ImportError as e:
     # 如果直接运行此模块，给出友好提示
     import sys
