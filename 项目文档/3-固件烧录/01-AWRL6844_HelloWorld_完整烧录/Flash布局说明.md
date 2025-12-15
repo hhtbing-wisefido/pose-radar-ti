@@ -15,8 +15,10 @@
 │ 0x00000000   │   0x2000     │ Flash Header│ ROM/Flash头+保留  │
 │ 0x00001FFF   │   (8 KB)     │ & 保留区    │ (包含SBL头部)     │
 ├──────────────┼──────────────┼─────────────┼──────────────────┤
-│ 0x00002000   │   ~0x3E000   │ SBL Meta    │ 二级引导程序      │
-│ 0x00041FFF   │   (~248 KB)  │ Image       │ (M_META_SBL_OFFSET)|
+│ 0x00002000   │   0x40000    │ SBL Meta    │ 二级引导程序      │
+│ 0x00041FFF   │   (256 KB)   │ Image       │ 实际~130KB，预留  │
+│              │              │             │ 256KB给SBL空间    │
+│              │              │             │ (M_META_SBL_OFFSET)
 ├──────────────┼──────────────┼─────────────┼──────────────────┤
 │ 0x00042000   │   ≤0x1BE000  │ Application │ 应用Meta Image    │
 │ 0x001FFFFF   │   (≤1.784MB) │ Meta Image  │ (M_META_IMAGE_OFFSET)
@@ -30,16 +32,18 @@
 ### 1. Flash Header & 预留区 (0x00000000)
 
 - **位置**: 0x0 - 0x1FFF（8KB，包含Flash Header+预留）
-- **作用**: 由工具生成的Flash Header，供ROM Bootloader识别；后续区域预留给SBL头部和对齐需求。
-- **来源**: `metaImage_creator.exe`在生成`sbl.release.appimage`时自动写入。
+- **作用**: Flash Header供ROM Bootloader识别；后续区域预留给SBL头部和对齐需求。
+- **来源**: arprog使用`-cf`参数时自动创建。
 
 ---
 
 ### 2. SBL Bootloader (0x00002000)
 
-- **位置**: 0x2000 - 0x41FFF（约248KB）
-- **宏定义**: `M_META_SBL_OFFSET`（见`sbl.h`）
-- **文件**: `sbl.release.appimage`（由`sbl_r5_img.release.rig`生成的meta image）
+- **位置**: 0x2000 - 0x41FFF（256KB预留空间）
+- **实际大小**: 约130KB（sbl.release.appimage实际文件大小）
+- **预留空间**: 256KB（0x40000），为SBL升级和功能扩展预留
+- **宏定义**: `M_META_SBL_OFFSET = 0x2000`（见`sbl.h`）
+- **文件**: `sbl.release.appimage`（SDK编译生成，可直接烧录）
 
 **功能**:
 - ✅ 初始化硬件（时钟、DDR、外设）
@@ -58,19 +62,28 @@ ROM Bootloader → 读取Flash Header → 加载SBL到RAM → 执行SBL
 MMWAVE_L_SDK_06_01_00_01/examples/drivers/boot/sbl/
 ```
 
+**地址计算**（见sbl.h源码）:
+```c
+#define M_META_SBL_OFFSET      (0x2000U)      // SBL起始地址
+#define M_META_IMAGE_OFFSET    (M_META_SBL_OFFSET + (256U * 1024U))  // 0x42000
+// 即：0x2000 + 0x40000 = 0x42000（预留256KB给SBL）
+```
+
 ---
 
 ### 3. Application Meta Image (0x00042000)
 
 - **位置**: 0x42000 - 0x1FFFFF（最大1.784MB）
-- **宏定义**: `M_META_IMAGE_OFFSET = 0x42000`（由`M_META_SBL_OFFSET`加256KB计算）
+- **宏定义**: `M_META_IMAGE_OFFSET = M_META_SBL_OFFSET + 0x40000 = 0x42000`
 - **大小上限**: `SBL_MAX_METAIMAGE_SIZE = 1784 * 1024`（见`sbl.h`）
-- **文件**: `hello_world_system.release.appimage`（由`metaimage_cfg.release.json`生成）
+- **文件**: `hello_world_system.release.appimage`（SDK编译生成，可直接烧录）
 
 **结构**（`SBL_METAHEADER_SIZE = 512B`）:
 ```
-Meta Image = Meta Header(512B) + R5F Core + DSP Core + RF Firmware
+.appimage = Meta Header(512B) + R5F Core + DSP Core + RF Firmware
 ```
+
+**注意**：.appimage文件由CCS/Make编译时自动生成，包含完整的Meta Header和各核代码，可直接烧录。
 
 **各部分说明**:
 

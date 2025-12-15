@@ -2,10 +2,16 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
+REM ============================================
+REM AWRL6844 完整烧录脚本（官方SDK标准流程）
+REM 基于: MMWAVE_L_SDK_06_01_00_01官方文档
+REM 一次性烧录SBL和Application到QSPI Flash
+REM ============================================
+
 REM 检查参数
 if "%~1"=="" (
     echo.
-    echo [ERROR] 缺少COM端口参数！
+    echo [错误] 请指定COM端口
     echo [用法] %~nx0 COM端口
     echo [示例] %~nx0 COM3
     echo.
@@ -23,7 +29,7 @@ cls
 echo.
 echo ╔════════════════════════════════════════════════════════════╗
 echo ║                                                            ║
-echo ║     AWRL6844 HelloWorld 完整烧录流程                       ║
+echo ║     AWRL6844 完整烧录流程 (官方SDK标准)                    ║
 echo ║                                                            ║
 echo ║     COM端口: %-45s║
 echo ║                                                            ║
@@ -31,73 +37,60 @@ echo ╚════════════════════════
 echo.
 
 set START_TIME=%time%
+set PROJECT_ROOT=%SCRIPT_DIR%\..
 
 REM ============================================================
-REM Phase 1: 清理旧文件
+REM Phase 1: 检查固件文件
 REM ============================================================
-echo [1/6] 清理旧文件...
+echo [1/3] 检查固件文件...
 echo.
 
 cd /d "%SCRIPT_DIR%"
 
-REM 静默清理（不显示详细信息）
-set PROJECT_ROOT=%SCRIPT_DIR%\..
-if exist "%PROJECT_ROOT%\1-SBL_Bootloader\temp" rmdir /s /q "%PROJECT_ROOT%\1-SBL_Bootloader\temp" 2>nul
-if exist "%PROJECT_ROOT%\2-HelloWorld_App\temp" rmdir /s /q "%PROJECT_ROOT%\2-HelloWorld_App\temp" 2>nul
-if exist "%PROJECT_ROOT%\4-Generated\temp" rmdir /s /q "%PROJECT_ROOT%\4-Generated\temp" 2>nul
-if exist "%PROJECT_ROOT%\4-Generated\*.bin" del /q "%PROJECT_ROOT%\4-Generated\*.bin" 2>nul
-
-echo   └─ 完成
-echo.
-
-REM ============================================================
-REM Phase 2: 生成SBL Meta Image
-REM ============================================================
-echo [2/6] 生成SBL Meta Image...
-echo.
-
-call "%SCRIPT_DIR%\1_generate_sbl_meta.bat" >nul 2>&1
-
-if errorlevel 1 (
+REM 检查SBL固件
+if not exist "%PROJECT_ROOT%\1-SBL_Bootloader\sbl.release.appimage" (
     echo   └─ 失败！
     echo.
-    echo [ERROR] SBL Meta Image生成失败
+    echo [错误] SBL固件不存在: sbl.release.appimage
+    echo [位置] 1-SBL_Bootloader\sbl.release.appimage
     pause
     exit /b 1
 )
 
-REM 检查输出文件
-if not exist "%PROJECT_ROOT%\4-Generated\sbl_meta.bin" (
+REM 获取SBL文件大小
+for %%F in ("%PROJECT_ROOT%\1-SBL_Bootloader\sbl.release.appimage") do set SBL_SIZE=%%~zF
+
+echo   ├─ SBL固件: sbl.release.appimage (%SBL_SIZE% bytes)
+
+REM 检查Application固件
+if not exist "%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage" (
     echo   └─ 失败！
     echo.
-    echo [ERROR] 未找到sbl_meta.bin
+    echo [错误] Application固件不存在: hello_world_system.release.appimage
+    echo [位置] 2-HelloWorld_App\hello_world_system.release.appimage
     pause
     exit /b 1
 )
 
-REM 获取文件大小
-for %%F in ("%PROJECT_ROOT%\4-Generated\sbl_meta.bin") do set SBL_SIZE=%%~zF
+REM 获取App文件大小
+for %%F in ("%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage") do set APP_SIZE=%%~zF
 
-echo   └─ 完成 - sbl_meta.bin (%SBL_SIZE% bytes)
-echo.
+echo   ├─ App固件: hello_world_system.release.appimage (%APP_SIZE% bytes)
 
-REM ============================================================
-REM Phase 3: 生成App Meta Image
-REM ============================================================
-echo [3/6] 生成App Meta Image...
-echo.
-
-call "%SCRIPT_DIR%\2_generate_app_meta.bat" >nul 2>&1
-
-if errorlevel 1 (
+REM 检查烧录工具
+if not exist "%PROJECT_ROOT%\3-Tools\arprog_cmdline_6844.exe" (
     echo   └─ 失败！
     echo.
-    echo [ERROR] App Meta Image生成失败
+    echo [错误] 烧录工具不存在: arprog_cmdline_6844.exe
+    echo [位置] 3-Tools\arprog_cmdline_6844.exe
     pause
     exit /b 1
 )
 
-REM 检查输出文件
+echo   └─ 烧录工具: arprog_cmdline_6844.exe
+echo.
+echo   [完成] 所有文件检查通过
+echo.
 if not exist "%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage" (
     echo   └─ 失败！
     echo.
@@ -113,72 +106,68 @@ echo   └─ 完成 - hello_world_system.release.appimage (%APP_SIZE% bytes)
 echo.
 
 REM ============================================================
-REM Phase 4: 烧录SBL
+REM Phase 2: 烧录固件 (官方标准命令)
 REM ============================================================
-echo [4/6] 烧录SBL Bootloader...
-echo   └─ 地址: 0x2000
+echo [2/3] 烧录固件到Flash...
 echo.
 
-echo [硬件检查] 请确认以下设置已就绪：
-echo   - SOP开关设置为SOP_MODE1 (S8=OFF, S7=OFF)
-echo   - USB连接到%COM_PORT%
-echo   - 板子已上电
+echo [重要] 请确认以下硬件设置：
+echo   ├─ SOP开关设置为SOP_MODE1 (SOP0=OFF, SOP1=OFF)
+echo   ├─ USB连接到%COM_PORT%
+echo   └─ 板子已上电
 echo.
 echo 按任意键继续烧录，或等待10秒自动开始...
 timeout /t 10 /nobreak >nul 2>&1
 
+echo.
+echo   开始烧录 (使用官方 -cf 参数自动创建Flash头)...
+echo   ├─ SBL文件 → Flash 0x2000
+echo   └─ App文件 → Flash 0x42000
+echo.
+
 cd /d "%PROJECT_ROOT%\3-Tools"
-echo   开始烧录SBL...
-arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\1-SBL_Bootloader\sbl.release.appimage" -o 0x2000
+
+REM 官方标准命令: 使用 -cf 参数自动创建Flash头，一次性烧录SBL和App
+arprog_cmdline_6844.exe -p %COM_PORT% ^
+  -f1 "%PROJECT_ROOT%\1-SBL_Bootloader\sbl.release.appimage" ^
+  -f2 "%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage" ^
+  -s SFLASH -c -cf
 
 if errorlevel 1 (
     echo.
-    echo   └─ 失败！
+    echo   └─ 烧录失败！
     echo.
-    echo [ERROR] SBL烧录失败
-    echo [INFO] 请检查：
-    echo   - COM端口是否正确 (当前: %COM_PORT%)
-    echo   - SOP跳线是否为SOP_MODE1 (S8=OFF, S7=OFF)
-    echo   - 串口是否被占用
-    echo   - 板子是否上电
+    echo ╔════════════════════════════════════════════════════════════╗
+    echo ║ [错误] 烧录失败，请检查以下项目：                          ║
+    echo ╚════════════════════════════════════════════════════════════╝
+    echo.
+    echo   1. COM端口是否正确？当前: %COM_PORT%
+    echo      - 查看设备管理器中的"XDS110 Class Application/User UART"
+    echo.
+    echo   2. SOP开关是否正确？
+    echo      - 应为 SOP_MODE1 (SOP0=OFF, SOP1=OFF)
+    echo.
+    echo   3. 串口是否被占用？
+    echo      - 关闭其他串口终端程序
+    echo.
+    echo   4. 尝试以下操作：
+    echo      - 按下板子的RESET按钮
+    echo      - 重新给板子上电
+    echo      - 更换USB端口
+    echo.
     cd /d "%SCRIPT_DIR%"
     pause
     exit /b 1
 )
 
-echo   └─ 完成
+echo.
+echo   └─ 烧录完成！
 echo.
 
 REM ============================================================
-REM Phase 5: 烧录App
+REM Phase 3: 完成提示
 REM ============================================================
-echo [5/6] 烧录HelloWorld应用...
-echo   └─ 地址: 0x42000
-echo.
-
-cd /d "%PROJECT_ROOT%\3-Tools"
-echo   开始烧录App...
-arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage" -o 0x42000
-
-if errorlevel 1 (
-    echo.
-    echo   └─ 失败！
-    echo.
-    echo [ERROR] App烧录失败
-    cd /d "%SCRIPT_DIR%"
-    pause
-    exit /b 1
-)
-
-echo   └─ 完成
-echo.
-
-REM ============================================================
-REM Phase 6: 验证（可选，暂时跳过以节省时间）
-REM ============================================================
-echo [6/6] 验证完成
-echo   └─ SBL: 已烧录到0x2000
-echo   └─ App: 已烧录到0x42000
+echo [3/3] 烧录流程完成！
 echo.
 
 REM 计算耗时
@@ -189,29 +178,29 @@ echo ╔════════════════════════
 echo ║                                                            ║
 echo ║     ✓ 烧录完成！                                           ║
 echo ║                                                            ║
+echo ║     SBL:  已烧录到 0x2000                                  ║
+echo ║     App:  已烧录到 0x42000                                 ║
+echo ║                                                            ║
 echo ╚════════════════════════════════════════════════════════════╝
 echo.
 
 echo ========================================
-echo   后续操作步骤
+echo   下一步操作
 echo ========================================
 echo.
 echo [1] 断开板子电源
 echo.
-echo [2] 修改SOP开关
-echo     从 SOP_MODE1 (S8=OFF, S7=OFF)
-echo     改为 SOP_MODE2 (S8=OFF, S7=ON)
+echo [2] 修改SOP开关为运行模式
+echo     从 SOP_MODE1 (SOP0=OFF, SOP1=OFF)
+echo     改为 SOP_MODE2 (SOP0=OFF, SOP1=ON)
 echo.
-echo [3] 重新上电
+echo [3] 重新上电启动
 echo.
-echo [4] 打开串口终端
-echo     波特率: 115200
-echo     数据位: 8
-echo     停止位: 1
-echo     校验: 无
-echo     端口: %COM_PORT%
+echo [4] 打开串口终端查看输出
+echo     └─ 端口: %COM_PORT%
+echo     └─ 波特率: 115200 8N1
 echo.
-echo [5] 期望输出
+echo [5] 预期输出示例
 echo.
 echo ----------------------------------------
 echo [BOOTLOADER_PROFILE] Boot Media       : FLASH
@@ -219,13 +208,14 @@ echo [BOOTLOADER_PROFILE] Boot Image Size  : 220 KB
 echo [BOOTLOADER_PROFILE] Cores present    :
 echo r5f0-0
 echo c66ss0
-echo r5f0-1
 echo [BOOTLOADER] Booting Cores ...
 echo Hello World from r5f0-0 !
 echo Hello World from c66ss0 !
-echo Hello World from r5f0-1 !
 echo ----------------------------------------
+echo.
+echo 如果看到以上输出，说明烧录成功！
 echo.
 
 cd /d "%SCRIPT_DIR%"
-timeout /t 5 >nul 2>&1
+pause
+

@@ -1,397 +1,242 @@
-# 👋 HelloWorld Application
+# 📱 HelloWorld 应用程序固件
 
-> **最简单的AWRL6844应用示例 - 验证系统功能**
-
----
-
-## 文件说明
-
-### 1. hello_world_system.release.appimage
-
-**文件大小**: ~220KB  
-**来源**: `MMWAVE_L_SDK_06_01_00_01/examples/hello_world/`  
-**类型**: 多核系统应用（R5F + DSP）
-
-**包含内容**:
-- **R5F Core**: 主控逻辑、串口输出
-- **DSP Core**: DSP初始化示例
-- **系统配置**: FreeRTOS任务调度
+> **多核演示应用 - R5F + C66x DSP + RF固件**
 
 ---
 
-### 2. metaimage_cfg.release.json
+## 📄 文件说明
 
-**用途**: HelloWorld Meta Image生成配置
+### hello_world_system.release.appimage
 
-**关键配置项**:
-```json
-{
-  "buildImages": [
-    {
-      "buildImagePath": "hello_world_r5_img.release.rig",
-      "encryptEnable": "no"
-    },
-    {
-      "buildImagePath": "hello_world_dsp_img.release.rig",
-      "encryptEnable": "no"
-    }
-  ],
-  "metaImageFile": "hello_world_system.release.appimage"
-}
-```
-
-**与SBL配置的区别**:
-- 包含2个核心镜像（R5F + DSP）
-- 不包含Flash Header（由SBL提供）
-- 加载地址不同（App区域：0x42000）
+- **文件类型**: 可烧录固件文件
+- **大小**: 约218KB
+- **来源**: TI SDK编译生成
+- **烧录地址**: 0x42000 (Flash偏移270336字节)
+- **可用空间**: 最大1.78MB (SBL_MAX_METAIMAGE_SIZE)
 
 ---
 
-## HelloWorld功能
+## 🎯 应用功能
 
-### 主要功能
+### HelloWorld演示
 
-1. **系统初始化**
-   - R5F核心启动
+这是TI官方的多核演示程序，验证以下功能：
+
+1. **R5F主核** (ARM Cortex-R5F)
+   - 系统初始化
+   - 串口通信
+   - 打印 "Hello World from r5f0-0!"
+
+2. **C66x DSP核**
    - DSP核心启动
-   - 串口初始化
+   - 打印 "Hello World from c66ss0!"
 
-2. **串口输出**
-   - 打印"Hello World!"
-   - 显示系统信息
-   - 输出设备ID
-
-3. **LED控制**
-   - GPIO初始化
-   - LED闪烁（1Hz）
-
-4. **FreeRTOS任务**
-   - 主任务循环
-   - 空闲任务
+3. **RF固件核** (R5F从核)
+   - 射频子系统初始化
+   - 打印 "Hello World from r5f0-1!"
 
 ---
 
-## 代码结构
+## 🔄 启动流程
 
-### R5F Core代码
-
-```c
-// main.c (简化版)
-
-void main(void)
-{
-    // 1. 系统初始化
-    System_init();
-    
-    // 2. 串口初始化
-    UART_init();
-    UART_printf("\n***** Hello World! *****\n");
-    
-    // 3. DSP核心启动
-    DSP_init();
-    
-    // 4. LED初始化
-    GPIO_init();
-    
-    // 5. 主循环
-    while(1)
-    {
-        GPIO_toggle(LED_PIN);
-        Task_sleep(1000);  // 1秒延迟
-        UART_printf("Tick\n");
-    }
-}
 ```
-
-### DSP Core代码
-
-```c
-// dsp_main.c (简化版)
-
-void main(void)
-{
-    // DSP初始化
-    DSP_init();
-    
-    // 等待R5F命令
-    while(1)
-    {
-        // IPC通信处理
-        IPC_processMessages();
-        
-        // DSP空闲
-        Task_sleep(100);
-    }
-}
+SBL启动完成
+   ↓
+读取App Meta Header (0x42000)
+   ↓
+解析多核镜像结构
+   ↓
+加载R5F主核到RAM
+   ↓
+加载C66x DSP核到RAM
+   ↓
+加载RF固件核到RAM
+   ↓
+按顺序启动各核
+   ↓
+各核运行HelloWorld
 ```
 
 ---
 
-## 生成HelloWorld Meta Image
+## 📦 固件结构
 
-### Step 1: 提取Build Images
+### .appimage文件组成
 
-```bash
-..\3-Tools\buildImage_creator.exe -i hello_world_system.release.appimage
 ```
-
-**生成文件**:
-- `temp/hello_world_r5_img.release.rig`
-- `temp/hello_world_dsp_img.release.rig`
-
----
-
-### Step 2: 创建Meta Image
-
-```bash
-..\3-Tools\metaImage_creator.exe -config metaimage_cfg.release.json
-```
-
-**生成文件**:
-- `hello_world_meta.bin`
-
-**文件结构**:
-```
-hello_world_meta.bin:
-  ├── Meta Header (~1KB)
-  │   ├── Magic: 0x4D535452
-  │   ├── Image Count: 2
-  │   ├── Image 1 Info (R5F)
-  │   └── Image 2 Info (DSP)
-  ├── R5F Core Image (~100KB)
-  │   ├── Load Address: 0x00000000
-  │   ├── Entry Point: 0x00000100
-  │   └── Binary Data
-  └── DSP Core Image (~50KB)
-      ├── Load Address: 0x21000000
-      └── Binary Data
+hello_world_system.release.appimage:
+  ├── Meta Header (512字节)
+  │   ├── Magic Number
+  │   ├── 镜像数量: 3
+  │   ├── 各核加载地址
+  │   └── 各核入口点
+  │
+  ├── R5F主核镜像 (~80KB)
+  │   └── ARM Cortex-R5F代码
+  │
+  ├── C66x DSP镜像 (~100KB)
+  │   └── TI C66x DSP代码
+  │
+  └── RF固件镜像 (~30KB)
+      └── R5F从核代码
 ```
 
 ---
 
-## 烧录到Flash
+## 🚀 烧录方法
 
-### 烧录命令
+### 前提条件
 
-```bash
+**⚠️ 必须先烧录SBL！**
+
+如果是首次烧录或SBL不存在，必须先烧录SBL到0x2000地址。
+
+### 方法1: 使用完整烧录脚本（推荐）
+
+```powershell
+cd ..\5-Scripts
+.\full_flash.bat COM3
+```
+
+这会同时烧录SBL和应用。
+
+### 方法2: 单独烧录应用（SBL已存在）
+
+```powershell
+cd ..\5-Scripts
+.\4_flash_app.bat COM3
+```
+
+### 方法3: 直接使用arprog命令
+
+```powershell
 cd ..\3-Tools
-.\arprog_cmdline_6844.exe -p COM3 -f ..\2-HelloWorld_App\hello_world_system.release.appimage -o 0x42000
+.\arprog_cmdline_6844.exe -p COM3 ^
+  -f1 "..\2-HelloWorld_App\hello_world_system.release.appimage" ^
+  -of1 270336 ^
+  -s SFLASH -c
 ```
 
-### 参数说明
-
-- `-o 0x42000`: 应用区起始地址（SBL区域结束后对齐）
-
-**为什么是0x42000？**
-- Flash Header占用0x0-0x1FFF，SBL占用0x2000-0x41FFF（共256KB）
-- 应用从0x42000开始
-- SBL会从0x42000读取并加载应用
+**参数说明**：
+- `-p COM3`: 串口号
+- `-f1 file`: 要烧录的文件
+- `-of1 270336`: Flash起始地址（270336 = 0x42000）
+- `-s SFLASH`: 目标存储（SPI Flash）
+- `-c`: 擦除后写入
 
 ---
 
-## 串口输出示例
+## 🖥️ 查看运行结果
 
-### 完整启动日志
+### 硬件设置
+
+1. **SOP开关设置**: SOP_MODE2 = [0011] (Debug UART模式)
+2. **串口连接**: 连接COM4（Debug UART）
+3. **串口参数**: 115200-8-N-1
+
+### 期望输出
 
 ```
-**********************************************
-*        AWRL6844 Secondary Bootloader      *
-*             Version: 1.0.0                *
-**********************************************
-
-[SBL] Loading Application from Flash...
-[SBL]   Address: 0x00042000
-[SBL]   Size: 218,624 bytes
-[SBL] Loading R5F image... Done
-[SBL] Loading DSP image... Done
-[SBL] Starting Application...
-
-**********************************************
-*         Hello World Application           *
-**********************************************
-
-[APP] System Initialize...
-[APP]   R5F Core @ 200 MHz
-[APP]   DSP Core @ 450 MHz
-[APP]   UART @ 115200 baud
-[APP] System Initialize... Done
-
-[APP] Starting DSP Core...
-[DSP] DSP Core Started
-[DSP] Waiting for commands...
-
-[APP] GPIO Initialize...
-[APP]   LED Pin: GPIO45
-[APP] GPIO Initialize... Done
-
-Hello World from AWRL6844! 🎉
-
-Device Information:
-  Chip ID: 0x68440001
-  Revision: 1.0
-  Serial Number: 0x12345678
-  Temperature: 45°C
-
-System Status:
-  R5F Core: Running
-  DSP Core: Running
-  UART: OK
-  GPIO: OK
-
-LED Blinking...
-Tick
-Tick
-Tick
-...
+[BOOTLOADER_PROFILE] Boot Media       : FLASH
+[BOOTLOADER_PROFILE] Boot Image Size  : 220 KB
+[BOOTLOADER_PROFILE] Cores present    :
+r5f0-0
+c66ss0
+r5f0-1
+[BOOTLOADER] Booting Cores ...
+Hello World from r5f0-0 !
+Hello World from c66ss0 !
+Hello World from r5f0-1 !
+All tests have passed!!
 ```
 
 ---
 
-## 修改代码
+## ⚠️ 重要说明
 
-### 修改输出内容
+### .appimage可直接烧录
 
-**修改文件**: `examples/hello_world/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/main.c`
+- ✅ SDK编译时已生成完整的.appimage文件
+- ✅ 包含完整的Meta Header和多核镜像
+- ✅ arprog会自动处理Flash写入
+- ❌ **不需要**使用buildImage_creator提取
+- ❌ **不需要**使用metaImage_creator生成meta
 
-```c
-// 找到这行
-UART_printf("Hello World from AWRL6844!\n");
+### 必须先有SBL
 
-// 改为
-UART_printf("Hello from My Custom App!\n");
-```
-
-**重新编译**:
-1. 打开CCS (Code Composer Studio)
-2. 导入项目
-3. 编译生成新的.appimage
-4. 重新生成Meta Image
-5. 烧录到Flash
+- 应用程序无法自己启动
+- 必须由SBL从Flash加载
+- 确保SBL已烧录到0x2000
 
 ---
 
-## 扩展功能
+## 💾 Flash地址分配
 
-### 添加新功能示例
+| 地址 | 内容 | 大小 |
+|------|------|------|
+| 0x00000 - 0x01FFF | Flash Header | 8KB |
+| 0x02000 - 0x41FFF | SBL | 256KB (预留) |
+| **0x42000 - 0x1FFFFF** | **应用程序** | **最大1.78MB** |
 
-```c
-// 添加温度读取
-void readTemperature(void)
-{
-    float temp = SOC_getTemperature();
-    UART_printf("Temperature: %.1f C\n", temp);
-}
+---
 
-// 在main循环中调用
-while(1)
-{
-    GPIO_toggle(LED_PIN);
-    readTemperature();  // 新增
-    Task_sleep(1000);
-}
+## 🔧 源码位置
+
 ```
-
-### 添加CAN通信
-
-```c
-// 初始化CAN
-MCAN_init();
-
-// 发送消息
-uint8_t txData[8] = {0x01, 0x02, 0x03, 0x04};
-MCAN_transmit(txData, 4);
+MMWAVE_L_SDK_06_01_00_01/
+└── examples/
+    └── hello_world/
+        └── awrl6844_hello_world_system/
+            ├── r5fss0-0_nortos/    # R5F主核
+            ├── c66ss0/             # DSP核
+            └── r5fss0-1_nortos/    # RF核
 ```
 
 ---
 
-## 性能特性
+## 📚 相关文档
 
-### 资源占用
-
-| 资源 | 占用 | 总量 | 百分比 |
-|------|------|------|--------|
-| Flash | ~220KB | 2MB | 10.7% |
-| RAM (R5F) | ~50KB | 512KB | 9.8% |
-| RAM (DSP) | ~30KB | 1MB | 2.9% |
-
-### 启动时间
-
-| 阶段 | 耗时 |
-|------|------|
-| ROM Boot | ~50ms |
-| SBL加载 | ~100ms |
-| App加载 | ~150ms |
-| **总计** | **~300ms** |
+- [../README.md](../README.md) - 项目总览
+- [../操作指南.md](../操作指南.md) - 详细烧录步骤
+- [../Flash布局说明.md](../Flash布局说明.md) - Flash内存布局
+- [../5-Scripts/README.md](../5-Scripts/README.md) - 脚本使用说明
 
 ---
 
-## 对比其他示例
+## 🐛 常见问题
 
-### HelloWorld vs mmWave Demo
+### Q: 为什么烧录后没有输出？
 
-| 特性 | HelloWorld | mmWave Demo |
-|------|-----------|-------------|
-| 文件大小 | 220KB | 350KB |
-| 功能 | 基本I/O | 雷达信号处理 |
-| RAM占用 | 80KB | 1.5MB |
-| 复杂度 | ⭐ | ⭐⭐⭐⭐ |
-| 适合场景 | 系统验证 | 实际应用 |
+**A**: 检查：
+1. SOP开关是否为SOP_MODE2 = [0011]
+2. 串口是否连接到COM4（Debug UART）
+3. 串口参数是否正确（115200-8-N-1）
+4. SBL是否已正确烧录
+5. 是否按下复位按钮
 
----
+### Q: 可以自定义HelloWorld程序吗？
 
-## 常见问题
+**A**: 可以！修改SDK源码后重新编译：
+1. 修改 `examples/hello_world/` 目录下的源文件
+2. 使用CCS或Make重新编译
+3. 会生成新的 `hello_world_system.release.appimage`
+4. 烧录新固件到0x42000
 
-### Q1: 为什么需要R5F和DSP两个核心？
+### Q: 如何添加更多功能？
+
+**A**: 参考SDK中的其他示例：
+- `examples/drivers/` - 外设驱动示例
+- `examples/mmwave_dfp/` - 雷达数据处理
+- 修改后重新编译生成.appimage文件
+
+### Q: 应用程序最大可以多大？
 
 **A**: 
-- **R5F**: 控制逻辑、外设通信
-- **DSP**: 高性能信号处理（雷达数据）
-
-HelloWorld中DSP核心是可选的，但保留用于演示多核启动。
-
-### Q2: 如何禁用DSP核心？
-
-**A**: 修改配置文件，移除DSP镜像：
-```json
-{
-  "buildImages": [
-    {  // 只保留R5F
-      "buildImagePath": "hello_world_r5_img.release.rig"
-    }
-  ]
-}
-```
-
-### Q3: 串口输出乱码？
-
-**A**: 检查串口参数：
-- 波特率: 115200
-- 数据位: 8
-- 校验位: None
-- 停止位: 1
+- 最大Meta Image大小: 1.78MB (SBL_MAX_METAIMAGE_SIZE)
+- 包含Meta Header和所有核的代码
+- 超过此大小会烧录失败
 
 ---
 
-## 下一步
-
-### 学习路径
-
-1. ✅ **HelloWorld** - 系统验证
-2. ⏭️ **GPIO Example** - 外设控制
-3. ⏭️ **UART Example** - 串口通信
-4. ⏭️ **mmWave Demo** - 雷达应用
-5. ⏭️ **InCabin Demo** - 车载应用
-
----
-
-## 相关文档
-
-- [README.md](../README.md) - 项目概述
-- [操作指南.md](../操作指南.md) - 烧录步骤
-- [1-SBL_Bootloader/README.md](../1-SBL_Bootloader/README.md) - SBL详解
-
----
-
-**更新日期**: 2025-12-12  
-**SDK版本**: 06.01.00.01  
-**示例类型**: FreeRTOS + Multi-Core
+**更新日期**: 2025-12-15  
+**SDK版本**: 06.01.00.01

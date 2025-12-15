@@ -22,35 +22,32 @@
 ├── 📄 操作指南.md                         # 详细烧录步骤
 ├── 📄 Flash布局说明.md                    # QSPI Flash内存布局
 │
-├── 📂 1-SBL_Bootloader/                  # SBL引导程序
-│   ├── sbl.release.appimage              # SBL固件（必须）
-│   ├── metaimage_cfg.release.json        # SBL Meta配置
+├── 📂 1-SBL_Bootloader/                  # SBL固件
+│   ├── sbl.release.appimage              # SBL固件（可直接烧录）
 │   └── README.md                         # SBL说明
 │
-├── 📂 2-HelloWorld_App/                  # HelloWorld应用
-│   ├── hello_world_system.release.appimage  # 应用固件
-│   ├── metaimage_cfg.release.json           # 应用Meta配置
-│   └── README.md                            # 应用说明
+├── 📂 2-HelloWorld_App/                  # 应用程序
+│   ├── hello_world_system.release.appimage  # 应用固件（可直接烧录）
+│   └── README.md                         # 应用说明
 │
 ├── 📂 3-Tools/                           # 烧录工具
-│   ├── arprog_cmdline_6844.exe           # 串口烧录工具
-│   ├── buildImage_creator.exe            # 镜像提取工具
-│   ├── metaImage_creator.exe             # Meta镜像生成工具
+│   ├── arprog_cmdline_6844.exe           # 串口烧录工具（必需）
 │   └── README.md                         # 工具说明
 │
-├── 📂 4-Generated/                       # 生成文件目录（执行后产生）
-│   ├── sbl_meta.bin                      # SBL Meta Image
-│   ├── hello_world_meta.bin              # App Meta Image
+├── 📂 4-Generated/                       # 临时文件目录（可选，调试用）
 │   └── README.md                         # 说明
 │
 └── 📂 5-Scripts/                         # 自动化脚本
-    ├── 1_generate_sbl_meta.bat           # 生成SBL Meta Image
-    ├── 2_generate_app_meta.bat           # 生成App Meta Image
-    ├── 3_flash_sbl.bat                   # 烧录SBL
-    ├── 4_flash_app.bat                   # 烧录应用
-    ├── clean_generated.bat               # 清理生成文件
+    ├── 3_flash_sbl.bat                   # 烧录SBL（单独）
+    ├── 4_flash_app.bat                   # 烧录应用（单独）
     ├── full_flash.bat                    # 完整烧录流程（推荐）
     └── README.md                         # 脚本说明
+
+注：已删除的文件（不再需要）：
+  ❌ 1_generate_sbl_meta.bat              (不需要生成meta)
+  ❌ 2_generate_app_meta.bat              (不需要生成meta)
+  ❌ buildImage_creator.exe               (SDK编译已生成.appimage)
+  ❌ metaImage_creator.exe                (烧录工具自动创建flash头)
 ```
 
 ---
@@ -60,11 +57,11 @@
 ### 前置条件
 
 - [x] AWRL6844EVM开发板
-- [x] USB数据线（Type-C或Micro-USB）
-- [x] Windows PC（已安装驱动）
+- [x] USB数据线
+- [x] Windows PC（已安装XDS110驱动）
 - [x] 串口调试工具（推荐：TeraTerm、PuTTY）
 
-### 方式1: 完整自动烧录（推荐新手）
+### 一键完整烧录（推荐）
 
 ```bash
 cd 5-Scripts
@@ -72,42 +69,41 @@ full_flash.bat COM3
 ```
 
 **执行内容**:
-1. ✅ 清理旧文件
-2. ✅ 生成SBL Meta Image
-3. ✅ 生成App Meta Image
-4. ✅ 烧录SBL到0x2000
-5. ✅ 烧录App到0x42000
-6. ✅ 自动验证
+1. ✅ 检查固件文件 (sbl.release.appimage, hello_world_system.release.appimage)
+2. ✅ 一次性烧录SBL和App到Flash (使用官方 -cf 参数)
+3. ✅ 显示后续操作提示
 
-**耗时**: 约2分钟
+**耗时**: 约2-3分钟
+
+**说明**: 固件文件(.appimage)由SDK编译生成，**可直接烧录**，无需生成meta或其他中间步骤。
 
 ---
 
-### 方式2: 分步手动烧录（推荐调试）
+### 分步手动烧录（可选）
 
 ```bash
 cd 5-Scripts
 
-# Step 1: 生成Meta Images
-1_generate_sbl_meta.bat
-2_generate_app_meta.bat
-
-# Step 2: 烧录SBL到Flash
+# 烧录SBL到0x2000
 3_flash_sbl.bat COM3
 
-# Step 3: 烧录HelloWorld应用
+# 烧录App到0x42000
 4_flash_app.bat COM3
 ```
 
+---
+
 ### 验证成功
 
-1. 打开串口终端（115200 8N1）
-2. 按复位按钮
-3. 应看到输出：
+1. 设置SOP开关为SOP_MODE2 (SOP0=OFF, SOP1=ON)
+2. 打开串口终端（115200 8N1）
+3. 按复位按钮
+4. 应看到输出：
    ```
-   ***** SBL Starting *****
-   Loading Application...
-   Hello World!
+   [BOOTLOADER_PROFILE] Boot Media : FLASH
+   Hello World from r5fss0-0 !
+   Hello World from c66ss0 !
+   All tests have passed!!
    ```
 
 ---
@@ -116,8 +112,8 @@ cd 5-Scripts
 
 | 地址范围 | 大小 | 内容 | 说明 |
 |---------|------|------|------|
-| `0x000000 - 0x00001FFF` | 8KB | Flash Header & 预留 | ROM Header + 对齐 |
-| `0x00002000 - 0x00041FFF` | ~248KB | SBL Bootloader | `M_META_SBL_OFFSET` |
+| `0x000000 - 0x00001FFF` | 8KB | Reserved | 保留区域 |
+| `0x00002000 - 0x00041FFF` | 256KB | SBL Bootloader | 实际~130KB，预留256KB |
 | `0x00042000 - 0x001FFFFF` | ≤1.784MB | HelloWorld Meta | `M_META_IMAGE_OFFSET` |
 
 详细说明见：[Flash布局说明.md](./Flash布局说明.md)
@@ -126,42 +122,56 @@ cd 5-Scripts
 
 ## 🔧 烧录流程详解
 
-### Phase 1: 准备Meta Images
+### 方式2：分步烧录（了解细节）
 
-```bash
-# 1.1 从SBL的.appimage提取核心镜像
-buildImage_creator.exe -i 1-SBL_Bootloader/sbl.release.appimage
+#### 阶段1：准备工作
 
-# 1.2 生成SBL Meta Image
-metaImage_creator.exe -config 1-SBL_Bootloader/metaimage_cfg.release.json
+```powershell
+# 1. 检查固件文件
+Test-Path "1-SBL_Bootloader\sbl.release.appimage"
+Test-Path "2-HelloWorld_App\hello_world_system.release.appimage"
+
+# 2. 检查串口（应看到两个连续COM口）
+Get-WmiObject Win32_SerialPort | Select Name, DeviceID
+
+# 3. 设置硬件模式（SOP_MODE0 = [0000] = 功能模式）
 ```
 
-### Phase 2: 烧录SBL到Flash
+#### 阶段2：执行烧录
 
-```bash
-# 2.1 设置开发板为SOP_MODE1（QSPI刷写模式）
-# 2.2 连接串口
-# 2.3 执行烧录
-arprog_cmdline_6844.exe -p COM3 -f 1-SBL_Bootloader/sbl.release.appimage -o 0x2000
+**选项A：使用脚本（推荐）**
+```powershell
+cd 5-Scripts
+.\3_flash_sbl.bat    # 烧录SBL（2-3分钟）
+.\4_flash_app.bat    # 烧录App（2-3分钟）
 ```
 
-### Phase 3: 烧录应用
+**选项B：直接使用arprog命令**
+```powershell
+# 烧录SBL到0x2000
+cd 3-Tools
+.\arprog_cmdline_6844.exe -p COM3 -f1 "..\1-SBL_Bootloader\sbl.release.appimage" -of1 8192 -s SFLASH -c
 
-```bash
-# 3.1 生成App Meta Image
-buildImage_creator.exe -i 2-HelloWorld_App/hello_world_system.release.appimage
-metaImage_creator.exe -config 2-HelloWorld_App/metaimage_cfg.release.json
-
-# 3.2 烧录App
-arprog_cmdline_6844.exe -p COM3 -f 2-HelloWorld_App/hello_world_system.release.appimage -o 0x42000
+# 烧录App到0x42000
+.\arprog_cmdline_6844.exe -p COM3 -f1 "..\2-HelloWorld_App\hello_world_system.release.appimage" -of1 270336 -s SFLASH -c
 ```
 
-### Phase 4: 验证运行
+**参数说明**：
+- `-p COM3`：串口号（根据实际情况调整）
+- `-f1 file`：要烧录的文件
+- `-of1 8192`：起始地址（8192=0x2000，270336=0x42000）
+- `-s SFLASH`：目标存储为SPI Flash
+- `-c`：擦除后写入
 
-```bash
-# 4.1 切换到SOP_MODE2（应用/功能模式）
-# 4.2 复位开发板
-# 4.3 查看串口输出
+#### 阶段3：验证运行
+
+```powershell
+# 1. 切换到运行模式（SOP_MODE2 = [0011] = Debug UART模式）
+# 2. 打开串口工具（COM4, 115200-8-N-1）
+# 3. 复位板子，应看到：
+#    - SBL启动信息
+#    - 跳转到应用
+#    - HelloWorld输出
 ```
 
 完整步骤见：[操作指南.md](./操作指南.md)
@@ -171,23 +181,20 @@ arprog_cmdline_6844.exe -p COM3 -f 2-HelloWorld_App/hello_world_system.release.a
 ## ❓ 常见问题
 
 ### Q1: 为什么需要先烧录SBL？
+**A**: SBL是二级引导程序，负责从Flash加载应用程序。ROM Bootloader → SBL → Application是固定的启动顺序。
 
-**A**: SBL是二级引导程序，负责从Flash加载应用程序。没有SBL，应用无法启动。
-
-### Q2: Flash Header在哪里？
-
-**A**: Flash Header包含在SBL Meta Image的前256字节，由`metaImage_creator.exe`自动生成。
+### Q2: .appimage文件可以直接烧录吗？
+**A**: 可以！.appimage由SDK编译生成，arprog工具使用`-cf`参数会自动创建Flash Header，无需手动生成meta。
 
 ### Q3: 可以只烧录应用吗？
-
 **A**: 不可以。首次烧录必须包含SBL。后续更新可以只更新应用部分（地址0x42000）。
 
 ### Q4: 串口没有输出？
-
 **A**: 检查：
-1. SOP开关是否设置为SOP_MODE2 (01)（应用模式）
+1. SOP开关是否设置为SOP_MODE2 = [0011]（Debug UART模式）
 2. 串口参数：115200 8N1
-3. 是否按下复位按钮
+3. 是否使用了正确的串口（COM4为Debug UART）
+4. 是否按下复位按钮
 
 ---
 
