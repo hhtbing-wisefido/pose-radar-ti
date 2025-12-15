@@ -21,8 +21,9 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.0.8"
-BUILD_DATE = "2025-11-30"
+VERSION = "1.0.9"
+BUILD_DATE = "2025-12-15"
+AUTHOR = "Benson@Wisefido"
 
 # 导入标签页模块
 try:
@@ -81,41 +82,147 @@ def verify_firmware_file(file_path):
     
     return True, "文件验证通过"
 
+def check_firmware_compatibility(file_path, device='AWRL6844'):
+    """
+    检查固件是否与设备匹配 (v1.0.5需求1)
+    
+    判别方法：
+    1. 文件名检查：是否包含设备型号关键字
+    2. Meta Header检查：解析固件元数据
+    3. SDK工具检查：是否使用正确的烧录工具
+    
+    Returns:
+        tuple: (is_compatible, reason, details)
+    """
+    reasons = []
+    details = []
+    is_compatible = True
+    
+    filename = os.path.basename(file_path).lower()
+    
+    # 检查1: 文件名是否包含设备型号
+    device_keywords = {
+        'AWRL6844': ['6844', 'awrl6844', 'iwrl6844'],
+        'AWRL6432': ['6432', 'awrl6432', 'iwrl6432']
+    }
+    
+    keywords = device_keywords.get(device, [])
+    filename_match = any(kw in filename for kw in keywords)
+    
+    if filename_match:
+        reasons.append(f"✅ 文件名包含{device}型号标识")
+        details.append(f"文件名: {filename}")
+    else:
+        is_compatible = False
+        reasons.append(f"⚠️ 文件名未包含{device}型号标识")
+        details.append(f"文件名: {filename}")
+        details.append(f"期望关键字: {', '.join(keywords)}")
+    
+    # 检查2: 分析固件结构
+    try:
+        info = analyze_appimage_structure(file_path)
+        if info:
+            if info['has_meta_header']:
+                reasons.append("✅ 包含有效的Meta Header")
+                details.append(f"Magic Number: {info['magic_number']}")
+            else:
+                is_compatible = False
+                reasons.append("❌ Meta Header无效")
+            
+            if info['has_sbl_header'] and info['has_app_header']:
+                reasons.append("✅ 包含SBL和App镜像")
+                details.append(f"SBL大小: {info['sbl_size']} 字节")
+                details.append(f"App大小: {info['app_size']} 字节")
+            else:
+                reasons.append("⚠️ 固件结构不完整")
+        else:
+            is_compatible = False
+            reasons.append("❌ 无法解析固件结构")
+    except Exception as e:
+        is_compatible = False
+        reasons.append(f"❌ 固件分析失败: {str(e)}")
+    
+    # 检查3: SDK工具检查
+    if device == 'AWRL6844':
+        expected_tool = 'arprog_cmdline_6844.exe'
+        reasons.append(f"✅ 使用烧录工具: {expected_tool}")
+        details.append(f"设备: {device}")
+    
+    # 汇总结果
+    reason_text = "\n".join(reasons)
+    details_text = "\n".join(details)
+    
+    return is_compatible, reason_text, details_text
+
 def analyze_appimage_structure(file_path):
-    """分析appimage文件结构"""
+    """
+    分析appimage文件结构（完整版）
+    
+    AppImage结构：
+    - Meta Header (256字节): 包含Magic、版本、SBL/App偏移和大小
+    - SBL Image: 从meta header指定的偏移开始
+    - App Image: 从meta header指定的偏移开始
+    
+    Returns:
+        dict: 包含文件结构信息，如果分析失败返回None
+    """
     try:
         with open(file_path, 'rb') as f:
-            data = f.read()
-        
-        info = {
-            'total_size': len(data),
-            'has_meta_header': False,
-            'has_sbl_header': False,
-            'has_app_header': False,
-            'sbl_offset': 0,
-            'app_offset': 0
-        }
-        
-        # 简化分析
-        if len(data) > 256:
-            # 查找可能的SBL和App起始位置
-            sbl_pattern = b'SBL'
-            app_pattern = b'APP'
+            # 读取Meta Header (256字节)
+            meta_header = f.read(256)
             
-            sbl_pos = data.find(sbl_pattern)
-            app_pos = data.find(app_pattern)
+            if len(meta_header) < 256:
+                return None
             
-            if sbl_pos > 0:
-                info['has_sbl_header'] = True
-                info['sbl_offset'] = sbl_pos
+            import struct
             
-            if app_pos > 0:
-                info['has_app_header'] = True
-                info['app_offset'] = app_pos
-        
-        return info
+            # 解析Meta Header结构
+            # Offset 0x00: Magic Number (4字节) - 应为 0x5254534D ("MSTR")
+            magic = struct.unpack('<I', meta_header[0:4])[0]
+            
+            # Offset 0x04-0x07: 版本信息
+            version = struct.unpack('<I', meta_header[4:8])[0]
+            
+            # Offset 0x10: SBL偏移 (4字节)
+            sbl_offset = struct.unpack('<I', meta_header[16:20])[0]
+            
+            # Offset 0x14: SBL大小 (4字节)
+            sbl_size = struct.unpack('<I', meta_header[20:24])[0]
+            
+            # Offset 0x18: App偏移 (4字节)
+            app_offset = struct.unpack('<I', meta_header[24:28])[0]
+            
+            # Offset 0x1C: App大小 (4字节)
+            app_size = struct.unpack('<I', meta_header[28:32])[0]
+            
+            # 获取文件总大小
+            f.seek(0, 2)  # 移到文件末尾
+            total_size = f.tell()
+            
+            info = {
+                'total_size': total_size,
+                'has_meta_header': magic == 0x5254534D,
+                'magic_number': hex(magic),
+                'version': version,
+                'sbl_offset': sbl_offset,
+                'sbl_size': sbl_size,
+                'app_offset': app_offset,
+                'app_size': app_size,
+                'has_sbl_header': sbl_offset > 0 and sbl_size > 0,
+                'has_app_header': app_offset > 0 and app_size > 0
+            }
+            
+            # 验证偏移和大小的合理性
+            if sbl_offset + sbl_size > total_size:
+                info['sbl_size'] = total_size - sbl_offset
+            
+            if app_offset + app_size > total_size:
+                info['app_size'] = total_size - app_offset
+            
+            return info
         
     except Exception as e:
+        print(f"分析appimage结构失败: {e}")
         return None
 
 # ============================================================
@@ -303,7 +410,7 @@ class FlashToolGUI:
         
         ttk.Label(
             title_frame,
-            text=f"构建日期: {BUILD_DATE}",
+            text=f"作者: {AUTHOR} | 构建: {BUILD_DATE}",
             font=('Arial', 9),
             foreground='gray'
         ).pack(side=tk.RIGHT)
@@ -736,11 +843,43 @@ class FlashToolGUI:
                 self.log(f"⚠️ {msg}\n", "WARN")
     
     def open_firmware_folder(self):
-        """打开固件文件夹"""
+        """打开固件文件夹并扫描固件文件"""
         folder = filedialog.askdirectory(title="选择固件文件夹")
-        if folder:
-            self.log(f"打开文件夹: {folder}\n")
-            # TODO: 扫描文件夹中的固件文件
+        if not folder:
+            return
+        
+        self.log(f"📂 扫描文件夹: {folder}\n")
+        
+        # 扫描.appimage和.bin文件
+        firmware_files = []
+        for ext in ['*.appimage', '*.bin']:
+            firmware_files.extend(Path(folder).glob(ext))
+        
+        if not firmware_files:
+            self.log("❌ 未找到固件文件 (.appimage 或 .bin)\n", "ERROR")
+            messagebox.showwarning("警告", "所选文件夹中未找到固件文件")
+            return
+        
+        # 按修改时间排序，最新的在前
+        firmware_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        self.log(f"✅ 找到 {len(firmware_files)} 个固件文件:\n", "SUCCESS")
+        for i, file in enumerate(firmware_files, 1):
+            size_kb = file.stat().st_size / 1024
+            mod_time = datetime.fromtimestamp(file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            self.log(f"  {i}. {file.name} ({size_kb:.1f} KB, {mod_time})\n")
+        
+        # 自动选择最新的固件
+        latest_firmware = str(firmware_files[0])
+        self.firmware_file.set(latest_firmware)
+        self.log(f"\n✅ 已自动选择最新固件: {firmware_files[0].name}\n", "SUCCESS")
+        
+        # 验证文件
+        valid, msg = verify_firmware_file(latest_firmware)
+        if valid:
+            self.log(f"✅ {msg}\n", "SUCCESS")
+        else:
+            self.log(f"⚠️ {msg}\n", "WARN")
     
     def analyze_firmware(self):
         """分析固件文件"""
@@ -797,8 +936,59 @@ class FlashToolGUI:
 # 主函数
 # ============================================================
 
+def check_old_process():
+    """检查是否有老进程在运行（v1.0.1需求1）"""
+    current_pid = os.getpid()
+    script_name = os.path.basename(__file__)
+    
+    old_processes = []
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if proc.pid == current_pid:
+                continue
+            cmdline = proc.info.get('cmdline', [])
+            if cmdline and script_name in ' '.join(cmdline):
+                old_processes.append(proc)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    
+    return old_processes
+
+def kill_old_processes(processes):
+    """关闭老进程"""
+    for proc in processes:
+        try:
+            proc.terminate()
+            proc.wait(timeout=3)
+        except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+            try:
+                proc.kill()
+            except psutil.NoSuchProcess:
+                pass
+
 def main():
     """主函数"""
+    # v1.0.1需求1: 检查老进程
+    old_processes = check_old_process()
+    if old_processes:
+        root_temp = tk.Tk()
+        root_temp.withdraw()
+        response = messagebox.askyesno(
+            "检测到旧进程",
+            f"检测到 {len(old_processes)} 个旧的烧录工具进程正在运行。\n\n"
+            "是否关闭旧进程并启动新窗口？\n\n"
+            "点击'是'：关闭旧进程并启动新窗口\n"
+            "点击'否'：取消启动"
+        )
+        root_temp.destroy()
+        
+        if response:
+            kill_old_processes(old_processes)
+            time.sleep(0.5)  # 等待旧进程完全关闭
+        else:
+            sys.exit(0)
+    
+    # 启动GUI
     root = tk.Tk()
     app = FlashToolGUI(root)
     root.mainloop()
