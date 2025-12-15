@@ -4,6 +4,22 @@
 
 ---
 
+## 📍 SDK来源路径
+
+**官方SDK工具位置**:
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool\
+├── arprog_cmdline_6844.exe          # 烧录工具 ⭐
+├── buildImage_creator.exe           # 镜像分析工具
+├── metaImage_creator.exe            # Meta镜像生成工具
+├── flashHeader_creator.exe          # Flash头生成工具
+└── Readme_arprog_cmdline_6844.html  # 工具说明文档
+```
+
+**设备型号**: AWRL6844 (xWRL684x-evm)
+
+---
+
 ## 📂 工具清单
 
 | 工具 | 大小 | 用途 | 是否必需 |

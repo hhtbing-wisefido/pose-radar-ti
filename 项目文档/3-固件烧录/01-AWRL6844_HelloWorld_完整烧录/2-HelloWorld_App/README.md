@@ -4,6 +4,25 @@
 
 ---
 
+## 📍 SDK来源路径
+
+**官方SDK位置**:
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01\examples\hello_world\xwrL684x-evm\
+├── r5fss0-0_freertos\               # R5F主核（FreeRTOS）
+│   ├── example.syscfg               # SysConfig配置文件
+│   └── Release\*.appimage
+├── c66ss0_freertos\                 # C66x DSP核
+│   ├── example.syscfg
+│   └── Release\*.appimage
+└── system\                          # 系统级多核项目
+    └── Release\hello_world_system.release.appimage  # 最终固件 ⭐
+```
+
+**设备型号**: AWRL6844 (xWRL684x-evm)
+
+---
+
 ## 📄 文件说明
 
 ### hello_world_system.release.appimage
@@ -11,6 +30,7 @@
 - **文件类型**: 可烧录固件文件
 - **大小**: 约218KB
 - **来源**: TI SDK编译生成
+- **源码路径**: `C:\ti\MMWAVE_L_SDK_06_01_00_01\examples\hello_world`
 - **烧录地址**: 0x42000 (Flash偏移270336字节)
 - **可用空间**: 最大1.78MB (SBL_MAX_METAIMAGE_SIZE)
 
@@ -91,26 +111,26 @@ hello_world_system.release.appimage:
 
 如果是首次烧录或SBL不存在，必须先烧录SBL到0x2000地址。
 
-### 方法1: 使用完整烧录脚本（推荐）
+### 方法1: 使用Python工具（推荐）⭐
 
 ```powershell
 cd ..\5-Scripts
-.\full_flash.bat COM3
+python flash_tool.py
+# 选择"完整烧录"或"仅烧录App"
 ```
 
-这会同时烧录SBL和应用。
-
-### 方法2: 单独烧录应用（SBL已存在）
-
-```powershell
-cd ..\5-Scripts
-.\4_flash_app.bat COM3
-```
-
-### 方法3: 直接使用arprog命令
+### 方法2: 直接使用arprog命令
 
 ```powershell
 cd ..\3-Tools
+
+# 一次性烧录SBL+App（推荐）
+.\arprog_cmdline_6844.exe -p COM3 ^
+  -f1 "..\1-SBL_Bootloader\sbl.release.appimage" ^
+  -f2 "..\2-HelloWorld_App\hello_world_system.release.appimage" ^
+  -s SFLASH -c -cf
+
+# 或仅烧录App（SBL已存在）
 .\arprog_cmdline_6844.exe -p COM3 ^
   -f1 "..\2-HelloWorld_App\hello_world_system.release.appimage" ^
   -of1 270336 ^

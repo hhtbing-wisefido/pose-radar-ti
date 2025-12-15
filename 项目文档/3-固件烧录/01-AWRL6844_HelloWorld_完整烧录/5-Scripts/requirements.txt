@@ -1,0 +1,3 @@
+# AWRL6844固件烧录工具依赖
+pyserial>=3.5
+psutil>=5.9.0

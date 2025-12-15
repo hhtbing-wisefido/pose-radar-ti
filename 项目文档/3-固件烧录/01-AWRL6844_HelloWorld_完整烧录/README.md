@@ -2,6 +2,29 @@
 
 > **项目目标**: 从空白板子到运行HelloWorld，实现完整的QSPI Flash烧录流程
 
+## 📍 SDK来源总结
+
+**本项目所有资料均来自TI官方SDK**:
+
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01\    # SDK根目录
+├── examples\drivers\boot\sbl\xwrL684x-evm\           # SBL固件源码
+├── examples\hello_world\xwrL684x-evm\              # HelloWorld源码
+└── tools\FlashingTool\                              # 烧录工具
+```
+
+**设备型号**: AWRL6844 (xWRL684x-evm)
+
+**SDK版本**: MMWAVE_L_SDK_06_01_00_01
+
+**重要说明**:
+- ✅ 所有固件均针对 xWRL684x-evm 平台
+- ✅ 所有工具均为TI官方版本
+- ✅ .appimage文件可直接烧录（SDK编译输出）
+- ✅ 详细源码路径请查看各子目录README.md
+
+---
+
 ## 📋 项目说明
 
 本项目提供AWRL6844从**完全空白板子**到**成功运行HelloWorld示例**的完整烧录方案，包含：
@@ -37,11 +60,11 @@
 ├── 📂 4-Generated/                       # 临时文件目录（可选，调试用）
 │   └── README.md                         # 说明
 │
-└── 📂 5-Scripts/                         # 自动化脚本
-    ├── 3_flash_sbl.bat                   # 烧录SBL（单独）
-    ├── 4_flash_app.bat                   # 烧录应用（单独）
-    ├── full_flash.bat                    # 完整烧录流程（推荐）
-    └── README.md                         # 脚本说明
+├── 📂 5-Scripts/                         # Python烧录工具
+    ├── flash_tool.py                     # 交互式烧录工具⭐
+    ├── requirements.txt                  # Python依赖
+    ├── PYTHON_TOOL_README.md             # 详细使用说明
+    └── README.md                         # 工具说明
 
 注：已删除的文件（不再需要）：
   ❌ 1_generate_sbl_meta.bat              (不需要生成meta)
@@ -61,17 +84,24 @@
 - [x] Windows PC（已安装XDS110驱动）
 - [x] 串口调试工具（推荐：TeraTerm、PuTTY）
 
-### 一键完整烧录（推荐）
+### 一键完整烧录（推荐）⭐
 
 ```bash
 cd 5-Scripts
-full_flash.bat COM3
+
+# 首次运行安装依赖
+pip install -r requirements.txt
+
+# 运行python工具
+python flash_tool.py
 ```
 
-**执行内容**:
-1. ✅ 检查固件文件 (sbl.release.appimage, hello_world_system.release.appimage)
-2. ✅ 一次性烧录SBL和App到Flash (使用官方 -cf 参数)
-3. ✅ 显示后续操作提示
+**工具特性**:
+1. ✅ 自动扫描COM口
+2. ✅ 交互式菜单选择
+3. ✅ 实时进度显示
+4. ✅ 超时自动检测
+5. ✅ 错误自动处理
 
 **耗时**: 约2-3分钟
 
@@ -79,16 +109,27 @@ full_flash.bat COM3
 
 ---
 
-### 分步手动烧录（可选）
+### 手动使用arprog命令（高级）
 
 ```bash
-cd 5-Scripts
+cd 3-Tools
 
-# 烧录SBL到0x2000
-3_flash_sbl.bat COM3
+# 完整烧录（一次性烧录SBL+App）
+.\arprog_cmdline_6844.exe -p COM3 ^
+  -f1 "..\1-SBL_Bootloader\sbl.release.appimage" ^
+  -f2 "..\2-HelloWorld_App\hello_world_system.release.appimage" ^
+  -s SFLASH -c -cf
 
-# 烧录App到0x42000
-4_flash_app.bat COM3
+# 或分步烧录：
+# 步骤1: 烧录SBL到0x2000
+.\arprog_cmdline_6844.exe -p COM3 ^
+  -f1 "..\1-SBL_Bootloader\sbl.release.appimage" ^
+  -of1 8192 -s SFLASH -c
+
+# 步骤2: 烧录App到0x42000
+.\arprog_cmdline_6844.exe -p COM3 ^
+  -f1 "..\2-HelloWorld_App\hello_world_system.release.appimage" ^
+  -of1 270336 -s SFLASH -c
 ```
 
 ---

@@ -4,11 +4,24 @@
 
 ---
 
+## 📍 相关SDK工具路径
+
+**调试工具位置**（如使用）:
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool\
+├── buildImage_creator.exe           # 镜像分析工具（用于解析.appimage）
+└── arprog_cmdline_6844.exe          # Flash读回验证（-r 参数）
+```
+
+**设备型号**: AWRL6844 (xWRL684x-evm)
+
+---
+
 ## 📋 目录用途
 
 此目录**不是必需的**，仅在以下场景使用：
 
-1. **Flash读回验证** - 从Flash读取内容进行对比
+1. **Flash读回验证** - 从FLASH读取内容进行对比
 2. **调试工具输出** - buildImage_creator等调试工具的输出
 3. **测试文件** - 临时测试用的二进制文件
 

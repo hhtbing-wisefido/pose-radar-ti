@@ -4,6 +4,20 @@
 
 ---
 
+## 📍 SDK来源路径
+
+**官方SDK位置**:
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01\examples\drivers\boot\sbl\xwrL684x-evm\r5fss0-0_nortos\
+├── example.syscfg                    # SysConfig配置文件
+├── Release\sbl.release.appimage     # 编译输出固件 ⭐
+└── Release\sbl.release.out          # ELF调试文件
+```
+
+**设备型号**: AWRL6844 (xWRL684x-evm)
+
+---
+
 ## 📄 文件说明
 
 ### sbl.release.appimage
@@ -11,6 +25,7 @@
 - **文件类型**: 可烧录固件文件
 - **大小**: 约130KB
 - **来源**: TI SDK编译生成
+- **源码路径**: `C:\ti\MMWAVE_L_SDK_06_01_00_01\examples\drivers\boot\sbl`
 - **烧录地址**: 0x2000 (Flash偏移8192字节)
 - **预留空间**: 256KB (0x40000)
 
@@ -69,21 +84,15 @@ SBL加载应用 (从0x42000)
 
 ## 🚀 烧录方法
 
-### 方法1: 使用完整烧录脚本（推荐）
+### 方法1: 使用Python工具（推荐）⭐
 
 ```powershell
 cd ..\5-Scripts
-.\full_flash.bat COM3
+python flash_tool.py
+# 选择完整烧录或仅烧录SBL
 ```
 
-### 方法2: 单独烧录SBL
-
-```powershell
-cd ..\5-Scripts
-.\3_flash_sbl.bat COM3
-```
-
-### 方法3: 直接使用arprog命令
+### 方法2: 直接使用arprog命令
 
 ```powershell
 cd ..\3-Tools
