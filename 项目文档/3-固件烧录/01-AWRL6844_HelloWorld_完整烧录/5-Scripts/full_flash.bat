@@ -119,15 +119,17 @@ echo [4/6] 烧录SBL Bootloader...
 echo   └─ 地址: 0x2000
 echo.
 
-echo [硬件检查] 请确认：
+echo [硬件检查] 请确认以下设置已就绪：
 echo   - SOP开关设置为SOP_MODE1 (S8=OFF, S7=OFF)
 echo   - USB连接到%COM_PORT%
 echo   - 板子已上电
 echo.
-pause
+echo 按任意键继续烧录，或等待10秒自动开始...
+timeout /t 10 /nobreak >nul 2>&1
 
 cd /d "%PROJECT_ROOT%\3-Tools"
-arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\1-SBL_Bootloader\sbl.release.appimage" -o 0x2000 >nul 2>&1
+echo   开始烧录SBL...
+arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\1-SBL_Bootloader\sbl.release.appimage" -o 0x2000
 
 if errorlevel 1 (
     echo.
@@ -135,9 +137,10 @@ if errorlevel 1 (
     echo.
     echo [ERROR] SBL烧录失败
     echo [INFO] 请检查：
-    echo   - COM端口是否正确
+    echo   - COM端口是否正确 (当前: %COM_PORT%)
     echo   - SOP跳线是否为SOP_MODE1 (S8=OFF, S7=OFF)
     echo   - 串口是否被占用
+    echo   - 板子是否上电
     cd /d "%SCRIPT_DIR%"
     pause
     exit /b 1
@@ -154,7 +157,8 @@ echo   └─ 地址: 0x42000
 echo.
 
 cd /d "%PROJECT_ROOT%\3-Tools"
-arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage" -o 0x42000 >nul 2>&1
+echo   开始烧录App...
+arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage" -o 0x42000
 
 if errorlevel 1 (
     echo.
@@ -224,4 +228,4 @@ echo ----------------------------------------
 echo.
 
 cd /d "%SCRIPT_DIR%"
-pause
+timeout /t 5 >nul 2>&1
