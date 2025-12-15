@@ -55,7 +55,12 @@ DEVICE_CONFIGS = {
         'app_baudrate': 115200,
         'flash_timeout': 180,
         'sbl_timeout': 60,
-        'app_timeout': 120
+        'app_timeout': 120,
+        # Flash地址配置
+        'sbl_offset': 0x2000,      # SBL烧录地址（8KB偏移）
+        'app_offset': 0x42000,     # App烧录地址（264KB偏移）
+        # SDK路径配置
+        'sdk_path': 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01'
     }
 }
 
