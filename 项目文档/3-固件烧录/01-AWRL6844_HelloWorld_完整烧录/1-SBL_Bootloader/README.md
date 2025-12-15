@@ -63,7 +63,7 @@
        ▼
 ┌─────────────────────────┐
 │  加载SBL到SRAM          │
-│  - 从0x100读取          │
+│  - 从0x2000读取         │
 │  - 加载到0x00000000     │
 │  - 验证校验和            │
 └──────┬──────────────────┘
@@ -107,17 +107,17 @@
 ```
 
 **生成文件**:
-- `sbl_meta.bin` (包含Flash Header + SBL)
+- `sbl.release.appimage` (包含Flash Header + SBL)
 
 **文件结构**:
 ```
-sbl_meta.bin:
-  ├── Flash Header (256B @ 0x0)
+sbl.release.appimage:
+  ├── Flash Header (~8KB @ 0x0)
   │   ├── Magic: 0x544F4F42
   │   ├── Image Size
   │   ├── Load Address
   │   └── Entry Point
-  └── SBL Code (~130KB @ 0x100)
+  └── SBL Code (~130KB @ 0x2000)
 ```
 
 ---
@@ -128,19 +128,19 @@ sbl_meta.bin:
 
 ```bash
 cd ..\3-Tools
-.\arprog_cmdline_6844.exe -p COM3 -f ..\4-Generated\sbl_meta.bin -o 0x100
+.\arprog_cmdline_6844.exe -p COM3 -f ..\1-SBL_Bootloader\sbl.release.appimage -o 0x2000
 ```
 
 ### 参数说明
 
 - `-p COM3`: 串口号
-- `-f sbl_meta.bin`: Meta Image文件
-- `-o 0x100`: Flash偏移地址（256字节）
+- `-f sbl.release.appimage`: SBL Meta Image文件
+- `-o 0x2000`: Flash偏移地址（与SDK宏`M_META_SBL_OFFSET`一致）
 
-**为什么是0x100？**
-- Flash Header占用0x0-0xFF（256字节）
-- SBL代码从0x100开始
-- ROM Bootloader会读取0x0的Header，然后从0x100加载SBL
+**为什么是0x2000？**
+- Flash Header占用0x0-0x1FFF（8KB）
+- SBL代码从0x2000开始
+- ROM Bootloader会读取0x0的Header，然后从0x2000加载SBL
 
 ---
 
@@ -161,7 +161,7 @@ cd ..\3-Tools
 [SBL] SOC Initialize... Done
 
 [SBL] Loading Application...
-[SBL]   Flash Address: 0x00040000
+[SBL]   Flash Address: 0x00042000
 [SBL]   Reading Meta Header...
 [SBL]   Meta Magic: 0x4D535452 (OK)
 [SBL]   Image Count: 2

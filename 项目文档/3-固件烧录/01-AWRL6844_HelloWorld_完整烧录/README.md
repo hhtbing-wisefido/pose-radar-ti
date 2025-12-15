@@ -75,8 +75,8 @@ full_flash.bat COM3
 1. ✅ 清理旧文件
 2. ✅ 生成SBL Meta Image
 3. ✅ 生成App Meta Image
-4. ✅ 烧录SBL到0x100
-5. ✅ 烧录App到0x40000
+4. ✅ 烧录SBL到0x2000
+5. ✅ 烧录App到0x42000
 6. ✅ 自动验证
 
 **耗时**: 约2分钟
@@ -116,10 +116,9 @@ cd 5-Scripts
 
 | 地址范围 | 大小 | 内容 | 说明 |
 |---------|------|------|------|
-| `0x000000 - 0x0000FF` | 256B | Flash Header | SBL引导信息 |
-| `0x000100 - 0x03FFFF` | ~256KB | SBL Bootloader | 二级引导程序 |
-| `0x040000 - 0x0BFFFF` | ~512KB | HelloWorld Meta | 应用程序镜像 |
-| `0x0C0000 - 0x1FFFFF` | 剩余 | 保留 | 未来扩展 |
+| `0x000000 - 0x00001FFF` | 8KB | Flash Header & 预留 | ROM Header + 对齐 |
+| `0x00002000 - 0x00041FFF` | ~248KB | SBL Bootloader | `M_META_SBL_OFFSET` |
+| `0x00042000 - 0x001FFFFF` | ≤1.784MB | HelloWorld Meta | `M_META_IMAGE_OFFSET` |
 
 详细说明见：[Flash布局说明.md](./Flash布局说明.md)
 
@@ -143,7 +142,7 @@ metaImage_creator.exe -config 1-SBL_Bootloader/metaimage_cfg.release.json
 # 2.1 设置开发板为SOP_MODE1（QSPI刷写模式）
 # 2.2 连接串口
 # 2.3 执行烧录
-arprog_cmdline_6844.exe -p COM3 -f 4-Generated/sbl_meta.bin -o 0x100
+arprog_cmdline_6844.exe -p COM3 -f 1-SBL_Bootloader/sbl.release.appimage -o 0x2000
 ```
 
 ### Phase 3: 烧录应用
@@ -154,7 +153,7 @@ buildImage_creator.exe -i 2-HelloWorld_App/hello_world_system.release.appimage
 metaImage_creator.exe -config 2-HelloWorld_App/metaimage_cfg.release.json
 
 # 3.2 烧录App
-arprog_cmdline_6844.exe -p COM3 -f 4-Generated/hello_world_meta.bin -o 0x40000
+arprog_cmdline_6844.exe -p COM3 -f 2-HelloWorld_App/hello_world_system.release.appimage -o 0x42000
 ```
 
 ### Phase 4: 验证运行
@@ -181,7 +180,7 @@ arprog_cmdline_6844.exe -p COM3 -f 4-Generated/hello_world_meta.bin -o 0x40000
 
 ### Q3: 可以只烧录应用吗？
 
-**A**: 不可以。首次烧录必须包含SBL。后续更新可以只更新应用部分（地址0x40000）。
+**A**: 不可以。首次烧录必须包含SBL。后续更新可以只更新应用部分（地址0x42000）。
 
 ### Q4: 串口没有输出？
 

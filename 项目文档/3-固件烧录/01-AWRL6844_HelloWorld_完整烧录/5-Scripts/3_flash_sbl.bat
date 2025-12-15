@@ -30,9 +30,8 @@ set PROJECT_ROOT=%CD%
 
 REM 设置路径
 set TOOLS_DIR=%PROJECT_ROOT%\3-Tools
-set OUTPUT_DIR=%PROJECT_ROOT%\4-Generated
-set META_IMAGE=%OUTPUT_DIR%\sbl_meta.bin
-set FLASH_ADDR=0x100
+set META_IMAGE=%PROJECT_ROOT%\1-SBL_Bootloader\sbl.release.appimage
+set FLASH_ADDR=0x2000
 
 echo [INFO] COM端口: %COM_PORT%
 echo [INFO] Meta Image: %META_IMAGE%
@@ -49,7 +48,7 @@ if not exist "%TOOLS_DIR%\arprog_cmdline_6844.exe" (
 
 REM 检查Meta Image是否存在
 if not exist "%META_IMAGE%" (
-    echo [ERROR] 找不到sbl_meta.bin！
+    echo [ERROR] 找不到sbl.release.appimage！
     echo [INFO] 请先运行: 1_generate_sbl_meta.bat
     echo.
     pause
@@ -91,7 +90,7 @@ if errorlevel 1 (
     echo.
     echo [排查步骤]
     echo   1. 检查COM端口是否正确
-    echo   2. 检查SOP跳线是否为SOP4
+    echo   2. 检查SOP跳线是否为SOP_MODE1 (S8=OFF, S7=OFF)
     echo   3. 按下复位按钮后重试
     echo   4. 检查串口是否被其他程序占用
     echo   5. 重新上电后重试
@@ -107,8 +106,8 @@ echo [SUCCESS] SBL烧录完成！
 echo ========================================
 echo.
 echo [烧录信息]
-echo   文件: sbl_meta.bin
-echo   地址: 0x100
+echo   文件: sbl.release.appimage
+echo   地址: 0x2000
 echo   端口: %COM_PORT%
 echo.
 echo [下一步]

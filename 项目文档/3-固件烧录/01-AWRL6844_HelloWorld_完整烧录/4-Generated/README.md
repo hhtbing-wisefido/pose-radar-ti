@@ -79,8 +79,8 @@ Meta Image (.bin):
 **文件示例**:
 ```
 readback/
-  ├── sbl_readback.bin         (从Flash 0x100读回)
-  └── app_readback.bin         (从Flash 0x40000读回)
+  ├── sbl_readback.bin         (从Flash 0x2000读回)
+  └── app_readback.bin         (从Flash 0x42000读回)
 ```
 
 ---
@@ -178,17 +178,17 @@ cd 2-HelloWorld_App
 
 ```bash
 # 烧录时带验证
-arprog_cmdline_6844.exe -p COM3 -f sbl_meta.bin -o 0x100 -v
+arprog_cmdline_6844.exe -p COM3 -f sbl_meta.bin -o 0x2000 -v
 ```
 
 ### 方法2: 手动读回对比
 
 ```bash
 # 读回SBL
-arprog_cmdline_6844.exe -p COM3 -r 0x100 -s 130000 -o 4-Generated\sbl_readback.bin
+arprog_cmdline_6844.exe -p COM3 -r 0x2000 -s 130000 -o 4-Generated\sbl_readback.bin
 
 # 读回App
-arprog_cmdline_6844.exe -p COM3 -r 0x40000 -s 220000 -o 4-Generated\app_readback.bin
+arprog_cmdline_6844.exe -p COM3 -r 0x42000 -s 220000 -o 4-Generated\app_readback.bin
 
 # 对比文件
 fc /b 4-Generated\sbl_meta.bin 4-Generated\sbl_readback.bin

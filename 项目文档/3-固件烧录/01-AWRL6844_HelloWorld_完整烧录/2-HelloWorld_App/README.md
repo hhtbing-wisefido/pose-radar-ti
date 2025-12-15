@@ -43,7 +43,7 @@
 **与SBL配置的区别**:
 - 包含2个核心镜像（R5F + DSP）
 - 不包含Flash Header（由SBL提供）
-- 加载地址不同（App区域：0x40000）
+- 加载地址不同（App区域：0x42000）
 
 ---
 
@@ -175,17 +175,17 @@ hello_world_meta.bin:
 
 ```bash
 cd ..\3-Tools
-.\arprog_cmdline_6844.exe -p COM3 -f ..\4-Generated\hello_world_meta.bin -o 0x40000
+.\arprog_cmdline_6844.exe -p COM3 -f ..\2-HelloWorld_App\hello_world_system.release.appimage -o 0x42000
 ```
 
 ### 参数说明
 
-- `-o 0x40000`: 应用区起始地址（256KB偏移）
+- `-o 0x42000`: 应用区起始地址（SBL区域结束后对齐）
 
-**为什么是0x40000？**
-- SBL占用0x0-0x3FFFF（256KB）
-- 应用从0x40000开始
-- SBL会从0x40000读取并加载应用
+**为什么是0x42000？**
+- Flash Header占用0x0-0x1FFF，SBL占用0x2000-0x41FFF（共256KB）
+- 应用从0x42000开始
+- SBL会从0x42000读取并加载应用
 
 ---
 
@@ -200,7 +200,7 @@ cd ..\3-Tools
 **********************************************
 
 [SBL] Loading Application from Flash...
-[SBL]   Address: 0x00040000
+[SBL]   Address: 0x00042000
 [SBL]   Size: 218,624 bytes
 [SBL] Loading R5F image... Done
 [SBL] Loading DSP image... Done

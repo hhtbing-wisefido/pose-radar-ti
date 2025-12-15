@@ -98,25 +98,25 @@ if errorlevel 1 (
 )
 
 REM 检查输出文件
-if not exist "%PROJECT_ROOT%\4-Generated\hello_world_meta.bin" (
+if not exist "%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage" (
     echo   └─ 失败！
     echo.
-    echo [ERROR] 未找到hello_world_meta.bin
+    echo [ERROR] 未找到hello_world_system.release.appimage
     pause
     exit /b 1
 )
 
 REM 获取文件大小
-for %%F in ("%PROJECT_ROOT%\4-Generated\hello_world_meta.bin") do set APP_SIZE=%%~zF
+for %%F in ("%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage") do set APP_SIZE=%%~zF
 
-echo   └─ 完成 - hello_world_meta.bin (%APP_SIZE% bytes)
+echo   └─ 完成 - hello_world_system.release.appimage (%APP_SIZE% bytes)
 echo.
 
 REM ============================================================
 REM Phase 4: 烧录SBL
 REM ============================================================
 echo [4/6] 烧录SBL Bootloader...
-echo   └─ 地址: 0x100
+echo   └─ 地址: 0x2000
 echo.
 
 echo [硬件检查] 请确认：
@@ -127,7 +127,7 @@ echo.
 pause
 
 cd /d "%PROJECT_ROOT%\3-Tools"
-arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\4-Generated\sbl_meta.bin" -o 0x100 >nul 2>&1
+arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\1-SBL_Bootloader\sbl.release.appimage" -o 0x2000 >nul 2>&1
 
 if errorlevel 1 (
     echo.
@@ -136,7 +136,7 @@ if errorlevel 1 (
     echo [ERROR] SBL烧录失败
     echo [INFO] 请检查：
     echo   - COM端口是否正确
-    echo   - SOP跳线是否为SOP4
+    echo   - SOP跳线是否为SOP_MODE1 (S8=OFF, S7=OFF)
     echo   - 串口是否被占用
     cd /d "%SCRIPT_DIR%"
     pause
@@ -150,11 +150,11 @@ REM ============================================================
 REM Phase 5: 烧录App
 REM ============================================================
 echo [5/6] 烧录HelloWorld应用...
-echo   └─ 地址: 0x40000
+echo   └─ 地址: 0x42000
 echo.
 
 cd /d "%PROJECT_ROOT%\3-Tools"
-arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\4-Generated\hello_world_meta.bin" -o 0x40000 >nul 2>&1
+arprog_cmdline_6844.exe -p %COM_PORT% -f "%PROJECT_ROOT%\2-HelloWorld_App\hello_world_system.release.appimage" -o 0x42000 >nul 2>&1
 
 if errorlevel 1 (
     echo.
@@ -173,8 +173,8 @@ REM ============================================================
 REM Phase 6: 验证（可选，暂时跳过以节省时间）
 REM ============================================================
 echo [6/6] 验证完成
-echo   └─ SBL: 已烧录到0x100
-echo   └─ App: 已烧录到0x40000
+echo   └─ SBL: 已烧录到0x2000
+echo   └─ App: 已烧录到0x42000
 echo.
 
 REM 计算耗时

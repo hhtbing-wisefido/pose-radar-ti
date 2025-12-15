@@ -19,12 +19,11 @@ set PROJECT_ROOT=%CD%
 REM 设置路径
 set APP_DIR=%PROJECT_ROOT%\2-HelloWorld_App
 set TOOLS_DIR=%PROJECT_ROOT%\3-Tools
-set OUTPUT_DIR=%PROJECT_ROOT%\4-Generated
 
 echo [INFO] 当前目录: %CD%
 echo [INFO] App目录: %APP_DIR%
 echo [INFO] 工具目录: %TOOLS_DIR%
-echo [INFO] 输出目录: %OUTPUT_DIR%
+echo [INFO] 输出文件: %APP_DIR%\hello_world_system.release.appimage
 echo.
 
 REM 检查工具是否存在
@@ -56,9 +55,6 @@ if not exist "%APP_DIR%\metaimage_cfg.release.json" (
     pause
     exit /b 1
 )
-
-REM 创建输出目录
-if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 REM 进入App目录
 echo [INFO] 进入App目录...
@@ -107,9 +103,9 @@ if errorlevel 1 (
 )
 
 REM 检查输出文件
-if not exist "%OUTPUT_DIR%\hello_world_meta.bin" (
+if not exist "%APP_DIR%\hello_world_system.release.appimage" (
     echo.
-    echo [ERROR] 未找到生成的hello_world_meta.bin
+    echo [ERROR] 未找到生成的hello_world_system.release.appimage
     cd /d "%SCRIPT_DIR%"
     pause
     exit /b 1

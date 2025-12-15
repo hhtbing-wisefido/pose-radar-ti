@@ -31,8 +31,8 @@ full_flash.bat COM3
 1. ✅ 清理旧文件
 2. ✅ 生成SBL Meta Image
 3. ✅ 生成App Meta Image
-4. ✅ 烧录SBL到0x100
-5. ✅ 烧录App到0x40000
+4. ✅ 烧录SBL到0x2000
+5. ✅ 烧录App到0x42000
 6. ✅ 验证烧录结果
 
 ---
@@ -68,7 +68,7 @@ full_flash.bat COM3
 - 进入SBL目录
 - 运行buildImage_creator
 - 运行metaImage_creator
-- 输出sbl_meta.bin到4-Generated/
+- 生成`sbl.release.appimage`
 
 **执行示例**:
 ```bash
@@ -86,14 +86,14 @@ buildImage_creator v2.0
 [INFO] 生成Meta Image...
 metaImage_creator v2.0
   Config: metaimage_cfg.release.json
-  Output: ../4-Generated/sbl_meta.bin
+  Output: sbl.release.appimage
   Build Images: 1
     [0] r5fss0-0: 125KB
   Flash Header: Generated
   Status: SUCCESS (130KB)
 
 [SUCCESS] SBL Meta Image生成完成！
-[OUTPUT] 文件: ..\4-Generated\sbl_meta.bin (130KB)
+[OUTPUT] 文件: ..\1-SBL_Bootloader\sbl.release.appimage (约130KB)
 ```
 
 ---
@@ -106,7 +106,7 @@ metaImage_creator v2.0
 - 进入App目录
 - 运行buildImage_creator
 - 运行metaImage_creator
-- 输出hello_world_meta.bin到4-Generated/
+- 生成`hello_world_system.release.appimage`
 
 **执行示例**:
 ```bash
@@ -126,16 +126,16 @@ buildImage_creator v2.0
 [INFO] 生成Meta Image...
 metaImage_creator v2.0
   Config: metaimage_cfg.release.json
-  Output: ../4-Generated/hello_world_meta.bin
+  Output: hello_world_system.release.appimage
   Build Images: 3
     [0] r5fss0-0: 80KB (R5F主核)
     [1] c66ss0: 100KB (DSP核)
     [2] r5fss0-1: 30KB (RF核)
   Flash Header: Not included
-  Status: SUCCESS (220KB)
+  Status: SUCCESS (约200KB)
 
 [SUCCESS] App Meta Image生成完成！
-[OUTPUT] 文件: ..\4-Generated\hello_world_meta.bin (220KB)
+[OUTPUT] 文件: ..\2-HelloWorld_App\hello_world_system.release.appimage (约200KB)
 ```
 
 ---
@@ -147,8 +147,8 @@ metaImage_creator v2.0
 **用法**: `3_flash_sbl.bat <COM端口>`
 
 **功能**:
-- 检查sbl_meta.bin是否存在
-- 烧录到Flash 0x100
+- 检查`sbl.release.appimage`是否存在
+- 烧录到Flash 0x2000
 - 自动验证
 
 **执行示例**:
@@ -157,8 +157,8 @@ C:\> 3_flash_sbl.bat COM3
 
 [INFO] 开始烧录SBL Bootloader...
 [INFO] COM端口: COM3
-[INFO] Meta Image: ..\4-Generated\sbl_meta.bin (130KB)
-[INFO] Flash地址: 0x00000100
+[INFO] Meta Image: ..\1-SBL_Bootloader\sbl.release.appimage (约130KB)
+[INFO] Flash地址: 0x00002000
 
 [WARN] 请确认硬件设置：
   1. SOP开关设置为SOP_MODE1 (00) - QSPI刷写模式
@@ -170,16 +170,16 @@ C:\> 3_flash_sbl.bat COM3
 [INFO] 开始烧录...
 arprog_cmdline_6844 v3.5
   Port: COM3
-  File: ../4-Generated/sbl_meta.bin
-  Address: 0x100
-  Size: 130KB
+  File: ../1-SBL_Bootloader/sbl.release.appimage
+  Address: 0x2000
+  Size: ~130KB
   
   Progress: [##########] 100%
   Time: 45s
   Status: SUCCESS
 
 [INFO] 验证烧录...
-  Readback: 130KB
+  Readback: ~130KB
   Compare: MATCH
   Status: VERIFIED
 
@@ -189,7 +189,7 @@ arprog_cmdline_6844 v3.5
 
 **错误处理**:
 ```bash
-[ERROR] 找不到sbl_meta.bin！
+[ERROR] 找不到sbl.release.appimage！
 [INFO] 请先运行: 1_generate_sbl_meta.bat
 
 [ERROR] 无法打开COM3！
@@ -215,8 +215,8 @@ arprog_cmdline_6844 v3.5
 **用法**: `4_flash_app.bat <COM端口>`
 
 **功能**:
-- 检查hello_world_meta.bin是否存在
-- 烧录到Flash 0x40000
+- 检查`hello_world_system.release.appimage`是否存在
+- 烧录到Flash 0x42000
 - 自动验证
 
 **执行示例**:
@@ -225,22 +225,22 @@ C:\> 4_flash_app.bat COM3
 
 [INFO] 开始烧录HelloWorld应用...
 [INFO] COM端口: COM3
-[INFO] Meta Image: ..\4-Generated\hello_world_meta.bin (220KB)
-[INFO] Flash地址: 0x00040000
+[INFO] Meta Image: ..\2-HelloWorld_App\hello_world_system.release.appimage (约200KB)
+[INFO] Flash地址: 0x00042000
 
 [INFO] 开始烧录...
 arprog_cmdline_6844 v3.5
   Port: COM3
-  File: ../4-Generated/hello_world_meta.bin
-  Address: 0x40000
-  Size: 220KB
+  File: ../2-HelloWorld_App/hello_world_system.release.appimage
+  Address: 0x42000
+  Size: ~200KB
   
   Progress: [##########] 100%
   Time: 60s
   Status: SUCCESS
 
 [INFO] 验证烧录...
-  Readback: 220KB
+  Readback: ~200KB
   Compare: MATCH
   Status: VERIFIED
 
@@ -262,8 +262,8 @@ arprog_cmdline_6844 v3.5
 **用法**: `5_verify_flash.bat <COM端口>`
 
 **功能**:
-- 读回SBL区域（0x100）
-- 读回App区域（0x40000）
+- 读回SBL区域（0x2000）
+- 读回App区域（0x42000）
 - 对比原始文件
 
 **执行示例**:
@@ -273,17 +273,17 @@ C:\> 5_verify_flash.bat COM3
 [INFO] 开始验证Flash内容...
 
 [INFO] 验证SBL区域...
-  Address: 0x100
-  Size: 130KB
+  Address: 0x2000
+  Size: ~130KB
   Readback: ../4-Generated/sbl_readback.bin
-  Compare with: ../4-Generated/sbl_meta.bin
+  Compare with: ../1-SBL_Bootloader/sbl.release.appimage
   Result: MATCH ✓
 
 [INFO] 验证App区域...
-  Address: 0x40000
-  Size: 220KB
+  Address: 0x42000
+  Size: ~200KB
   Readback: ../4-Generated/app_readback.bin
-  Compare with: ../4-Generated/hello_world_meta.bin
+  Compare with: ../2-HelloWorld_App/hello_world_system.release.appimage
   Result: MATCH ✓
 
 [SUCCESS] Flash内容验证通过！
@@ -346,17 +346,17 @@ C:\> full_flash.bat COM3
   └─ 完成 (1s)
 
 [2/6] 生成SBL Meta Image...
-  └─ 完成 (5s) - sbl_meta.bin (130KB)
+  └─ 完成 (5s) - sbl.release.appimage (约130KB)
 
 [3/6] 生成App Meta Image...
-  └─ 完成 (8s) - hello_world_meta.bin (220KB)
+  └─ 完成 (8s) - hello_world_system.release.appimage (约200KB)
 
 [4/6] 烧录SBL Bootloader...
-  └─ 地址: 0x100
+  └─ 地址: 0x2000
   └─ 完成 (45s)
 
 [5/6] 烧录HelloWorld应用...
-  └─ 地址: 0x40000
+  └─ 地址: 0x42000
   └─ 完成 (60s)
 
 [6/6] 验证Flash内容...

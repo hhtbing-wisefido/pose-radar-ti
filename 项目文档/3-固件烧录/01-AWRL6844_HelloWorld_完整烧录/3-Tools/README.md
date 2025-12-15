@@ -21,22 +21,22 @@
 **基本用法**:
 ```bash
 # 烧录文件
-arprog_cmdline_6844.exe -p COM3 -f firmware.bin -o 0x100
+arprog_cmdline_6844.exe -p COM3 -f firmware.bin -o 0x2000
 
 # 读取Flash
-arprog_cmdline_6844.exe -p COM3 -r 0x100 -s 1024 -o output.bin
+arprog_cmdline_6844.exe -p COM3 -r 0x2000 -s 1024 -o output.bin
 
 # 全片擦除
 arprog_cmdline_6844.exe -p COM3 -e
 
 # 验证烧录
-arprog_cmdline_6844.exe -p COM3 -f firmware.bin -o 0x100 -v
+arprog_cmdline_6844.exe -p COM3 -f firmware.bin -o 0x2000 -v
 ```
 
 **参数说明**:
 - `-p COM3`: 串口号
 - `-f file.bin`: 要烧录的文件
-- `-o 0x100`: Flash偏移地址
+- `-o 0x2000`: Flash偏移地址
 - `-r addr`: 读取起始地址
 - `-s size`: 读取大小（字节）
 - `-e`: 全片擦除
@@ -187,7 +187,7 @@ cd 1-SBL_Bootloader
 
 # Step 3: 烧录到Flash
 cd ..\3-Tools
-.\arprog_cmdline_6844.exe -p COM3 -f ..\1-SBL_Bootloader\sbl_meta.bin -o 0x100
+.\arprog_cmdline_6844.exe -p COM3 -f ..\1-SBL_Bootloader\sbl_meta.bin -o 0x2000
 ```
 
 ### 示例2: 生成并烧录应用
@@ -203,7 +203,7 @@ cd 2-HelloWorld_App
 
 # Step 3: 烧录到Flash
 cd ..\3-Tools
-.\arprog_cmdline_6844.exe -p COM3 -f ..\2-HelloWorld_App\hello_world_meta.bin -o 0x40000
+.\arprog_cmdline_6844.exe -p COM3 -f ..\2-HelloWorld_App\hello_world_meta.bin -o 0x42000
 ```
 
 ---
@@ -259,10 +259,10 @@ cd ..\3-Tools
 **A**: 
 ```bash
 # 方法1: 工具自动验证
-arprog_cmdline_6844.exe -p COM3 -f file.bin -o 0x100 -v
+arprog_cmdline_6844.exe -p COM3 -f file.bin -o 0x2000 -v
 
 # 方法2: 读回验证
-arprog_cmdline_6844.exe -p COM3 -r 0x100 -s 1024 -o readback.bin
+arprog_cmdline_6844.exe -p COM3 -r 0x2000 -s 1024 -o readback.bin
 # 然后手动对比file.bin和readback.bin
 ```
 
