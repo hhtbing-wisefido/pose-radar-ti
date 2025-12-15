@@ -386,43 +386,310 @@ class FlashToolGUI:
         except Exception as e:
             return False, f"端口连接失败: {str(e)}"
     
-    # =========== 烧录方法（简化版本，委托给标签页） ===========
+    # =========== 烧录方法 ===========
     
-    def flash_firmware(self, firmware_file, sbl_port, app_port, timeout):
-        """完整烧录固件 - 简化版本"""
-        self.log("开始完整烧录流程...\n")
-        self.log(f"固件文件: {firmware_file}\n")
-        self.log(f"SBL端口: {sbl_port}\n")
-        self.log(f"App端口: {app_port}\n")
-        self.log(f"超时时间: {timeout}秒\n\n")
+    def flash_firmware(self):
+        """完整烧录固件（SBL + App）"""
+        if self.flashing:
+            self.log("⚠️ 烧录正在进行中...\n", "WARN")
+            return
         
-        # TODO: 实现完整的烧录逻辑
-        self.log("注意: 这是v1.0.8精简版本的演示代码\n")
-        self.log("完整的烧录逻辑需要从旧版本恢复或重新实现\n")
+        # 获取固件文件
+        firmware_file = self.firmware_file.get()
+        if not firmware_file or not os.path.exists(firmware_file):
+            messagebox.showerror("错误", "请先选择有效的固件文件！")
+            return
         
-        return True
+        # 获取端口
+        sbl_port = self.sbl_port.get()
+        app_port = self.app_port.get()
+        
+        if not sbl_port or not app_port:
+            messagebox.showerror("错误", "请先选择SBL和App端口！")
+            return
+        
+        # 启动烧录线程
+        self.flashing = True
+        self.flash_thread = threading.Thread(
+            target=self._flash_firmware_thread,
+            args=(firmware_file, sbl_port, app_port),
+            daemon=True
+        )
+        self.flash_thread.start()
     
-    def flash_sbl_only(self, firmware_file, sbl_port, timeout):
-        """仅烧录SBL - 简化版本"""
-        self.log("开始SBL烧录...\n")
-        self.log(f"固件文件: {firmware_file}\n")
-        self.log(f"SBL端口: {sbl_port}\n")
-        
-        # TODO: 实现SBL烧录逻辑
-        self.log("注意: 这是演示代码\n")
-        
-        return True
+    def _flash_firmware_thread(self, firmware_file, sbl_port, app_port):
+        """烧录线程（完整烧录）"""
+        try:
+            self.log("\n" + "="*60 + "\n")
+            self.log("🚀 开始完整烧录流程（SBL + App）\n", "INFO")
+            self.log("="*60 + "\n\n")
+            
+            self.log(f"📁 固件文件: {firmware_file}\n")
+            self.log(f"🔌 SBL端口: {sbl_port}\n")
+            self.log(f"🔌 App端口: {app_port}\n\n")
+            
+            # SDK工具路径
+            sdk_path = self.device_config.get('sdk_path', 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01')
+            tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
+            
+            if not os.path.exists(tool_exe):
+                self.log(f"❌ 找不到烧录工具: {tool_exe}\n", "ERROR")
+                self.log("请确认SDK已正确安装\n", "ERROR")
+                return
+            
+            # 步骤1: 烧录SBL
+            self.log("📝 步骤 1/2: 烧录SBL (Bootloader)\n", "INFO")
+            sbl_offset = self.device_config.get('sbl_offset', 0x2000)
+            
+            sbl_cmd = [
+                tool_exe,
+                sbl_port,
+                str(sbl_offset),
+                firmware_file
+            ]
+            
+            self.log(f"执行命令: {' '.join(sbl_cmd)}\n")
+            
+            process = subprocess.Popen(
+                sbl_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            # 读取输出
+            for line in process.stdout:
+                self.log(line)
+                if "Error" in line or "error" in line:
+                    self.log(f"⚠️ {line}", "ERROR")
+            
+            process.wait()
+            
+            if process.returncode != 0:
+                self.log("\n❌ SBL烧录失败！\n", "ERROR")
+                stderr = process.stderr.read()
+                if stderr:
+                    self.log(f"错误信息: {stderr}\n", "ERROR")
+                return
+            
+            self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
+            time.sleep(1)
+            
+            # 步骤2: 烧录App
+            self.log("\n📝 步骤 2/2: 烧录App (应用程序)\n", "INFO")
+            app_offset = self.device_config.get('app_offset', 0x42000)
+            
+            app_cmd = [
+                tool_exe,
+                app_port,
+                str(app_offset),
+                firmware_file
+            ]
+            
+            self.log(f"执行命令: {' '.join(app_cmd)}\n")
+            
+            process = subprocess.Popen(
+                app_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            # 读取输出
+            for line in process.stdout:
+                self.log(line)
+                if "Error" in line or "error" in line:
+                    self.log(f"⚠️ {line}", "ERROR")
+            
+            process.wait()
+            
+            if process.returncode != 0:
+                self.log("\n❌ App烧录失败！\n", "ERROR")
+                stderr = process.stderr.read()
+                if stderr:
+                    self.log(f"错误信息: {stderr}\n", "ERROR")
+                return
+            
+            self.log("\n✅ App烧录成功！\n", "SUCCESS")
+            
+            # 完成
+            self.log("\n" + "="*60 + "\n")
+            self.log("🎉 完整烧录完成！\n", "SUCCESS")
+            self.log("="*60 + "\n\n")
+            
+            messagebox.showinfo("成功", "固件烧录完成！\n\n请复位设备并测试。")
+            
+        except Exception as e:
+            self.log(f"\n❌ 烧录过程出错: {str(e)}\n", "ERROR")
+            messagebox.showerror("错误", f"烧录失败：{str(e)}")
+        finally:
+            self.flashing = False
     
-    def flash_app_only(self, firmware_file, app_port, timeout):
-        """仅烧录App - 简化版本"""
-        self.log("开始App烧录...\n")
-        self.log(f"固件文件: {firmware_file}\n")
-        self.log(f"App端口: {app_port}\n")
+    def flash_sbl_only(self):
+        """仅烧录SBL"""
+        if self.flashing:
+            self.log("⚠️ 烧录正在进行中...\n", "WARN")
+            return
         
-        # TODO: 实现App烧录逻辑
-        self.log("注意: 这是演示代码\n")
+        # 获取固件文件
+        firmware_file = self.firmware_file.get()
+        if not firmware_file or not os.path.exists(firmware_file):
+            messagebox.showerror("错误", "请先选择有效的固件文件！")
+            return
         
-        return True
+        # 获取端口
+        sbl_port = self.sbl_port.get()
+        if not sbl_port:
+            messagebox.showerror("错误", "请先选择SBL端口！")
+            return
+        
+        # 启动烧录线程
+        self.flashing = True
+        self.flash_thread = threading.Thread(
+            target=self._flash_sbl_thread,
+            args=(firmware_file, sbl_port),
+            daemon=True
+        )
+        self.flash_thread.start()
+    
+    def _flash_sbl_thread(self, firmware_file, sbl_port):
+        """烧录线程（仅SBL）"""
+        try:
+            self.log("\n" + "="*60 + "\n")
+            self.log("🔧 开始SBL烧录\n", "INFO")
+            self.log("="*60 + "\n\n")
+            
+            self.log(f"📁 固件文件: {firmware_file}\n")
+            self.log(f"🔌 SBL端口: {sbl_port}\n\n")
+            
+            # SDK工具路径
+            sdk_path = self.device_config.get('sdk_path', 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01')
+            tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
+            
+            if not os.path.exists(tool_exe):
+                self.log(f"❌ 找不到烧录工具: {tool_exe}\n", "ERROR")
+                return
+            
+            sbl_offset = self.device_config.get('sbl_offset', 0x2000)
+            
+            cmd = [
+                tool_exe,
+                sbl_port,
+                str(sbl_offset),
+                firmware_file
+            ]
+            
+            self.log(f"执行命令: {' '.join(cmd)}\n")
+            
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            for line in process.stdout:
+                self.log(line)
+            
+            process.wait()
+            
+            if process.returncode != 0:
+                self.log("\n❌ SBL烧录失败！\n", "ERROR")
+                return
+            
+            self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
+            messagebox.showinfo("成功", "SBL烧录完成！")
+            
+        except Exception as e:
+            self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
+            messagebox.showerror("错误", f"烧录失败：{str(e)}")
+        finally:
+            self.flashing = False
+    
+    def flash_app_only(self):
+        """仅烧录App"""
+        if self.flashing:
+            self.log("⚠️ 烧录正在进行中...\n", "WARN")
+            return
+        
+        # 获取固件文件
+        firmware_file = self.firmware_file.get()
+        if not firmware_file or not os.path.exists(firmware_file):
+            messagebox.showerror("错误", "请先选择有效的固件文件！")
+            return
+        
+        # 获取端口
+        app_port = self.app_port.get()
+        if not app_port:
+            messagebox.showerror("错误", "请先选择App端口！")
+            return
+        
+        # 启动烧录线程
+        self.flashing = True
+        self.flash_thread = threading.Thread(
+            target=self._flash_app_thread,
+            args=(firmware_file, app_port),
+            daemon=True
+        )
+        self.flash_thread.start()
+    
+    def _flash_app_thread(self, firmware_file, app_port):
+        """烧录线程（仅App）"""
+        try:
+            self.log("\n" + "="*60 + "\n")
+            self.log("📱 开始App烧录\n", "INFO")
+            self.log("="*60 + "\n\n")
+            
+            self.log(f"📁 固件文件: {firmware_file}\n")
+            self.log(f"🔌 App端口: {app_port}\n\n")
+            
+            # SDK工具路径
+            sdk_path = self.device_config.get('sdk_path', 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01')
+            tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
+            
+            if not os.path.exists(tool_exe):
+                self.log(f"❌ 找不到烧录工具: {tool_exe}\n", "ERROR")
+                return
+            
+            app_offset = self.device_config.get('app_offset', 0x42000)
+            
+            cmd = [
+                tool_exe,
+                app_port,
+                str(app_offset),
+                firmware_file
+            ]
+            
+            self.log(f"执行命令: {' '.join(cmd)}\n")
+            
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            for line in process.stdout:
+                self.log(line)
+            
+            process.wait()
+            
+            if process.returncode != 0:
+                self.log("\n❌ App烧录失败！\n", "ERROR")
+                return
+            
+            self.log("\n✅ App烧录成功！\n", "SUCCESS")
+            messagebox.showinfo("成功", "App烧录完成！")
+            
+        except Exception as e:
+            self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
+            messagebox.showerror("错误", f"烧录失败：{str(e)}")
+        finally:
+            self.flashing = False
     
     # =========== 文件选择方法 ===========
     
@@ -430,21 +697,43 @@ class FlashToolGUI:
         """选择SBL固件文件"""
         filename = filedialog.askopenfilename(
             title="选择SBL固件文件",
-            filetypes=[("Binary Files", "*.bin"), ("All Files", "*.*")]
+            filetypes=[
+                ("AppImage Files", "*.appimage"),
+                ("Binary Files", "*.bin"),
+                ("All Files", "*.*")
+            ],
+            initialdir=os.path.dirname(self.firmware_file.get()) if self.firmware_file.get() else None
         )
         if filename:
-            # TODO: 处理SBL文件选择
-            self.log(f"已选择SBL文件: {filename}\n")
+            self.firmware_file.set(filename)
+            self.log(f"✅ 已选择SBL文件: {filename}\n", "SUCCESS")
+            # 验证文件
+            valid, msg = verify_firmware_file(filename)
+            if valid:
+                self.log(f"✅ {msg}\n", "SUCCESS")
+            else:
+                self.log(f"⚠️ {msg}\n", "WARN")
     
     def select_app_file(self):
         """选择App固件文件"""
         filename = filedialog.askopenfilename(
             title="选择App固件文件",
-            filetypes=[("Binary Files", "*.bin"), ("All Files", "*.*")]
+            filetypes=[
+                ("AppImage Files", "*.appimage"),
+                ("Binary Files", "*.bin"),
+                ("All Files", "*.*")
+            ],
+            initialdir=os.path.dirname(self.firmware_file.get()) if self.firmware_file.get() else None
         )
         if filename:
-            # TODO: 处理App文件选择
-            self.log(f"已选择App文件: {filename}\n")
+            self.firmware_file.set(filename)
+            self.log(f"✅ 已选择App文件: {filename}\n", "SUCCESS")
+            # 验证文件
+            valid, msg = verify_firmware_file(filename)
+            if valid:
+                self.log(f"✅ {msg}\n", "SUCCESS")
+            else:
+                self.log(f"⚠️ {msg}\n", "WARN")
     
     def open_firmware_folder(self):
         """打开固件文件夹"""
