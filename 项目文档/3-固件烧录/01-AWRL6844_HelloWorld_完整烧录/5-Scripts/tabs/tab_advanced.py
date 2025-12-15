@@ -49,7 +49,7 @@ class AdvancedTab:
     
     def create_ui(self):
         """创建标签页UI"""
-        self.frame.configure(bg="#ecf0f1")
+        # ttk.Frame不支持bg参数，使用默认主题
         
         # 主容器 - 两列布局
         left_col = tk.Frame(self.frame, bg="#ecf0f1")

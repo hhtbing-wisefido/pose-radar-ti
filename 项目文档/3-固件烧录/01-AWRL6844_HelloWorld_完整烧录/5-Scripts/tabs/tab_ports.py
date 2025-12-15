@@ -49,7 +49,7 @@ class PortsTab:
     
     def create_ui(self):
         """创建标签页UI"""
-        self.frame.configure(bg="#ecf0f1")
+        # ttk.Frame不支持bg参数，使用默认主题
         
         # 标题
         tk.Label(

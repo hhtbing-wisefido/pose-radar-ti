@@ -50,7 +50,7 @@ class BasicTab:
     
     def create_ui(self):
         """创建标签页UI"""
-        self.frame.configure(bg="#ecf0f1")
+        # ttk.Frame不支持bg参数，使用默认主题
         
         # 主容器 - 两列布局
         left_col = tk.Frame(self.frame, bg="#ecf0f1")
@@ -346,6 +346,29 @@ class BasicTab:
             pady=4,
             cursor="hand2"
         ).pack(pady=(5, 0))
+    
+    def update_port_list(self, sbl_ports, app_ports):
+        """更新端口列表"""
+        # TODO: 更新端口下拉框
+        pass
+    
+    def log(self, message, tag=None):
+        """添加日志消息"""
+        if hasattr(self.app, 'log_text'):
+            self.app.log_text.config(state=tk.NORMAL)
+            if tag:
+                self.app.log_text.insert(tk.END, message, tag)
+            else:
+                self.app.log_text.insert(tk.END, message)
+            self.app.log_text.see(tk.END)
+            self.app.log_text.config(state=tk.DISABLED)
+    
+    def clear_log(self):
+        """清空日志"""
+        if hasattr(self.app, 'log_text'):
+            self.app.log_text.config(state=tk.NORMAL)
+            self.app.log_text.delete(1.0, tk.END)
+            self.app.log_text.config(state=tk.DISABLED)
 
 
 # 如果直接运行此文件，显示错误提示
