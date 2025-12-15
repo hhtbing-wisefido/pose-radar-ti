@@ -253,11 +253,21 @@ C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool\arprog_cmdline_6844.exe
 ### 📥 安装依赖
 
 ```bash
-# 进入工具目录
-cd 5-Scripts
+# 切换到工具目录
+cd 项目文档/3-固件烧录/01-AWRL6844_HelloWorld_完整烧录/5-Scripts
 
 # 首次运行安装依赖
 pip install -r requirements.txt
+```
+
+### 🎮 启动工具
+
+```bash
+# 确保在 5-Scripts 目录
+cd 项目文档/3-固件烧录/01-AWRL6844_HelloWorld_完整烧录/5-Scripts
+
+# 运行工具
+python flash_tool.py
 ```
 
 ### 🎮 启动工具
