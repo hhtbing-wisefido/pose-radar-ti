@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-tab_firmware_lib.py - 固件库标签页模块
+tab_firmware_lib.py - 固件库标签页模块 v1.3.0 (精简版)
 
 ⚠️ 此模块不能单独运行，必须从 flash_tool.py 主入口启动！
 """
@@ -39,8 +39,6 @@ class FirmwareProject:
         self.compatibility = ""           # 兼容性说明
         self.compatibility_reason = ""    # 兼容性判断原因
         self.description = ""             # 项目描述
-        self.source_directory = None      # 关联的源代码目录（如果存在）
-        self.variants = []                # 同一项目的其他固件变体
 
 class FirmwareLibTab:
     """固件库标签页类 - 项目级管理"""
@@ -345,8 +343,6 @@ class FirmwareLibTab:
             for project_name, firmwares in firmware_groups.items():
                 project = self._create_project_from_firmware_group(project_name, firmwares, source_name)
                 if project and self._is_compatible_project(project):
-                    # 尝试关联源代码目录
-                    self._link_source_directory(project)
                     self.projects.append(project)
                     count += 1
                     
@@ -371,21 +367,10 @@ class FirmwareLibTab:
             project.name = project_name
             project.sdk_source = source_name
             
-            # 选择主固件（优先选择Release版本或FreeRTOS版本）
-            primary_fw = self._select_primary_firmware(firmwares)
+            # 直接选择第一个固件(简化处理)
+            primary_fw = firmwares[0]
             project.app_firmware = primary_fw['path']
             project.project_path = primary_fw['root']
-            
-            # 存储所有固件变体
-            project.variants = []
-            for fw in firmwares:
-                if fw != primary_fw:
-                    variant_project = FirmwareProject()
-                    variant_project.name = project_name
-                    variant_project.app_firmware = fw['path']
-                    variant_project.project_path = fw['root']
-                    variant_project.sdk_source = source_name
-                    project.variants.append(variant_project)
             
             # 查找配置文件（在主固件所在目录）
             root_dir = primary_fw['root']
@@ -420,78 +405,6 @@ class FirmwareLibTab:
             
         except Exception as e:
             print(f"创建项目失败 ({project_name}): {e}")
-            return None
-    
-    def _select_primary_firmware(self, firmwares):
-        """选择主推荐固件
-        
-        优先级：Release > FreeRTOS > NoRTOS > 其他
-        """
-        # 优先选择Release版本
-        for fw in firmwares:
-            if 'release' in fw['name'].lower():
-                return fw
-        
-        # 其次选择FreeRTOS版本
-        for fw in firmwares:
-            if 'freertos' in fw['name'].lower():
-                return fw
-        
-        # 再选择NoRTOS版本
-        for fw in firmwares:
-            if 'nortos' in fw['name'].lower():
-                return fw
-        
-        # 默认返回第一个
-        return firmwares[0]
-    
-    def _create_project_from_firmware(self, root_dir, firmware_file, source_name):
-        """从固件文件创建项目对象"""
-        try:
-            project = FirmwareProject()
-            project.project_path = root_dir
-            project.sdk_source = source_name
-            project.app_firmware = os.path.join(root_dir, firmware_file)
-            
-            # 从固件文件名提取项目名称
-            project.name = self._extract_project_name_from_firmware(firmware_file)
-            
-            # 查找同目录下的可选配置文件
-            files = os.listdir(root_dir)
-            
-            # 1. 查找.syscfg文件（可选）
-            for f in files:
-                if f.endswith('.syscfg'):
-                    project.syscfg_file = os.path.join(root_dir, f)
-                    break
-            
-            # 2. 查找RTOS .cfg文件（可选，JavaScript语法）
-            for f in files:
-                if f.endswith('.cfg'):
-                    cfg_path = os.path.join(root_dir, f)
-                    if self._is_rtos_cfg(cfg_path):
-                        project.rtos_cfg_file = cfg_path
-                        break
-                    project.rtos_cfg_file = os.path.join(root_dir, f)
-            
-            # 推荐SBL
-            project.recommended_sbl = self._recommend_sbl(project)
-            if project.recommended_sbl:
-                project.selected_sbl = project.recommended_sbl[0]['path']  # 默认选择优先级最高的
-            
-            # 推荐雷达参数配置
-            project.recommended_radar_cfg = self._recommend_radar_cfg(project)
-            if project.recommended_radar_cfg:
-                project.selected_radar_cfg = project.recommended_radar_cfg[0]['path']
-            
-            # 设置描述和兼容性
-            project.description = self._get_description(project.name)
-            project.compatibility = self._check_compatibility(project)
-            
-            return project
-            
-        except Exception as e:
-            print(f"创建项目对象错误 ({root_dir}): {e}")
             return None
     
     def _extract_project_name_from_firmware(self, firmware_file):
@@ -561,119 +474,11 @@ class FirmwareLibTab:
         project.compatibility_reason = "⚠️ 兼容性未知 (文件名和路径均未包含6844标识)"
         return False
     
-    def _link_source_directory(self, project):
-        """关联源代码目录（如果存在）"""
-        try:
-            # 如果已有配置文件，不需要查找
-            if project.syscfg_file or project.rtos_cfg_file:
-                return
-            
-            # 从 prebuilt_binaries 向上1级查找源代码目录（修正：从2级改为1级）
-            current_dir = project.project_path
-            
-            # 检查是否在 prebuilt_binaries 目录中
-            if 'prebuilt_binaries' not in current_dir.lower():
-                return
-            
-            # 向上1级：prebuilt_binaries -> [项目目录]
-            parent_dir = os.path.dirname(current_dir)
-            
-            if not os.path.exists(parent_dir):
-                return
-            
-            # 检查父目录是否包含源代码文件
-            has_source = False
-            syscfg_file = None
-            rtos_cfg_file = None
-            
-            for file in os.listdir(parent_dir):
-                file_path = os.path.join(parent_dir, file)
-                if file.endswith('.syscfg'):
-                    syscfg_file = file_path
-                    has_source = True
-                elif file.endswith('.cfg') and self._is_rtos_cfg(file_path):
-                    rtos_cfg_file = file_path
-                    has_source = True
-                elif file.endswith(('.c', '.cpp', '.h')):
-                    has_source = True
-            
-            if has_source:
-                project.source_directory = parent_dir
-                if syscfg_file:
-                    project.syscfg_file = syscfg_file
-                if rtos_cfg_file:
-                    project.rtos_cfg_file = rtos_cfg_file
-                    
-        except Exception as e:
-            # 静默失败，不影响主流程
-            pass
-    
-    def _extract_base_name(self, firmware_path):
-        """提取固件的基础名称（去除变体后缀）"""
-        filename = os.path.basename(firmware_path)
-        name = os.path.splitext(filename)[0].lower()
-        
-        # 移除常见变体标识
-        variants = ['_freertos', '_nortos', '_release', '_debug', 
-                   '_ti-arm-clang', '_arm-clang', '_gcc', '_ccs',
-                   '_system', '_mss', '_dss']
-        
-        for variant in variants:
-            name = name.replace(variant, '')
-        
-        return name
-    
-    def _group_firmware_variants(self):
-        """将同一项目的多个固件变体分组"""
-        try:
-            # 按基础名称分组
-            groups = {}
-            for project in self.projects:
-                base_name = self._extract_base_name(project.app_firmware)
-                if base_name not in groups:
-                    groups[base_name] = []
-                groups[base_name].append(project)
-            
-            # 为每个分组设置variants
-            for base_name, projects_list in groups.items():
-                if len(projects_list) > 1:
-                    # 有多个变体
-                    for project in projects_list:
-                        # 将其他项目作为此项目的变体
-                        project.variants = [p for p in projects_list if p != project]
-                        
-        except Exception as e:
-            print(f"分组固件变体错误: {e}")
-    
-    def _identify_variant_type(self, filename):
-        """识别固件变体类型"""
-        filename_lower = filename.lower()
-        
-        types = []
-        if 'freertos' in filename_lower:
-            types.append("FreeRTOS")
-        elif 'nortos' in filename_lower:
-            types.append("NoRTOS")
-            
-        if 'ti-arm-clang' in filename_lower or 'tiarmclang' in filename_lower:
-            types.append("TI-ARM")
-        elif 'arm-clang' in filename_lower or 'armclang' in filename_lower:
-            types.append("ARM")
-        elif 'gcc' in filename_lower:
-            types.append("GCC")
-            
-        if 'debug' in filename_lower:
-            types.append("Debug")
-        elif 'release' in filename_lower:
-            types.append("Release")
-        
-        return " + ".join(types) if types else "Standard"
-    
     def _recommend_sbl(self, project):
-        """推荐SBL固件 - 3级优先级"""
+        """推荐SBL固件 - 只查找项目本地"""
         recommendations = []
         
-        # Priority 1: 项目本地SBL（与应用固件同目录或父目录）
+        # 项目本地SBL（与应用固件同目录或父目录）
         search_dirs = [
             project.project_path,
             os.path.dirname(project.project_path),
@@ -692,58 +497,7 @@ class FirmwareLibTab:
                                 'reason': '与应用固件在同一项目'
                             })
         
-        # Priority 2: 同一SDK/SBL标准目录
-        for sdk_path in self.sdk_paths:
-            if not os.path.exists(sdk_path):
-                continue
-            
-            # 查找SDK中的SBL目录
-            sbl_dirs = [
-                os.path.join(sdk_path, 'tools', 'sbl'),
-                os.path.join(sdk_path, 'source', 'ti', 'examples', 'sbl'),
-                os.path.join(sdk_path, 'examples', 'sbl'),
-            ]
-            
-            for sbl_dir in sbl_dirs:
-                if os.path.exists(sbl_dir):
-                    for root, dirs, files in os.walk(sbl_dir):
-                        for f in files:
-                            if 'sbl' in f.lower() and f.endswith(('.appimage', '.bin')):
-                                # 检查是否兼容6844
-                                if '6844' in f.lower() or '68xx' in f.lower() or 'xwrl68' in f.lower():
-                                    sbl_path = os.path.join(root, f)
-                                    recommendations.append({
-                                        'path': sbl_path,
-                                        'source': os.path.basename(sdk_path),
-                                        'priority': 2,
-                                        'reason': '来自同一SDK标准目录'
-                                    })
-        
-        # Priority 3: 其他SDK通用SBL
-        for sdk_path in self.sdk_paths:
-            if not os.path.exists(sdk_path) or sdk_path == project.sdk_source:
-                continue
-            
-            sbl_dirs = [
-                os.path.join(sdk_path, 'tools', 'sbl'),
-                os.path.join(sdk_path, 'source', 'ti', 'examples', 'sbl'),
-            ]
-            
-            for sbl_dir in sbl_dirs:
-                if os.path.exists(sbl_dir):
-                    for root, dirs, files in os.walk(sbl_dir):
-                        for f in files:
-                            if 'sbl' in f.lower() and f.endswith(('.appimage', '.bin')):
-                                if '6844' in f.lower() or '68xx' in f.lower():
-                                    sbl_path = os.path.join(root, f)
-                                    recommendations.append({
-                                        'path': sbl_path,
-                                        'source': os.path.basename(sdk_path),
-                                        'priority': 3,
-                                        'reason': '来自其他SDK（通用SBL）'
-                                    })
-        
-        # 去重和排序
+        # 去重
         seen = set()
         unique_recommendations = []
         for rec in recommendations:
@@ -751,11 +505,10 @@ class FirmwareLibTab:
                 seen.add(rec['path'])
                 unique_recommendations.append(rec)
         
-        unique_recommendations.sort(key=lambda x: x['priority'])
         return unique_recommendations
     
     def _recommend_radar_cfg(self, project):
-        """推荐雷达参数配置 - 4级优先级"""
+        """推荐雷达参数配置 - 只查找项目内配置"""
         recommendations = []
         
         # Priority 1: 项目根目录/profile.cfg
@@ -781,29 +534,7 @@ class FirmwareLibTab:
                         'reason': '项目自定义配置'
                     })
         
-        # Priority 3: SDK示例配置
-        for sdk_path in self.sdk_paths:
-            if not os.path.exists(sdk_path):
-                continue
-            
-            cfg_dirs = [
-                os.path.join(sdk_path, 'examples', 'profiles'),
-                os.path.join(sdk_path, 'tools', 'profiles'),
-            ]
-            
-            for cfg_dir in cfg_dirs:
-                if os.path.exists(cfg_dir):
-                    for f in os.listdir(cfg_dir):
-                        if f.endswith('.cfg'):
-                            cfg_path = os.path.join(cfg_dir, f)
-                            recommendations.append({
-                                'path': cfg_path,
-                                'source': os.path.basename(sdk_path),
-                                'priority': 3,
-                                'reason': 'SDK标准示例配置'
-                            })
-        
-        # 去重和排序
+        # 去重
         seen = set()
         unique_recommendations = []
         for rec in recommendations:
@@ -811,8 +542,7 @@ class FirmwareLibTab:
                 seen.add(rec['path'])
                 unique_recommendations.append(rec)
         
-        unique_recommendations.sort(key=lambda x: x['priority'])
-        return unique_recommendations[:5]  # 最多返回5个推荐
+        return unique_recommendations[:5]
     
     def _extract_project_name(self, path):
         """从路径中提取项目名称"""
@@ -870,11 +600,7 @@ class FirmwareLibTab:
             elif len(path_parts) >= 1:
                 context = path_parts[-1]
             
-            # 显示固件数量（包括主固件+变体）
-            firmware_count = 1 + len(project.variants)
-            variant_info = f" ({firmware_count}个固件)" if firmware_count > 1 else ""
-            
-            display_name = f"📁 {project.name}{variant_info} [{context}]"
+            display_name = f"📁 {project.name} [{context}]"
             self.project_listbox.insert(tk.END, display_name)
     
     def on_project_select(self, event):
@@ -885,9 +611,6 @@ class FirmwareLibTab:
         
         index = selection[0]
         self.current_project = self.projects[index]
-        
-        # 加载配置
-        self._load_project_config()
         
         # 显示项目详情
         self.show_project_details()
@@ -1031,14 +754,6 @@ class FirmwareLibTab:
         if self.current_project:
             self.current_project.selected_sbl = self.sbl_var.get()
     
-    def _on_default_cfg_change(self):
-        """默认配置复选框变化"""
-        # 禁用/启用雷达配置选项
-        state = tk.DISABLED if self.use_default_cfg.get() else tk.NORMAL
-        # TODO: 更新所有雷达配置RadioButton的状态
-        # 重新显示详情
-        self.show_project_details()
-    
     def _select_custom_sbl(self):
         """选择自定义SBL"""
         if not self.current_project:
@@ -1068,69 +783,6 @@ class FirmwareLibTab:
             self.current_project.selected_radar_cfg = filepath
             self.radar_cfg_var.set(filepath)
             messagebox.showinfo("成功", f"已选择配置: {os.path.basename(filepath)}")
-    
-    def _save_project_config(self):
-        """保存项目配置到JSON"""
-        if not self.current_project:
-            return
-        
-        config = {
-            'selected_sbl': self.current_project.selected_sbl,
-            'selected_radar_cfg': self.current_project.selected_radar_cfg,
-            'use_default_cfg': self.use_default_cfg.get(),
-            'last_used': True
-        }
-        
-        config_file = os.path.join(self.current_project.project_path, '.flash_tool_config.json')
-        try:
-            with open(config_file, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=2, ensure_ascii=False)
-            messagebox.showinfo("成功", "项目配置已保存")
-        except Exception as e:
-            messagebox.showerror("错误", f"保存配置失败: {e}")
-    
-    def _load_project_config(self):
-        """加载项目配置"""
-        if not self.current_project:
-            return
-        
-        config_file = os.path.join(self.current_project.project_path, '.flash_tool_config.json')
-        if not os.path.exists(config_file):
-            # 使用默认配置
-            if self.current_project.recommended_sbl:
-                self.sbl_var.set(self.current_project.recommended_sbl[0]['path'])
-            if self.current_project.recommended_radar_cfg:
-                self.radar_cfg_var.set(self.current_project.recommended_radar_cfg[0]['path'])
-            return
-        
-        try:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            
-            self.current_project.selected_sbl = config.get('selected_sbl')
-            self.current_project.selected_radar_cfg = config.get('selected_radar_cfg')
-            self.use_default_cfg.set(config.get('use_default_cfg', True))
-            
-            # 更新UI变量
-            if self.current_project.selected_sbl:
-                self.sbl_var.set(self.current_project.selected_sbl)
-            if self.current_project.selected_radar_cfg:
-                self.radar_cfg_var.set(self.current_project.selected_radar_cfg)
-        except Exception as e:
-            print(f"加载配置失败: {e}")
-    
-    def flash_project(self):
-        """一键填充项目文件到基本烧录页"""
-        if not self.current_project:
-            messagebox.showwarning("提示", "请先选择一个项目")
-            return
-        
-        # TODO: 实现一键填充逻辑
-        # 1. 检查SBL和应用固件
-        # 2. 调用基本烧录页的烧录功能
-        # 3. 显示进度和结果
-        
-        messagebox.showinfo("开发中", "一键填充功能正在开发中...\n\n请使用'加载到基本烧录页'按钮")
     
     def load_to_basic_tab(self):
         """加载固件到基本烧录页面"""
