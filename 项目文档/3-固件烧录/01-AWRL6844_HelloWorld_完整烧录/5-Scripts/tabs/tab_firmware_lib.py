@@ -21,7 +21,7 @@ class FirmwareProject:
         self.project_path = ""            # 固件所在目录
         
         # 核心文件（必须）
-        self.app_firmware = None          # 应用固件路径(.appimage或.bin)【必须】
+        self.app_firmware = None          # 应用固件路径(.appimage)【必须】
         
         # 配置文件（可选，如果同目录存在则关联）
         self.syscfg_file = None           # .syscfg配置文件【可选】
@@ -327,9 +327,9 @@ class FirmwareLibTab:
             firmware_groups = {}  # {项目名称: [固件信息列表]}
             
             for root, dirs, files in os.walk(directory):
-                # 查找.appimage或.bin固件文件
+                # 查找.appimage固件文件
                 firmware_files = [f for f in files 
-                                if (f.endswith('.appimage') or f.endswith('.bin'))
+                                if f.endswith('.appimage')
                                 and 'sbl' not in f.lower()]  # 排除SBL
                 
                 # 为每个固件提取项目名称并分组
