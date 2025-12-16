@@ -46,6 +46,3 @@ Release/
 # Git 相关
 .git/
 
-# 备份文件
-*.backup*
-*_backup.py
