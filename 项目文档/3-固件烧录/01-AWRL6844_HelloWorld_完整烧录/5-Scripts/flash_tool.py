@@ -21,8 +21,8 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.2.5"
-BUILD_DATE = "2025-12-15"
+VERSION = "1.2.8"
+BUILD_DATE = "2025-12-16"
 AUTHOR = "Benson@Wisefido"
 
 # 导入标签页模块
