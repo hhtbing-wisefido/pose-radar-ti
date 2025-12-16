@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-tab_firmware_lib.py - 固件库标签页模块 v1.4.0 (极简版)
+tab_firmware_lib.py - 固件库标签页模块 (极简版)
 
 ⚠️ 此模块不能单独运行，必须从 flash_tool.py 主入口启动！
 """
