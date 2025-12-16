@@ -43,7 +43,7 @@ class FirmwareProject:
         self.variants = []                # 同一项目的其他固件变体
 
 class FirmwareLibTab:
-    """固件库标签页类 - v1.2.0 项目级管理"""
+    """固件库标签页类 - 项目级管理"""
     
     def __init__(self, parent_frame, app):
         """
@@ -122,7 +122,7 @@ class FirmwareLibTab:
         sys.exit(1)
     
     def create_ui(self):
-        """创建标签页UI - v1.2.0项目级管理"""
+        """创建标签页UI - 项目级管理"""
         # 主容器
         main_container = tk.Frame(self.frame, bg="#ecf0f1")
         main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -230,10 +230,6 @@ class FirmwareLibTab:
         
         # 初始提示
         self._show_initial_message()
-    
-    def _on_mousewheel(self, event):
-        """鼠标滚轮事件处理"""
-        self.detail_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
     
     def _show_initial_message(self):
         """显示初始提示信息"""
@@ -1045,6 +1041,10 @@ class FirmwareLibTab:
     
     def _select_custom_sbl(self):
         """选择自定义SBL"""
+        if not self.current_project:
+            messagebox.showwarning("警告", "请先选择一个固件项目")
+            return
+        
         filepath = filedialog.askopenfilename(
             title="选择SBL固件",
             filetypes=[("固件文件", "*.appimage *.bin"), ("所有文件", "*.*")]
@@ -1056,6 +1056,10 @@ class FirmwareLibTab:
     
     def _select_custom_radar_cfg(self):
         """选择自定义雷达配置"""
+        if not self.current_project:
+            messagebox.showwarning("警告", "请先选择一个固件项目")
+            return
+        
         filepath = filedialog.askopenfilename(
             title="选择雷达参数配置",
             filetypes=[("配置文件", "*.cfg"), ("所有文件", "*.*")]
@@ -1423,10 +1427,6 @@ class FirmwareLibTab:
                 justify=tk.LEFT
             ).pack(padx=10, pady=10, anchor=tk.W)
     
-        text_widget.insert(tk.END, "• r5fss0-0_freertos/ - 单核FreeRTOS应用\n")
-        text_widget.insert(tk.END, "• *_nortos/ - 裸机版本，体积更小\n")
-        text_widget.insert(tk.END, "• .appimage - TI标准固件格式\n")
-    
     def _add_detail_path_row(self, parent, label, filepath, required=True):
         """添加详细路径行"""
         frame = tk.LabelFrame(
@@ -1509,18 +1509,8 @@ class FirmwareLibTab:
                    "1. 非雷达应用项目（如驱动示例、内核示例）\n"
                    "2. 使用代码配置而非.cfg文件\n"
                    "3. 配置文件位于其他位置")
-    
-    def _get_priority_icon(self, priority):
-        """获取优先级图标"""
-        priority_map = {
-            'high': '🔴 高',
-            'medium': '🟡 中',
-            'low': '🟢 低'
-        }
-        return priority_map.get(priority, priority)
-    
 
-# 如果直接运行此文件，显示错误提示
+# 如果直接运行此文件,显示错误提示
 if __name__ == "__main__":
     import sys
     print("=" * 70)
