@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.2.9"
+VERSION = "1.3.0"
 BUILD_DATE = "2025-12-16"
 AUTHOR = "Benson@Wisefido"
 
