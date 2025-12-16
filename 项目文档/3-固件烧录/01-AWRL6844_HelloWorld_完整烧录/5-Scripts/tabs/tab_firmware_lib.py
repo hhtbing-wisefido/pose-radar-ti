@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 tab_firmware_lib.py - 固件库标签页
-版本: v1.2.7
+版本: v1.2.8
 作者: Benson@Wisefido
 
 ⚠️ 此模块不能单独运行，必须从 flash_tool.py 主入口启动！
+
+v1.2.8 更新内容（2025-12-16）：
+- ✅ 稳定版本，确认功能正常
 
 v1.2.7 更新内容（2025-12-16）：
 - 🗑️ 删除目录树标签页（_create_directory_tree_tab）
