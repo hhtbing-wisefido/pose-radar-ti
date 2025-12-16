@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-tab_firmware_lib.py - 固件库标签页模块 v1.3.0 (精简版)
+tab_firmware_lib.py - 固件库标签页模块 v1.4.0 (极简版)
 
 ⚠️ 此模块不能单独运行，必须从 flash_tool.py 主入口启动！
 """
@@ -391,16 +391,6 @@ class FirmwareLibTab:
                         break
                     project.rtos_cfg_file = os.path.join(root_dir, f)
             
-            # 推荐SBL
-            project.recommended_sbl = self._recommend_sbl(project)
-            if project.recommended_sbl:
-                project.selected_sbl = project.recommended_sbl[0]['path']
-            
-            # 推荐雷达参数配置
-            project.recommended_radar_cfg = self._recommend_radar_cfg(project)
-            if project.recommended_radar_cfg:
-                project.selected_radar_cfg = project.recommended_radar_cfg[0]['path']
-            
             return project
             
         except Exception as e:
@@ -473,76 +463,6 @@ class FirmwareLibTab:
         
         project.compatibility_reason = "⚠️ 兼容性未知 (文件名和路径均未包含6844标识)"
         return False
-    
-    def _recommend_sbl(self, project):
-        """推荐SBL固件 - 只查找项目本地"""
-        recommendations = []
-        
-        # 项目本地SBL（与应用固件同目录或父目录）
-        search_dirs = [
-            project.project_path,
-            os.path.dirname(project.project_path),
-        ]
-        
-        for search_dir in search_dirs:
-            if os.path.exists(search_dir):
-                for root, dirs, files in os.walk(search_dir):
-                    for f in files:
-                        if 'sbl' in f.lower() and f.endswith(('.appimage', '.bin')):
-                            sbl_path = os.path.join(root, f)
-                            recommendations.append({
-                                'path': sbl_path,
-                                'source': '项目本地',
-                                'priority': 1,
-                                'reason': '与应用固件在同一项目'
-                            })
-        
-        # 去重
-        seen = set()
-        unique_recommendations = []
-        for rec in recommendations:
-            if rec['path'] not in seen:
-                seen.add(rec['path'])
-                unique_recommendations.append(rec)
-        
-        return unique_recommendations
-    
-    def _recommend_radar_cfg(self, project):
-        """推荐雷达参数配置 - 只查找项目内配置"""
-        recommendations = []
-        
-        # Priority 1: 项目根目录/profile.cfg
-        profile_path = os.path.join(project.project_path, 'profile.cfg')
-        if os.path.exists(profile_path):
-            recommendations.append({
-                'path': profile_path,
-                'source': '项目默认',
-                'priority': 1,
-                'reason': '项目标准配置文件'
-            })
-        
-        # Priority 2: 项目/config/目录
-        config_dir = os.path.join(project.project_path, 'config')
-        if os.path.exists(config_dir):
-            for f in os.listdir(config_dir):
-                if f.endswith('.cfg') and not self._is_rtos_cfg(os.path.join(config_dir, f)):
-                    cfg_path = os.path.join(config_dir, f)
-                    recommendations.append({
-                        'path': cfg_path,
-                        'source': '项目配置目录',
-                        'priority': 2,
-                        'reason': '项目自定义配置'
-                    })
-        
-        # 去重
-        seen = set()
-        unique_recommendations = []
-        for rec in recommendations:
-            if rec['path'] not in seen:
-                seen.add(rec['path'])
-                unique_recommendations.append(rec)
-        
-        return unique_recommendations[:5]
     
     def _extract_project_name(self, path):
         """从路径中提取项目名称"""
@@ -744,46 +664,6 @@ class FirmwareLibTab:
                     fg="#7f8c8d"
                 ).pack(side=tk.LEFT)
     
-    def _get_priority_icon(self, priority):
-        """获取优先级图标"""
-        icons = {1: "⭐⭐⭐", 2: "⭐⭐", 3: "⭐", 4: ""}
-        return icons.get(priority, "")
-    
-    def _on_sbl_change(self):
-        """SBL选择变化"""
-        if self.current_project:
-            self.current_project.selected_sbl = self.sbl_var.get()
-    
-    def _select_custom_sbl(self):
-        """选择自定义SBL"""
-        if not self.current_project:
-            messagebox.showwarning("警告", "请先选择一个固件项目")
-            return
-        
-        filepath = filedialog.askopenfilename(
-            title="选择SBL固件",
-            filetypes=[("固件文件", "*.appimage *.bin"), ("所有文件", "*.*")]
-        )
-        if filepath:
-            self.current_project.selected_sbl = filepath
-            self.sbl_var.set(filepath)
-            messagebox.showinfo("成功", f"已选择SBL: {os.path.basename(filepath)}")
-    
-    def _select_custom_radar_cfg(self):
-        """选择自定义雷达配置"""
-        if not self.current_project:
-            messagebox.showwarning("警告", "请先选择一个固件项目")
-            return
-        
-        filepath = filedialog.askopenfilename(
-            title="选择雷达参数配置",
-            filetypes=[("配置文件", "*.cfg"), ("所有文件", "*.*")]
-        )
-        if filepath:
-            self.current_project.selected_radar_cfg = filepath
-            self.radar_cfg_var.set(filepath)
-            messagebox.showinfo("成功", f"已选择配置: {os.path.basename(filepath)}")
-    
     def load_to_basic_tab(self):
         """加载固件到基本烧录页面"""
         if not self.current_project:
@@ -942,142 +822,6 @@ class FirmwareLibTab:
         
         # 应用固件
         self._add_detail_path_row(scrollable_frame, "📦 应用固件", project.app_firmware, required=True)
-        
-        # SBL固件
-        sbl_frame = tk.LabelFrame(
-            scrollable_frame,
-            text="🔧 SBL引导固件",
-            font=("Microsoft YaHei UI", 10, "bold"),
-            bg="white",
-            fg="#2c3e50",
-            bd=2,
-            relief=tk.GROOVE
-        )
-        sbl_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        if project.recommended_sbl:
-            for i, sbl in enumerate(project.recommended_sbl[:3]):
-                sbl_item_frame = tk.Frame(sbl_frame, bg="white")
-                sbl_item_frame.pack(fill=tk.X, padx=10, pady=5)
-                
-                rb = tk.Radiobutton(
-                    sbl_item_frame,
-                    text=f"{self._get_priority_icon(sbl['priority'])} {os.path.basename(sbl['path'])}",
-                    variable=self.sbl_var,
-                    value=sbl['path'],
-                    font=("Microsoft YaHei UI", 9),
-                    bg="white",
-                    fg="#34495e",
-                    selectcolor="white"
-                )
-                rb.pack(anchor=tk.W)
-                
-                # 完整路径
-                path_text = tk.Text(
-                    sbl_item_frame,
-                    font=("Consolas", 8),
-                    bg="#f8f9fa",
-                    fg="#495057",
-                    relief=tk.FLAT,
-                    height=3,
-                    wrap=tk.WORD
-                )
-                path_text.insert(1.0, sbl['path'])
-                path_text.config(state='disabled')
-                path_text.pack(fill=tk.BOTH, expand=True, padx=20, pady=(2, 5))
-                
-                # 推荐原因
-                tk.Label(
-                    sbl_item_frame,
-                    text=f"💡 {sbl['reason']} (来源: {sbl['source']})",
-                    font=("Microsoft YaHei UI", 8),
-                    bg="white",
-                    fg="#7f8c8d"
-                ).pack(anchor=tk.W, padx=20)
-            
-            tk.Button(
-                sbl_frame,
-                text="📂 选择其他SBL",
-                font=("Microsoft YaHei UI", 9),
-                command=self._select_custom_sbl,
-                bg="#95a5a6",
-                fg="white",
-                relief=tk.FLAT,
-                padx=10,
-                pady=3
-            ).pack(padx=10, pady=5, anchor=tk.W)
-        else:
-            tk.Label(
-                sbl_frame,
-                text="⚠️ 未找到推荐的SBL，请手动选择",
-                font=("Microsoft YaHei UI", 9),
-                bg="white",
-                fg="#e67e22"
-            ).pack(padx=10, pady=5)
-        
-        # 雷达配置
-        radar_frame = tk.LabelFrame(
-            scrollable_frame,
-            text="📡 雷达参数配置",
-            font=("Microsoft YaHei UI", 10, "bold"),
-            bg="white",
-            fg="#2c3e50",
-            bd=2,
-            relief=tk.GROOVE
-        )
-        radar_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        if project.recommended_radar_cfg:
-            for i, cfg in enumerate(project.recommended_radar_cfg[:3]):
-                cfg_item_frame = tk.Frame(radar_frame, bg="white")
-                cfg_item_frame.pack(fill=tk.X, padx=10, pady=5)
-                
-                rb = tk.Radiobutton(
-                    cfg_item_frame,
-                    text=f"{self._get_priority_icon(cfg['priority'])} {os.path.basename(cfg['path'])}",
-                    variable=self.radar_cfg_var,
-                    value=cfg['path'],
-                    font=("Microsoft YaHei UI", 9),
-                    bg="white",
-                    fg="#34495e",
-                    selectcolor="white"
-                )
-                rb.pack(anchor=tk.W)
-                
-                # 完整路径
-                path_text = tk.Text(
-                    cfg_item_frame,
-                    font=("Consolas", 8),
-                    bg="#f8f9fa",
-                    fg="#495057",
-                    relief=tk.FLAT,
-                    height=3,
-                    wrap=tk.WORD
-                )
-                path_text.insert(1.0, cfg['path'])
-                path_text.config(state='disabled')
-                path_text.pack(fill=tk.BOTH, expand=True, padx=20, pady=(2, 5))
-                
-                # 推荐原因
-                tk.Label(
-                    cfg_item_frame,
-                    text=f"💡 {cfg['reason']} (来源: {cfg['source']})",
-                    font=("Microsoft YaHei UI", 8),
-                    bg="white",
-                    fg="#7f8c8d"
-                ).pack(anchor=tk.W, padx=20)
-        else:
-            # 显示无雷达配置的原因
-            reason = self._get_no_radar_cfg_reason(project)
-            tk.Label(
-                radar_frame,
-                text=f"ℹ️ {reason}",
-                font=("Microsoft YaHei UI", 9),
-                bg="white",
-                fg="#3498db",
-                wraplength=700,
-                justify=tk.LEFT
-            ).pack(padx=10, pady=10, anchor=tk.W)
     
     def _add_detail_path_row(self, parent, label, filepath, required=True):
         """添加详细路径行"""
@@ -1145,22 +889,6 @@ class FirmwareLibTab:
                 bg="white",
                 fg="#e74c3c"
             ).pack(padx=10, pady=10)
-    
-    def _get_no_radar_cfg_reason(self, project):
-        """获取无雷达配置文件的原因"""
-        if 'hello_world' in project.name.lower():
-            return ("Hello World是基础启动示例项目，主要用于验证硬件和SDK环境，"
-                   "不涉及雷达信号处理功能，因此不需要雷达配置文件。\n\n"
-                   "如需雷达功能，请使用mmwave_demo等雷达应用项目。")
-        elif 'empty' in project.name.lower():
-            return "这是空白项目模板，用于创建自定义应用，不包含预配置的雷达参数。"
-        elif 'sbl' in project.name.lower() or 'boot' in project.name.lower():
-            return "这是引导加载程序(SBL)，只负责启动应用固件，不涉及雷达配置。"
-        else:
-            return ("该项目未包含雷达配置文件，可能原因：\n"
-                   "1. 非雷达应用项目（如驱动示例、内核示例）\n"
-                   "2. 使用代码配置而非.cfg文件\n"
-                   "3. 配置文件位于其他位置")
 
 # 如果直接运行此文件,显示错误提示
 if __name__ == "__main__":
