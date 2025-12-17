@@ -163,6 +163,19 @@ class FirmwareLibTab:
             cursor="hand2"
         ).pack(side=tk.RIGHT, padx=5)
         
+        tk.Button(
+            toolbar,
+            text="📤 导出列表",
+            font=("Microsoft YaHei UI", 9),
+            command=self.export_firmware_list,
+            bg="#e67e22",
+            fg="white",
+            relief=tk.FLAT,
+            padx=15,
+            pady=5,
+            cursor="hand2"
+        ).pack(side=tk.RIGHT, padx=5)
+        
         # 中间内容区域 - 使用PanedWindow实现50/50可调整分割
         paned_window = tk.PanedWindow(
             main_container, 
@@ -691,6 +704,107 @@ class FirmwareLibTab:
         
         messagebox.showinfo("成功", f"项目已加载到基本烧录页面：\n\n{self.current_project.name}")
     
+    def export_firmware_list(self):
+        """导出固件列表为Markdown格式"""
+        if not self.projects:
+            messagebox.showwarning("提示", "没有可导出的固件项目\n\n请先点击'重新扫描'按钮扫描固件")
+            return
+        
+        # 选择保存位置
+        from datetime import datetime
+        default_filename = f"固件库_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        
+        filepath = filedialog.asksaveasfilename(
+            title="导出固件列表",
+            defaultextension=".md",
+            initialfile=default_filename,
+            filetypes=[("Markdown文件", "*.md"), ("所有文件", "*.*")]
+        )
+        
+        if not filepath:
+            return
+        
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                # 写入标题
+                f.write("# AWRL6844 固件库列表\n\n")
+                f.write(f"**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                f.write(f"**固件总数**: {len(self.projects)} 个\n\n")
+                f.write("---\n\n")
+                
+                # 写入每个固件项目
+                for idx, project in enumerate(self.projects, 1):
+                    f.write(f"## {idx}. {project.name}\n\n")
+                    
+                    # 基本信息
+                    f.write("### 📋 基本信息\n\n")
+                    f.write(f"- **来源SDK**: {project.sdk_source}\n")
+                    f.write(f"- **兼容性**: {project.compatibility_reason}\n")
+                    if project.description:
+                        f.write(f"- **描述**: {project.description}\n")
+                    f.write("\n")
+                    
+                    # 固件文件
+                    f.write("### 📦 应用固件\n\n")
+                    if project.app_firmware and os.path.exists(project.app_firmware):
+                        file_size = os.path.getsize(project.app_firmware)
+                        size_kb = file_size / 1024
+                        size_mb = size_kb / 1024
+                        
+                        f.write(f"- **文件名**: `{os.path.basename(project.app_firmware)}`\n")
+                        f.write(f"- **大小**: {size_mb:.2f} MB ({size_kb:.2f} KB / {file_size:,} 字节)\n")
+                        f.write(f"- **完整路径**:\n")
+                        f.write(f"  ```\n")
+                        f.write(f"  {project.app_firmware}\n")
+                        f.write(f"  ```\n")
+                    else:
+                        f.write("- ❌ 固件文件不存在\n")
+                    
+                    f.write("\n")
+                    
+                    # 配置文件
+                    if project.syscfg_file or project.rtos_cfg_file:
+                        f.write("### ⚙️ 配置文件\n\n")
+                        if project.syscfg_file:
+                            f.write(f"- **SysConfig**: `{os.path.basename(project.syscfg_file)}`\n")
+                        if project.rtos_cfg_file:
+                            f.write(f"- **RTOS Config**: `{os.path.basename(project.rtos_cfg_file)}`\n")
+                        f.write("\n")
+                    
+                    f.write("---\n\n")
+                
+                # 写入统计信息
+                f.write("## 📊 统计信息\n\n")
+                
+                # 按SDK统计
+                sdk_stats = {}
+                for project in self.projects:
+                    sdk = project.sdk_source
+                    sdk_stats[sdk] = sdk_stats.get(sdk, 0) + 1
+                
+                f.write("### 按SDK来源统计\n\n")
+                f.write("| SDK | 固件数量 |\n")
+                f.write("|-----|--------|\n")
+                for sdk, count in sorted(sdk_stats.items(), key=lambda x: x[1], reverse=True):
+                    f.write(f"| {sdk} | {count} |\n")
+                f.write("\n")
+                
+                # 扫描路径
+                f.write("### 扫描路径\n\n")
+                for path in self.sdk_paths:
+                    status = "✅" if os.path.exists(path) else "❌"
+                    f.write(f"- {status} `{path}`\n")
+                f.write("\n")
+            
+            messagebox.showinfo("成功", f"固件列表已导出到:\n\n{filepath}\n\n共导出 {len(self.projects)} 个固件项目")
+            
+            # 询问是否打开文件
+            if messagebox.askyesno("打开文件", "是否打开导出的文件？"):
+                os.startfile(filepath)
+                
+        except Exception as e:
+            messagebox.showerror("导出失败", f"导出固件列表时出错:\n\n{str(e)}")
+    
     def manage_scan_paths(self):
         """管理扫描路径 - 添加/删除自定义固件目录"""
         # 创建对话框
@@ -820,8 +934,84 @@ class FirmwareLibTab:
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # 应用固件
-        self._add_detail_path_row(scrollable_frame, "📦 应用固件", project.app_firmware, required=True)
+        # 显示当前项目的固件信息
+        tk.Label(
+            scrollable_frame,
+            text="📦 应用固件",
+            font=("Microsoft YaHei UI", 11, "bold"),
+            bg="white",
+            fg="#2c3e50"
+        ).pack(pady=10)
+        
+        # 只显示当前选中项目的固件
+        self._add_firmware_item(scrollable_frame, project)
+    
+    def _add_firmware_item(self, parent, project):
+        """添加固件项显示"""
+        frame = tk.Frame(parent, bg="white")
+        frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        if project.app_firmware and os.path.exists(project.app_firmware):
+            # 文件信息
+            file_size = os.path.getsize(project.app_firmware)
+            size_kb = file_size / 1024
+            
+            info_frame = tk.Frame(frame, bg="white")
+            info_frame.pack(fill=tk.X, padx=10, pady=5)
+            
+            tk.Label(
+                info_frame,
+                text=f"📄 文件名: {os.path.basename(project.app_firmware)}",
+                font=("Microsoft YaHei UI", 9),
+                bg="white",
+                fg="#34495e"
+            ).pack(anchor=tk.W)
+            
+            tk.Label(
+                info_frame,
+                text=f"📊 大小: {size_kb:.2f} KB ({file_size:,} 字节)",
+                font=("Microsoft YaHei UI", 9),
+                bg="white",
+                fg="#7f8c8d"
+            ).pack(anchor=tk.W, pady=(2, 0))
+            
+            tk.Label(
+                info_frame,
+                text=f"📚 来源: {project.sdk_source}",
+                font=("Microsoft YaHei UI", 9),
+                bg="white",
+                fg="#7f8c8d"
+            ).pack(anchor=tk.W, pady=(2, 0))
+            
+            # 完整路径
+            tk.Label(
+                frame,
+                text="📂 完整路径:",
+                font=("Microsoft YaHei UI", 9, "bold"),
+                bg="white",
+                fg="#34495e"
+            ).pack(anchor=tk.W, padx=10, pady=(5, 2))
+            
+            path_text = tk.Text(
+                frame,
+                font=("Consolas", 8),
+                bg="#f8f9fa",
+                fg="#495057",
+                relief=tk.FLAT,
+                height=2,
+                wrap=tk.WORD
+            )
+            path_text.insert(1.0, project.app_firmware)
+            path_text.config(state='disabled')
+            path_text.pack(fill=tk.X, padx=10, pady=(0, 10))
+        else:
+            tk.Label(
+                frame,
+                text="❌ 固件文件不存在",
+                font=("Microsoft YaHei UI", 9),
+                bg="white",
+                fg="#e74c3c"
+            ).pack(padx=10, pady=10)
     
     def _add_detail_path_row(self, parent, label, filepath, required=True):
         """添加详细路径行"""
