@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.4.2 - 模块化版本
+Ti AWRL6844 固件烧录工具 v1.4.3 - 模块化版本
 主入口文件 - 调用各标签页模块
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.4.2"
+VERSION = "1.4.3"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
@@ -378,6 +378,28 @@ class SBLCheckDialog(tk.Toplevel):
         self.port = port
         self.baudrate = baudrate
         self.geometry("600x500")
+        
+        # 设置窗口可调整大小
+        self.resizable(True, True)
+        
+        # 设置窗口居中显示在主窗口上
+        self.update_idletasks()
+        
+        # 获取父窗口的位置和大小
+        parent_x = parent.winfo_x()
+        parent_y = parent.winfo_y()
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+        
+        # 计算对话框应该显示的位置（居中在父窗口上）
+        dialog_width = 600
+        dialog_height = 500
+        x = parent_x + (parent_width - dialog_width) // 2
+        y = parent_y + (parent_height - dialog_height) // 2
+        
+        # 设置窗口位置
+        self.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
+        
         self.create_widgets()
         self.start_check()
         
@@ -710,24 +732,40 @@ class FlashToolGUI:
         tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
         
         if os.path.exists(tool_exe):
-            # 工具存在
+            # 工具存在 - 显示完整路径
             if hasattr(self, 'tool_status_label'):
                 self.tool_status_label.config(text="✅ 已找到", fg="green")
+            if hasattr(self, 'tool_path_label'):
+                self.tool_path_label.config(text=tool_exe)
             return True
         else:
             # 工具不存在
             if hasattr(self, 'tool_status_label'):
                 self.tool_status_label.config(text="❌ 未找到", fg="red")
+            if hasattr(self, 'tool_path_label'):
+                self.tool_path_label.config(text="")
             return False
     
     def test_port(self, port, baudrate=115200):
         """测试端口连接"""
+        if not port:
+            self.log("\n⚠️ 请先选择端口！\n", "WARN")
+            messagebox.showwarning("警告", "请先选择要测试的端口！")
+            return False, "未选择端口"
+        
+        self.log(f"\n🔍 正在测试端口 {port}...\n", "INFO")
+        
         try:
             ser = serial.Serial(port, baudrate, timeout=1)
             ser.close()
+            self.log(f"✅ 端口 {port} 连接正常！\n", "SUCCESS")
+            messagebox.showinfo("成功", f"端口 {port} 连接正常！")
             return True, "端口连接正常"
         except Exception as e:
-            return False, f"端口连接失败: {str(e)}"
+            error_msg = f"端口 {port} 连接失败: {str(e)}"
+            self.log(f"❌ {error_msg}\n", "ERROR")
+            messagebox.showerror("错误", error_msg)
+            return False, error_msg
     
     # =========== 烧录方法 ===========
     
@@ -1045,7 +1083,6 @@ class FlashToolGUI:
             title="选择SBL固件文件",
             filetypes=[
                 ("AppImage Files", "*.appimage"),
-                ("Binary Files", "*.bin"),
                 ("All Files", "*.*")
             ],
             initialdir=os.path.dirname(self.firmware_file.get()) if self.firmware_file.get() else None
@@ -1066,7 +1103,6 @@ class FlashToolGUI:
             title="选择App固件文件",
             filetypes=[
                 ("AppImage Files", "*.appimage"),
-                ("Binary Files", "*.bin"),
                 ("All Files", "*.*")
             ],
             initialdir=os.path.dirname(self.firmware_file.get()) if self.firmware_file.get() else None
@@ -1081,65 +1117,62 @@ class FlashToolGUI:
             else:
                 self.log(f"⚠️ {msg}\n", "WARN")
     
-    def open_firmware_folder(self):
-        """打开固件文件夹并扫描固件文件"""
-        folder = filedialog.askdirectory(title="选择固件文件夹")
-        if not folder:
-            return
-        
-        self.log(f"📂 扫描文件夹: {folder}\n")
-        
-        # 扫描.appimage和.bin文件
-        firmware_files = []
-        for ext in ['*.appimage', '*.bin']:
-            firmware_files.extend(Path(folder).glob(ext))
-        
-        if not firmware_files:
-            self.log("❌ 未找到固件文件 (.appimage 或 .bin)\n", "ERROR")
-            messagebox.showwarning("警告", "所选文件夹中未找到固件文件")
-            return
-        
-        # 按修改时间排序，最新的在前
-        firmware_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-        
-        self.log(f"✅ 找到 {len(firmware_files)} 个固件文件:\n", "SUCCESS")
-        for i, file in enumerate(firmware_files, 1):
-            size_kb = file.stat().st_size / 1024
-            mod_time = datetime.fromtimestamp(file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-            self.log(f"  {i}. {file.name} ({size_kb:.1f} KB, {mod_time})\n")
-        
-        # 自动选择最新的固件
-        latest_firmware = str(firmware_files[0])
-        self.firmware_file.set(latest_firmware)
-        self.log(f"\n✅ 已自动选择最新固件: {firmware_files[0].name}\n", "SUCCESS")
-        
-        # 验证文件
-        valid, msg = verify_firmware_file(latest_firmware)
-        if valid:
-            self.log(f"✅ {msg}\n", "SUCCESS")
-        else:
-            self.log(f"⚠️ {msg}\n", "WARN")
-    
     def analyze_firmware(self):
-        """分析固件文件"""
-        filename = filedialog.askopenfilename(
-            title="选择要分析的固件文件",
-            filetypes=[("Binary Files", "*.bin"), ("All Files", "*.*")]
-        )
-        if filename:
-            self.log(f"\n分析固件: {filename}\n")
-            info = analyze_appimage_structure(filename)
-            if info:
-                self.log(f"文件大小: {info['total_size']} 字节\n")
-                self.log(f"SBL偏移: {info['sbl_offset']}\n")
-                self.log(f"App偏移: {info['app_offset']}\n")
-            else:
-                self.log("分析失败\n", "ERROR")
+        """分析已选择的固件文件"""
+        firmware_file = self.firmware_file.get()
+        
+        if not firmware_file:
+            self.log("\n⚠️ 请先选择固件文件！\n", "WARN")
+            return
+        
+        if not os.path.exists(firmware_file):
+            self.log(f"\n❌ 固件文件不存在: {firmware_file}\n", "ERROR")
+            return
+        
+        self.log(f"\n🔍 分析固件: {os.path.basename(firmware_file)}\n", "INFO")
+        self.log(f"完整路径: {firmware_file}\n\n")
+        
+        info = analyze_appimage_structure(firmware_file)
+        if info:
+            self.log("=" * 50 + "\n")
+            self.log(f"📊 固件结构分析结果\n", "SUCCESS")
+            self.log("=" * 50 + "\n")
+            self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
+            self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
+            self.log(f"版本: {info.get('version', 'N/A')}\n")
+            self.log(f"\nSBL信息:\n")
+            self.log(f"  - 偏移: 0x{info['sbl_offset']:X} ({info['sbl_offset']} 字节)\n")
+            self.log(f"  - 大小: {info['sbl_size']:,} 字节 ({info['sbl_size']/1024:.2f} KB)\n")
+            self.log(f"\nApp信息:\n")
+            self.log(f"  - 偏移: 0x{info['app_offset']:X} ({info['app_offset']} 字节)\n")
+            self.log(f"  - 大小: {info['app_size']:,} 字节 ({info['app_size']/1024:.2f} KB)\n")
+            self.log("=" * 50 + "\n")
+        else:
+            self.log("❌ 分析失败：无法解析固件文件结构\n", "ERROR")
     
     def refresh_com_ports(self):
         """刷新COM端口列表"""
-        self.refresh_ports()
-        self.log("已刷新端口列表\n")
+        self.log("\n🔄 正在刷新端口列表...\n", "INFO")
+        
+        sbl_ports, app_ports = self.refresh_ports()
+        
+        if sbl_ports or app_ports:
+            self.log(f"✅ 刷新成功！\n", "SUCCESS")
+            if sbl_ports:
+                self.log(f"  🔌 找到烧录端口: {', '.join(sbl_ports)}\n", "SUCCESS")
+            else:
+                self.log(f"  ⚠️ 未找到烧录端口 (XDS110 Auxiliary Data Port)\n", "WARN")
+            
+            if app_ports:
+                self.log(f"  🔌 找到调试端口: {', '.join(app_ports)}\n", "SUCCESS")
+            else:
+                self.log(f"  ⚠️ 未找到调试端口 (XDS110 Application/User UART)\n", "WARN")
+        else:
+            self.log("❌ 未找到任何XDS110端口！\n", "ERROR")
+            self.log("请检查：\n", "WARN")
+            self.log("  1. 设备是否正确连接\n")
+            self.log("  2. USB驱动是否安装\n")
+            self.log("  3. 设备管理器中是否显示XDS110端口\n")
     
     # =========== 日志方法 ===========
     

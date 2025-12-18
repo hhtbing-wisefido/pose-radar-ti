@@ -174,28 +174,26 @@ class BasicTab:
         )
         self.app.tool_status_label.grid(row=4, column=1, columnspan=2, sticky=tk.W, pady=(5, 2), padx=(5, 0))
         
+        # 工具路径显示
+        self.app.tool_path_label = tk.Label(
+            firmware_frame,
+            text="",
+            font=("Consolas", 7),
+            bg="#ecf0f1",
+            fg="#7f8c8d",
+            wraplength=220,
+            justify=tk.LEFT
+        )
+        self.app.tool_path_label.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=(0, 5))
+        
         # 按钮区域
         button_container = tk.Frame(firmware_frame, bg="#ecf0f1")
-        button_container.grid(row=5, column=0, columnspan=3, pady=(10, 0), sticky=tk.EW)
+        button_container.grid(row=6, column=0, columnspan=3, pady=(10, 0), sticky=tk.EW)
         
-        # 打开目录按钮
+        # 分析已选固件按钮
         tk.Button(
             button_container,
-            text="📂 打开目录",
-            font=("Microsoft YaHei UI", 8),
-            command=self.app.open_firmware_folder,
-            bg="#16a085",
-            fg="white",
-            relief=tk.FLAT,
-            padx=8,
-            pady=4,
-            cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
-        
-        # 分析固件按钮
-        tk.Button(
-            button_container,
-            text="🔍 分析",
+            text="🔍 分析已选固件",
             font=("Microsoft YaHei UI", 8),
             command=self.app.analyze_firmware,
             bg="#3498db",
@@ -204,7 +202,7 @@ class BasicTab:
             padx=8,
             pady=4,
             cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(3, 0))
+        ).pack(fill=tk.X, expand=True)
         
         # --- 端口设置 ---
         port_frame = tk.LabelFrame(
