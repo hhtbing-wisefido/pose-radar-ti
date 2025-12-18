@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.4.8 - 整合版本
+Ti AWRL6844 固件烧录工具 v1.4.9 - 整合版本
 主入口文件 - 单一烧录功能标签页
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.4.8"
+VERSION = "1.4.9"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
@@ -159,68 +159,79 @@ def check_firmware_compatibility(file_path, device='AWRL6844'):
 
 def analyze_appimage_structure(file_path):
     """
-    分析appimage文件结构（完整版）
+    分析appimage文件结构（修正版）
     
-    AppImage结构：
-    - Meta Header (256字节): 包含Magic、版本、SBL/App偏移和大小
-    - SBL Image: 从meta header指定的偏移开始
-    - App Image: 从meta header指定的偏移开始
+    ⚠️ 重要说明：
+    - .appimage文件内部的Meta Header记录的是【文件内相对偏移】
+    - Flash烧录偏移是固定的：SBL=0x2000, App=0x42000（由SDK/sbl.h定义）
+    - 本函数返回【Flash烧录偏移】，而非文件内偏移
+    
+    AppImage文件结构：
+    - Meta Header (512字节): 包含Magic、版本、各核镜像信息
+    - 实际镜像数据: R5F + DSP + RF固件
     
     Returns:
-        dict: 包含文件结构信息，如果分析失败返回None
+        dict: 包含文件结构信息和Flash烧录偏移
     """
     try:
         with open(file_path, 'rb') as f:
-            # 读取Meta Header (256字节)
-            meta_header = f.read(256)
+            # 读取Meta Header (至少512字节，按TI官方定义)
+            meta_header = f.read(512)
             
-            if len(meta_header) < 256:
+            if len(meta_header) < 512:
                 return None
             
             import struct
             
-            # 解析Meta Header结构
             # Offset 0x00: Magic Number (4字节) - 应为 0x5254534D ("MSTR")
             magic = struct.unpack('<I', meta_header[0:4])[0]
             
-            # Offset 0x04-0x07: 版本信息
+            # Offset 0x04: 版本信息 (4字节)
             version = struct.unpack('<I', meta_header[4:8])[0]
             
-            # Offset 0x10: SBL偏移 (4字节)
-            sbl_offset = struct.unpack('<I', meta_header[16:20])[0]
-            
-            # Offset 0x14: SBL大小 (4字节)
-            sbl_size = struct.unpack('<I', meta_header[20:24])[0]
-            
-            # Offset 0x18: App偏移 (4字节)
-            app_offset = struct.unpack('<I', meta_header[24:28])[0]
-            
-            # Offset 0x1C: App大小 (4字节)
-            app_size = struct.unpack('<I', meta_header[28:32])[0]
-            
             # 获取文件总大小
-            f.seek(0, 2)  # 移到文件末尾
+            f.seek(0, 2)
             total_size = f.tell()
             
-            info = {
-                'total_size': total_size,
-                'has_meta_header': magic == 0x5254534D,
-                'magic_number': hex(magic),
-                'version': version,
-                'sbl_offset': sbl_offset,
-                'sbl_size': sbl_size,
-                'app_offset': app_offset,
-                'app_size': app_size,
-                'has_sbl_header': sbl_offset > 0 and sbl_size > 0,
-                'has_app_header': app_offset > 0 and app_size > 0
-            }
+            # 判断文件类型（根据大小和文件名）
+            filename = os.path.basename(file_path).lower()
+            is_sbl = 'sbl' in filename or total_size < 200*1024
             
-            # 验证偏移和大小的合理性
-            if sbl_offset + sbl_size > total_size:
-                info['sbl_size'] = total_size - sbl_offset
+            # ⚠️ 关键修正：返回Flash烧录偏移，而非文件内偏移
+            # 这些值来自官方SDK的sbl.h定义
+            FLASH_SBL_OFFSET = 0x2000    # M_META_SBL_OFFSET
+            FLASH_APP_OFFSET = 0x42000   # M_META_IMAGE_OFFSET
             
-            if app_offset + app_size > total_size:
-                info['app_size'] = total_size - app_offset
+            if is_sbl:
+                # SBL固件
+                info = {
+                    'total_size': total_size,
+                    'has_meta_header': magic == 0x5254534D,
+                    'magic_number': hex(magic),
+                    'version': version,
+                    'sbl_offset': FLASH_SBL_OFFSET,  # Flash烧录偏移
+                    'sbl_size': total_size,          # 整个文件就是SBL
+                    'app_offset': 0,
+                    'app_size': 0,
+                    'has_sbl_header': True,
+                    'has_app_header': False,
+                    'file_type': 'SBL'
+                }
+            else:
+                # 应用固件
+                info = {
+                    'total_size': total_size,
+                    'has_meta_header': magic == 0x5254534D,
+                    'magic_number': hex(magic),
+                    'version': version,
+                    'sbl_offset': 0,
+                    'sbl_size': 0,
+                    'app_offset': FLASH_APP_OFFSET,  # Flash烧录偏移
+                    'app_size': total_size,          # 整个文件就是App
+                    'has_sbl_header': False,
+                    'has_app_header': True,
+                    'file_type': 'APP'
+                }
             
             return info
         
@@ -615,6 +626,7 @@ class FlashToolGUI:
         self.firmware_file = tk.StringVar()  # 兼容旧代码
         self.sbl_file = tk.StringVar()  # SBL固件文件
         self.app_file = tk.StringVar()  # App固件文件
+        self.flash_tool_path = tk.StringVar()  # 烧录工具路径
         self.sbl_port = tk.StringVar()
         self.app_port = tk.StringVar()
         self.flash_timeout = tk.IntVar(value=self.device_config['flash_timeout'])
@@ -795,24 +807,58 @@ class FlashToolGUI:
         return None
     
     def check_flash_tool(self):
-        """检测烧录工具是否存在"""
-        sdk_path = self.device_config.get('sdk_path', 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01')
-        tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
+        """检测烧录工具是否存在（支持多个路径）"""
+        # 获取脚本所在目录的绝对路径
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # 向上两级到达 01-AWRL6844固件系统工具
+        tool_base = os.path.dirname(os.path.dirname(script_dir))
         
-        if os.path.exists(tool_exe):
-            # 工具存在 - 显示完整路径
+        # 候选路径列表
+        tool_paths = [
+            # 1. APP内置工具（优先）
+            os.path.join(tool_base, '3-Tools', 'arprog_cmdline_6844.exe'),
+            # 2. SDK标准路径
+            'C:\\ti\\MMWAVE_L_SDK_06_01_00_01\\tools\\FlashingTool\\arprog_cmdline_6844.exe',
+            # 3. 用户自定义路径（如果已设置）
+            self.flash_tool_path.get()
+        ]
+        
+        # 遍历查找第一个存在的工具
+        for tool_exe in tool_paths:
+            if tool_exe and os.path.exists(tool_exe):
+                self.flash_tool_path.set(tool_exe)
+                if hasattr(self, 'tool_status_label'):
+                    self.tool_status_label.config(text="✅ 已找到", fg="green")
+                if hasattr(self, 'tool_path_label'):
+                    self.tool_path_label.config(text=tool_exe)
+                return True
+        
+        # 所有路径都不存在
+        if hasattr(self, 'tool_status_label'):
+            self.tool_status_label.config(text="❌ 未找到", fg="red")
+        if hasattr(self, 'tool_path_label'):
+            self.tool_path_label.config(text="")
+        return False
+    
+    def select_flash_tool(self):
+        """选择烧录工具路径"""
+        filename = filedialog.askopenfilename(
+            title="选择烧录工具",
+            filetypes=[
+                ("Executable Files", "*.exe"),
+                ("All Files", "*.*")
+            ],
+            initialdir=os.path.dirname(self.flash_tool_path.get()) if self.flash_tool_path.get() else None
+        )
+        if filename:
+            self.flash_tool_path.set(filename)
+            self.log(f"✅ 已选择烧录工具: {filename}\n", "SUCCESS")
+            
+            # 更新界面状态
             if hasattr(self, 'tool_status_label'):
-                self.tool_status_label.config(text="✅ 已找到", fg="green")
+                self.tool_status_label.config(text="✅ 已选择", fg="green")
             if hasattr(self, 'tool_path_label'):
-                self.tool_path_label.config(text=tool_exe)
-            return True
-        else:
-            # 工具不存在
-            if hasattr(self, 'tool_status_label'):
-                self.tool_status_label.config(text="❌ 未找到", fg="red")
-            if hasattr(self, 'tool_path_label'):
-                self.tool_path_label.config(text="")
-            return False
+                self.tool_path_label.config(text=filename)
     
     def test_port(self, port, baudrate=115200):
         """测试端口连接"""
@@ -891,13 +937,12 @@ class FlashToolGUI:
             self.log(f"🔌 SBL端口: {sbl_port}\n")
             self.log(f"🔌 App端口: {app_port}\n\n")
             
-            # SDK工具路径
-            sdk_path = self.device_config.get('sdk_path', 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01')
-            tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
+            # 获取烧录工具路径
+            tool_exe = self.flash_tool_path.get()
             
-            if not os.path.exists(tool_exe):
-                self.log(f"❌ 找不到烧录工具: {tool_exe}\n", "ERROR")
-                self.log("请确认SDK已正确安装\n", "ERROR")
+            if not tool_exe or not os.path.exists(tool_exe):
+                self.log(f"❌ 找不到烧录工具\n", "ERROR")
+                self.log("请点击「选择」按钮选择烧录工具，或确认SDK已正确安装\n", "ERROR")
                 return
             
             # 步骤1: 烧录SBL（如提供）
@@ -1025,12 +1070,11 @@ class FlashToolGUI:
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 SBL端口: {sbl_port}\n\n")
             
-            # SDK工具路径
-            sdk_path = self.device_config.get('sdk_path', 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01')
-            tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
+            # 获取烧录工具路径
+            tool_exe = self.flash_tool_path.get()
             
-            if not os.path.exists(tool_exe):
-                self.log(f"❌ 找不到烧录工具: {tool_exe}\n", "ERROR")
+            if not tool_exe or not os.path.exists(tool_exe):
+                self.log(f"❌ 找不到烧录工具\n", "ERROR")
                 return
             
             sbl_offset = self.device_config.get('sbl_offset', 0x2000)
@@ -1108,12 +1152,11 @@ class FlashToolGUI:
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 App端口: {app_port}\n\n")
             
-            # SDK工具路径
-            sdk_path = self.device_config.get('sdk_path', 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01')
-            tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
+            # 获取烧录工具路径
+            tool_exe = self.flash_tool_path.get()
             
-            if not os.path.exists(tool_exe):
-                self.log(f"❌ 找不到烧录工具: {tool_exe}\n", "ERROR")
+            if not tool_exe or not os.path.exists(tool_exe):
+                self.log(f"❌ 找不到烧录工具\n", "ERROR")
                 return
             
             app_offset = self.device_config.get('app_offset', 0x42000)
@@ -1213,11 +1256,17 @@ class FlashToolGUI:
     
     def analyze_firmware(self):
         """分析已选择的固件文件"""
-        sbl_file = self.sbl_file.get()
-        app_file = self.app_file.get()
+        sbl_file = (self.sbl_file.get() or '').strip()
+        app_file = (self.app_file.get() or '').strip()
+        
+        # 调试信息
+        self.log(f"\n🔍 开始分析固件...\n", "INFO")
+        self.log(f"SBL文件变量值: '{sbl_file}'\n")
+        self.log(f"App文件变量值: '{app_file}'\n")
         
         if not sbl_file and not app_file:
             self.log("\n⚠️ 请先选择SBL或App固件文件！\n", "WARN")
+            self.log("提示: 点击左侧的「选择」按钮来选择固件文件\n")
             return
         
         # 分析SBL固件
@@ -1235,13 +1284,11 @@ class FlashToolGUI:
                     self.log("=" * 50 + "\n")
                     self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
                     self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
-                    self.log(f"版本: {info.get('version', 'N/A')}\n")
-                    self.log(f"\nSBL信息:\n")
-                    self.log(f"  - 偏移: 0x{info['sbl_offset']:X} ({info['sbl_offset']} 字节)\n")
-                    self.log(f"  - 大小: {info['sbl_size']:,} 字节 ({info['sbl_size']/1024:.2f} KB)\n")
-                    self.log(f"\nApp信息:\n")
-                    self.log(f"  - 偏移: 0x{info['app_offset']:X} ({info['app_offset']} 字节)\n")
-                    self.log(f"  - 大小: {info['app_size']:,} 字节 ({info['app_size']/1024:.2f} KB)\n")
+                    self.log(f"文件类型: {info.get('file_type', 'Unknown')}\n")
+                    self.log(f"\n📍 Flash烧录信息:\n")
+                    self.log(f"  - Flash偏移: 0x{info['sbl_offset']:X} ({info['sbl_offset']} 字节)\n")
+                    self.log(f"  - 固件大小: {info['sbl_size']:,} 字节 ({info['sbl_size']/1024:.2f} KB)\n")
+                    self.log(f"  - 预留空间: 256 KB (0x40000)\n")
                     self.log("=" * 50 + "\n")
                 else:
                     self.log("❌ SBL分析失败：无法解析固件文件结构\n", "ERROR")
@@ -1261,13 +1308,11 @@ class FlashToolGUI:
                     self.log("=" * 50 + "\n")
                     self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
                     self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
-                    self.log(f"版本: {info.get('version', 'N/A')}\n")
-                    self.log(f"\nSBL信息:\n")
-                    self.log(f"  - 偏移: 0x{info['sbl_offset']:X} ({info['sbl_offset']} 字节)\n")
-                    self.log(f"  - 大小: {info['sbl_size']:,} 字节 ({info['sbl_size']/1024:.2f} KB)\n")
-                    self.log(f"\nApp信息:\n")
-                    self.log(f"  - 偏移: 0x{info['app_offset']:X} ({info['app_offset']} 字节)\n")
-                    self.log(f"  - 大小: {info['app_size']:,} 字节 ({info['app_size']/1024:.2f} KB)\n")
+                    self.log(f"文件类型: {info.get('file_type', 'Unknown')}\n")
+                    self.log(f"\n📍 Flash烧录信息:\n")
+                    self.log(f"  - Flash偏移: 0x{info['app_offset']:X} ({info['app_offset']} 字节)\n")
+                    self.log(f"  - 固件大小: {info['app_size']:,} 字节 ({info['app_size']/1024:.2f} KB)\n")
+                    self.log(f"  - 最大空间: 1784 KB\n")
                     self.log("=" * 50 + "\n")
                 else:
                     self.log("❌ App分析失败：无法解析固件文件结构\n", "ERROR")

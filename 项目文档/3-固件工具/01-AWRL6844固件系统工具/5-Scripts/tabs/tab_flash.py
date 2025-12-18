@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.4.8
+版本: v1.4.9
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -172,7 +172,21 @@ class FlashTab:
             bg="#ecf0f1",
             fg="red"
         )
-        self.app.tool_status_label.grid(row=4, column=1, columnspan=2, sticky=tk.W, pady=(5, 2), padx=(5, 0))
+        self.app.tool_status_label.grid(row=4, column=1, sticky=tk.W, pady=(5, 2), padx=(5, 0))
+        
+        # 选择工具按钮
+        tk.Button(
+            firmware_frame,
+            text="选择",
+            font=("Microsoft YaHei UI", 8),
+            command=self.app.select_flash_tool,
+            bg="#3498db",
+            fg="white",
+            relief=tk.FLAT,
+            padx=5,
+            pady=1,
+            cursor="hand2"
+        ).grid(row=4, column=2, sticky=tk.E, pady=(5, 2))
         
         # 工具路径显示
         self.app.tool_path_label = tk.Label(
@@ -216,10 +230,10 @@ class FlashTab:
         )
         port_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # 烧录端口（COM3）
+        # SBL烧录端口（COM4 - Auxiliary Data Port）
         tk.Label(
             port_frame,
-            text="烧录端口(COM3):",
+            text="SBL烧录端口(COM4):",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1"
         ).grid(row=0, column=0, sticky=tk.W, pady=5)
@@ -231,7 +245,7 @@ class FlashTab:
             font=("Consolas", 9)
         )
         self.app.flash_port_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
-        self.app.flash_port_combo.set("COM3")
+        self.app.flash_port_combo.set("COM4")
         # 同步到主程序变量
         try:
             self.app.sbl_port.set(self.app.flash_port_combo.get())
@@ -240,10 +254,10 @@ class FlashTab:
         # 选择变更时同步
         self.app.flash_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.sbl_port.set(self.app.flash_port_combo.get()))
         
-        # 调试端口（COM4）
+        # App/调试端口（COM3 - User UART）
         tk.Label(
             port_frame,
-            text="调试端口(COM4):",
+            text="App/调试端口(COM3):",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1"
         ).grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -255,7 +269,7 @@ class FlashTab:
             font=("Consolas", 9)
         )
         self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(5, 0))
-        self.app.debug_port_combo.set("COM4")
+        self.app.debug_port_combo.set("COM3")
         # 同步到主程序变量
         try:
             self.app.app_port.set(self.app.debug_port_combo.get())

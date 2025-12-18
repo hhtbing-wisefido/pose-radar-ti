@@ -438,20 +438,32 @@ class FirmwareManagerTab:
         
         # 一键添加按钮
         action_frame = ttk.Frame(frame)
-        action_frame.pack(fill=tk.X, padx=10, pady=5)
+        action_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
         
-        add_btn = ttk.Button(
+        # 创建突出的按钮
+        add_btn = tk.Button(
             action_frame,
-            text="⚡ 一键添加到基本烧录",
-            command=self.add_to_basic_flash
+            text="⚡ 一键添加到烧录功能",
+            font=("Microsoft YaHei UI", 10, "bold"),
+            command=self.add_to_basic_flash,
+            bg="#27ae60",  # 绿色背景
+            fg="white",
+            activebackground="#229954",
+            activeforeground="white",
+            relief=tk.RAISED,
+            bd=3,
+            padx=20,
+            pady=10,
+            cursor="hand2"
         )
-        add_btn.pack(side=tk.LEFT, padx=5)
+        add_btn.pack(pady=5)
         
         ttk.Label(
             action_frame,
-            text="将选中的应用固件和SBL固件添加到基本烧录标签页",
-            foreground="gray"
-        ).pack(side=tk.LEFT, padx=10)
+            text="↑ 点击上方按钮，将选中固件自动添加到「烧录功能」标签页",
+            foreground="#e74c3c",
+            font=("Microsoft YaHei UI", 9, "bold")
+        ).pack(pady=2)
         
         # SBL匹配结果
         sbl_frame = ttk.LabelFrame(frame, text="推荐SBL固件 (Top 3)", padding=10)
@@ -872,6 +884,14 @@ class FirmwareManagerTab:
         
         # 设置到主应用的固件路径
         try:
+            # ⚠️ 关键修复：设置StringVar变量（供analyze_firmware使用）
+            if hasattr(self.main_app, 'sbl_file'):
+                self.main_app.sbl_file.set(sbl_path)
+            if hasattr(self.main_app, 'app_file'):
+                self.main_app.app_file.set(app_path)
+            if hasattr(self.main_app, 'firmware_file'):
+                self.main_app.firmware_file.set(app_path)  # 兼容旧代码
+            
             # 更新SBL路径显示
             if hasattr(self.main_app, 'sbl_path_label'):
                 self.main_app.sbl_path_label.config(text=sbl_path)
