@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.4.6 - 模块化版本
-主入口文件 - 调用各标签页模块
+Ti AWRL6844 固件烧录工具 v1.4.8 - 整合版本
+主入口文件 - 单一烧录功能标签页
 """
 
 import tkinter as tk
@@ -21,23 +21,20 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.4.6"
+VERSION = "1.4.8"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
 # 导入标签页模块
 try:
-    from tabs import BasicTab, AdvancedTab, MonitorTab, PortsTab, FirmwareManagerTab
+    from tabs import FlashTab, FirmwareManagerTab
 except ImportError as e:
     messagebox.showerror(
         "模块导入错误",
         f"无法导入tabs模块：{e}\n\n"
         "请确保tabs目录存在且包含以下文件：\n"
         "- __init__.py\n"
-        "- tab_basic.py\n"
-        "- tab_advanced.py\n"
-        "- tab_monitor.py\n"
-        "- tab_ports.py\n"
+        "- tab_flash.py\n"
         "- tab_firmware_manager.py"
     )
     sys.exit(1)
@@ -662,25 +659,17 @@ class FlashToolGUI:
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
         # 创建各个标签页的Frame
-        basic_frame = ttk.Frame(self.notebook)
-        advanced_frame = ttk.Frame(self.notebook)
+        flash_frame = ttk.Frame(self.notebook)
         firmware_manager_frame = ttk.Frame(self.notebook)
-        monitor_frame = ttk.Frame(self.notebook)
-        ports_frame = ttk.Frame(self.notebook)
         
         # 添加到Notebook
-        self.notebook.add(basic_frame, text="  基本烧录  ")
-        self.notebook.add(advanced_frame, text="  高级功能  ")
+        self.notebook.add(flash_frame, text="  烧录功能  ")
         self.notebook.add(firmware_manager_frame, text="  固件管理  ")
-        self.notebook.add(monitor_frame, text="  串口监视  ")
-        self.notebook.add(ports_frame, text="  端口管理  ")
         
         # 实例化各标签页模块
-        self.basic_tab = BasicTab(basic_frame, self)
-        self.advanced_tab = AdvancedTab(advanced_frame, self)
+        self.flash_tab = FlashTab(flash_frame, self)
+        self.basic_tab = self.flash_tab  # 兼容旧代码
         self.firmware_manager_tab = FirmwareManagerTab(firmware_manager_frame, self)
-        self.monitor_tab = MonitorTab(monitor_frame, self)
-        self.ports_tab = PortsTab(ports_frame, self)
         
         # 状态栏
         status_frame = ttk.Frame(self.root)
@@ -714,6 +703,82 @@ class FlashToolGUI:
             self.basic_tab.update_port_list(sbl_ports, app_ports)
         
         return sbl_ports, app_ports
+
+    def open_serial_monitor(self, port, baudrate=115200):
+        """打开串口监视（输出到日志区）"""
+        if not port:
+            self.log("\n⚠️ 未指定端口，无法打开监视器\n", "WARN")
+            return
+        self.log(f"\n📡 打开串口监视器: {port} @ {baudrate}\n", "INFO")
+        stop_event = threading.Event()
+
+        def _monitor():
+            ser = None
+            try:
+                ser = serial.Serial(port, baudrate, timeout=0.1)
+                self.log(f"✅ 监视器已连接 {port}\n")
+                while not stop_event.is_set():
+                    try:
+                        if ser.in_waiting:
+                            data = ser.read(ser.in_waiting)
+                            try:
+                                text = data.decode('utf-8', errors='replace')
+                                if text:
+                                    self.log(text)
+                            except Exception:
+                                pass
+                        time.sleep(0.05)
+                    except Exception as e:
+                        self.log(f"\n❌ 串口读取错误: {str(e)}\n", "ERROR")
+                        break
+            except Exception as e:
+                self.log(f"❌ 打开串口失败: {str(e)}\n", "ERROR")
+            finally:
+                try:
+                    if ser:
+                        ser.close()
+                except Exception:
+                    pass
+                self.log(f"📴 监视器已关闭: {port}\n")
+
+        # 启动后台线程（一次性监视会话，不保存引用，关闭窗口时自动结束）
+        t = threading.Thread(target=_monitor, daemon=True)
+        t.start()
+
+    def release_port(self, port):
+        """尝试释放端口（关闭本程序可能占用的句柄，并提示外部占用）"""
+        if not port:
+            self.log("\n⚠️ 未指定端口，无法释放\n", "WARN")
+            return False
+        self.log(f"\n🔓 尝试释放端口: {port}\n", "INFO")
+        # 尝试以独占方式打开并立即关闭
+        try:
+            ser = serial.Serial(port, 115200, timeout=0.2)
+            ser.close()
+            self.log("✅ 端口可用，无需释放\n", "SUCCESS")
+            return True
+        except Exception as e:
+            self.log(f"⚠️ 端口当前不可用: {str(e)}\n", "WARN")
+            # 检查可能占用的进程（基于进程名/命令行的启发式）
+            suspects = ["putty", "teraterm", "sscom", "python", "pycharm", "code"]
+            found = []
+            for proc in psutil.process_iter(['pid','name','cmdline']):
+                try:
+                    name = (proc.info.get('name') or '').lower()
+                    cmd = ' '.join(proc.info.get('cmdline') or []).lower()
+                    if any(s in name for s in suspects) or any(s in cmd for s in suspects):
+                        if port.lower() in cmd:
+                            found.append((proc.pid, name))
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            if found:
+                self.log("🔎 可能占用该端口的进程: \n")
+                for pid, name in found:
+                    self.log(f"  • PID {pid}: {name}\n")
+                self.log("如需强制释放，请手动关闭以上程序后重试。\n", "WARN")
+            else:
+                self.log("未发现明显的占用进程。可尝试：\n  1) 重新插拔USB\n  2) 设备复位\n  3) 设备管理器禁用/启用该端口\n", "WARN")
+            return False
     
     def get_port_info(self, port):
         """获取端口详细信息"""
@@ -1248,15 +1313,21 @@ class FlashToolGUI:
     # =========== 日志方法 ===========
     
     def log(self, message, tag=None):
-        """添加日志（始终输出到基本烧录标签页）"""
-        # 修复：不管当前激活哪个标签页，都输出到基本烧录页
-        if hasattr(self, 'basic_tab') and hasattr(self.basic_tab, 'log'):
+        """添加日志（始终输出到烧录功能标签页）"""
+        # 修复：不管当前激活哪个标签页，都输出到烧录功能页
+        if hasattr(self, 'flash_tab') and hasattr(self.flash_tab, 'log'):
+            self.flash_tab.log(message, tag)
+        elif hasattr(self, 'basic_tab') and hasattr(self.basic_tab, 'log'):
+            # 兼容旧代码
             self.basic_tab.log(message, tag)
     
     def clear_log(self):
         """清空日志"""
-        # 修复：不管当前激活哪个标签页，都清除基本烧录页
-        if hasattr(self, 'basic_tab') and hasattr(self.basic_tab, 'clear_log'):
+        # 修复：不管当前激活哪个标签页，都清除烧录功能页
+        if hasattr(self, 'flash_tab') and hasattr(self.flash_tab, 'clear_log'):
+            self.flash_tab.clear_log()
+        elif hasattr(self, 'basic_tab') and hasattr(self.basic_tab, 'clear_log'):
+            # 兼容旧代码
             self.basic_tab.clear_log()
     
     # =========== 状态栏方法 ===========

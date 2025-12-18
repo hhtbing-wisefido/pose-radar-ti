@@ -232,6 +232,13 @@ class FlashTab:
         )
         self.app.flash_port_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
         self.app.flash_port_combo.set("COM3")
+        # 同步到主程序变量
+        try:
+            self.app.sbl_port.set(self.app.flash_port_combo.get())
+        except Exception:
+            pass
+        # 选择变更时同步
+        self.app.flash_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.sbl_port.set(self.app.flash_port_combo.get()))
         
         # 调试端口（COM4）
         tk.Label(
@@ -249,6 +256,13 @@ class FlashTab:
         )
         self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(5, 0))
         self.app.debug_port_combo.set("COM4")
+        # 同步到主程序变量
+        try:
+            self.app.app_port.set(self.app.debug_port_combo.get())
+        except Exception:
+            pass
+        # 选择变更时同步
+        self.app.debug_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.app_port.set(self.app.debug_port_combo.get()))
         
         # 刷新按钮 + 测试按钮 + SBL检测按钮
         button_frame = tk.Frame(port_frame, bg="#ecf0f1")
@@ -535,8 +549,48 @@ class FlashTab:
     
     def update_port_list(self, sbl_ports, app_ports):
         """更新端口列表"""
-        # TODO: 更新端口下拉框
-        pass
+        # 更新烧录端口候选
+        try:
+            current_sbl = self.app.flash_port_combo.get() if hasattr(self.app, 'flash_port_combo') else None
+            values_sbl = sbl_ports or []
+            if hasattr(self.app, 'flash_port_combo'):
+                self.app.flash_port_combo['values'] = values_sbl
+                if current_sbl in values_sbl:
+                    self.app.flash_port_combo.set(current_sbl)
+                elif values_sbl:
+                    self.app.flash_port_combo.set(values_sbl[0])
+                # 同步变量
+                if hasattr(self.app, 'sbl_port'):
+                    self.app.sbl_port.set(self.app.flash_port_combo.get())
+        except Exception:
+            pass
+        
+        # 更新调试端口候选
+        try:
+            current_app = self.app.debug_port_combo.get() if hasattr(self.app, 'debug_port_combo') else None
+            values_app = app_ports or []
+            if hasattr(self.app, 'debug_port_combo'):
+                self.app.debug_port_combo['values'] = values_app
+                if current_app in values_app:
+                    self.app.debug_port_combo.set(current_app)
+                elif values_app:
+                    self.app.debug_port_combo.set(values_app[0])
+                # 同步变量
+                if hasattr(self.app, 'app_port'):
+                    self.app.app_port.set(self.app.debug_port_combo.get())
+        except Exception:
+            pass
+        
+        # 更新端口管理下拉：合并并去重
+        try:
+            if hasattr(self, 'port_mgmt_combo'):
+                all_ports = list(dict.fromkeys((sbl_ports or []) + (app_ports or [])))
+                if all_ports:
+                    self.port_mgmt_combo['values'] = all_ports
+                    if self.port_mgmt_combo.get() not in all_ports:
+                        self.port_mgmt_combo.set(all_ports[0])
+        except Exception:
+            pass
     
     def log(self, message, tag=None):
         """添加日志消息"""
