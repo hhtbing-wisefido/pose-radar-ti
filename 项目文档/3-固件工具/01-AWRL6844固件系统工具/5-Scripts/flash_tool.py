@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.4.5 - 模块化版本
+Ti AWRL6844 固件烧录工具 v1.4.6 - 模块化版本
 主入口文件 - 调用各标签页模块
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.4.5"
+VERSION = "1.4.6"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
@@ -1248,21 +1248,15 @@ class FlashToolGUI:
     # =========== 日志方法 ===========
     
     def log(self, message, tag=None):
-        """添加日志（委托给当前激活的标签页）"""
-        current_tab = self.notebook.select()
-        tab_index = self.notebook.index(current_tab)
-        
-        # 只有基本烧录标签页有log功能
-        if tab_index == 0 and hasattr(self.basic_tab, 'log'):
+        """添加日志（始终输出到基本烧录标签页）"""
+        # 修复：不管当前激活哪个标签页，都输出到基本烧录页
+        if hasattr(self, 'basic_tab') and hasattr(self.basic_tab, 'log'):
             self.basic_tab.log(message, tag)
     
     def clear_log(self):
         """清空日志"""
-        current_tab = self.notebook.select()
-        tab_index = self.notebook.index(current_tab)
-        
-        # 只有基本烧录标签页有clear_log功能
-        if tab_index == 0 and hasattr(self.basic_tab, 'clear_log'):
+        # 修复：不管当前激活哪个标签页，都清除基本烧录页
+        if hasattr(self, 'basic_tab') and hasattr(self.basic_tab, 'clear_log'):
             self.basic_tab.clear_log()
     
     # =========== 状态栏方法 ===========
