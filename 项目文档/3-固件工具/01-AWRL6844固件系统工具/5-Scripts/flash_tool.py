@@ -925,8 +925,6 @@ class FlashToolGUI:
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
-                return.returncode != 0:
-                self.log("\n❌ SBL烧录失败！\n", "ERROR")
                 return
             
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
