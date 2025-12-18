@@ -1007,7 +1007,6 @@ class FlashToolGUI:
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
-                returnog("\n❌ App烧录失败！\n", "ERROR")
                 return
             
             self.log("\n✅ App烧录成功！\n", "SUCCESS")
