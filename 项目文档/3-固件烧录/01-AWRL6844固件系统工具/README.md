@@ -1,4 +1,4 @@
-# 🚀 AWRL6844 HelloWorld 完整烧录项目
+# 🚀 AWRL6844 固件系统工具
 
 > **项目目标**: 从空白板子到运行HelloWorld，实现完整的QSPI Flash烧录流程
 
@@ -27,7 +27,7 @@ C:\ti\MMWAVE_L_SDK_06_01_00_01\    # SDK根目录
 
 ## 📋 项目说明
 
-本项目提供AWRL6844从**完全空白板子**到**成功运行HelloWorld示例**的完整烧录方案，包含：
+本工具提供AWRL6844固件烧录和管理的完整解决方案，包含：
 
 1. ✅ **SBL Bootloader** - 二级引导程序
 2. ✅ **HelloWorld应用** - 最简单的验证程序
@@ -40,7 +40,7 @@ C:\ti\MMWAVE_L_SDK_06_01_00_01\    # SDK根目录
 ## 📁 目录结构
 
 ```
-01-AWRL6844_HelloWorld_完整烧录/
+01-AWRL6844固件系统工具/
 ├── 📄 README.md                          # 本文件
 ├── 📄 操作指南.md                         # 详细烧录步骤
 ├── 📄 Flash布局说明.md                    # QSPI Flash内存布局
