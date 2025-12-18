@@ -844,12 +844,19 @@ class FlashToolGUI:
             return
         
         # 获取固件文件 - 优先使用sbl_file/app_file，如果不存在则使用firmware_file
-        sbl_file = self.sbl_file.get()
-        app_file = self.app_file.get()
-        firmware_file = sbl_file or app_file or self.firmware_file.get()
+        sbl_file = (self.sbl_file.get() or '').strip()
+        app_file = (self.app_file.get() or '').strip()
+        fallback = (self.firmware_file.get() or '').strip()
         
-        if not firmware_file or not os.path.exists(firmware_file):
-            messagebox.showerror("错误", "请先选择有效的固件文件！")
+        if (not sbl_file and not app_file) and (not fallback or not os.path.exists(fallback)):
+            messagebox.showerror("错误", "请先选择SBL或App固件文件！")
+            return
+        # 校验存在性（分别校验）
+        if sbl_file and not os.path.exists(sbl_file):
+            messagebox.showerror("错误", f"SBL文件不存在：{sbl_file}")
+            return
+        if app_file and not os.path.exists(app_file):
+            messagebox.showerror("错误", f"App文件不存在：{app_file}")
             return
         
         # 获取端口
@@ -864,13 +871,13 @@ class FlashToolGUI:
         self.flashing = True
         self.flash_thread = threading.Thread(
             target=self._flash_firmware_thread,
-            args=(firmware_file, sbl_port, app_port),
+            args=(sbl_file or fallback, app_file or fallback, sbl_port, app_port),
             daemon=True
         )
         self.flash_thread.start()
     
-    def _flash_firmware_thread(self, firmware_file, sbl_port, app_port):
-        """烧录线程（完整烧录）"""
+    def _flash_firmware_thread(self, sbl_file, app_file, sbl_port, app_port):
+        """烧录线程（完整烧录：分别烧录 SBL 与 App）"""
         try:
             self.log("\n" + "="*60 + "\n")
             self.log("🚀 开始完整烧录流程（SBL + App）\n", "INFO")
@@ -879,7 +886,8 @@ class FlashToolGUI:
             self.log("🧭 SOP提示：烧录前将开关置于 SOP_MODE1 → S8=OFF, S7=OFF\n", "WARN")
             self.log("🧭 SOP提示：烧录完成运行前改为 SOP_MODE2 → S8=OFF, S7=ON\n\n", "WARN")
             
-            self.log(f"📁 固件文件: {firmware_file}\n")
+            self.log(f"📁 SBL文件: {sbl_file}\n")
+            self.log(f"📁 App文件: {app_file}\n")
             self.log(f"🔌 SBL端口: {sbl_port}\n")
             self.log(f"🔌 App端口: {app_port}\n\n")
             
@@ -892,16 +900,12 @@ class FlashToolGUI:
                 self.log("请确认SDK已正确安装\n", "ERROR")
                 return
             
-            # 步骤1: 烧录SBL
+            # 步骤1: 烧录SBL（如提供）
             self.log("📝 步骤 1/2: 烧录SBL (Bootloader)\n", "INFO")
             sbl_offset = self.device_config.get('sbl_offset', 0x2000)
             
-            sbl_cmd = [
-                tool_exe,
-                sbl_port,
-                str(sbl_offset),
-                firmware_file
-            ]
+            sbl_image = sbl_file
+            sbl_cmd = [tool_exe, sbl_port, str(sbl_offset), sbl_image]
             
             self.log(f"执行命令: {' '.join(sbl_cmd)}\n")
             
@@ -933,16 +937,12 @@ class FlashToolGUI:
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
             time.sleep(1)
             
-            # 步骤2: 烧录App
+            # 步骤2: 烧录App（如提供）
             self.log("\n📝 步骤 2/2: 烧录App (应用程序)\n", "INFO")
             app_offset = self.device_config.get('app_offset', 0x42000)
             
-            app_cmd = [
-                tool_exe,
-                app_port,
-                str(app_offset),
-                firmware_file
-            ]
+            app_image = app_file
+            app_cmd = [tool_exe, app_port, str(app_offset), app_image]
             
             self.log(f"执行命令: {' '.join(app_cmd)}\n")
             
