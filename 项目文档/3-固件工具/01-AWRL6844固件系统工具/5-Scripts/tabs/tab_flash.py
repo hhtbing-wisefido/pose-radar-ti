@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.4.9
+版本: v1.5.0
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -230,10 +230,10 @@ class FlashTab:
         )
         port_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # SBL烧录端口（COM4 - Auxiliary Data Port）
+        # 烧录端口（COM3 - User UART）- 实测验证
         tk.Label(
             port_frame,
-            text="SBL烧录端口(COM4):",
+            text="烧录端口(COM3):",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1"
         ).grid(row=0, column=0, sticky=tk.W, pady=5)
@@ -245,7 +245,7 @@ class FlashTab:
             font=("Consolas", 9)
         )
         self.app.flash_port_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
-        self.app.flash_port_combo.set("COM4")
+        self.app.flash_port_combo.set("COM3")
         # 同步到主程序变量
         try:
             self.app.sbl_port.set(self.app.flash_port_combo.get())
@@ -254,10 +254,10 @@ class FlashTab:
         # 选择变更时同步
         self.app.flash_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.sbl_port.set(self.app.flash_port_combo.get()))
         
-        # App/调试端口（COM3 - User UART）
+        # 数据输出端口（COM4 - Auxiliary Data Port）- 实测验证
         tk.Label(
             port_frame,
-            text="App/调试端口(COM3):",
+            text="数据输出端口(COM4):",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1"
         ).grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -269,7 +269,7 @@ class FlashTab:
             font=("Consolas", 9)
         )
         self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(5, 0))
-        self.app.debug_port_combo.set("COM3")
+        self.app.debug_port_combo.set("COM4")
         # 同步到主程序变量
         try:
             self.app.app_port.set(self.app.debug_port_combo.get())
