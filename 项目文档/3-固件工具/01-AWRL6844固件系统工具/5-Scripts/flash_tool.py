@@ -627,7 +627,7 @@ class FlashToolGUI:
         self.firmware_file = tk.StringVar()  # 兼容旧代码
         self.sbl_file = tk.StringVar()  # SBL固件文件
         self.app_file = tk.StringVar()  # App固件文件
-        self.flash_tool_path = tk.StringVar()  # 烧录工具路径
+        self.flash_tool_path = ""  # 烧录工具路径（改为字符串）
         self.sbl_port = tk.StringVar()
         self.app_port = tk.StringVar()
         self.flash_timeout = tk.IntVar(value=self.device_config['flash_timeout'])
@@ -821,13 +821,13 @@ class FlashToolGUI:
             # 2. SDK标准路径
             'C:\\ti\\MMWAVE_L_SDK_06_01_00_01\\tools\\FlashingTool\\arprog_cmdline_6844.exe',
             # 3. 用户自定义路径（如果已设置）
-            self.flash_tool_path.get()
+            self.flash_tool_path
         ]
         
         # 遍历查找第一个存在的工具
         for tool_exe in tool_paths:
             if tool_exe and os.path.exists(tool_exe):
-                self.flash_tool_path.set(tool_exe)
+                self.flash_tool_path = tool_exe
                 if hasattr(self, 'tool_status_label'):
                     self.tool_status_label.config(text="✅ 已找到", fg="green")
                 if hasattr(self, 'tool_path_label'):
@@ -956,7 +956,7 @@ class FlashToolGUI:
             self.log(f"🔌 App端口: {app_port}\n\n")
             
             # 获取烧录工具路径
-            tool_exe = self.flash_tool_path.get()
+            tool_exe = self.flash_tool_path
             
             if not tool_exe or not os.path.exists(tool_exe):
                 self.log(f"❌ 找不到烧录工具\n", "ERROR")
@@ -1089,7 +1089,7 @@ class FlashToolGUI:
             self.log(f"🔌 SBL端口: {sbl_port}\n\n")
             
             # 获取烧录工具路径
-            tool_exe = self.flash_tool_path.get()
+            tool_exe = self.flash_tool_path
             
             if not tool_exe or not os.path.exists(tool_exe):
                 self.log(f"❌ 找不到烧录工具\n", "ERROR")
@@ -1171,7 +1171,7 @@ class FlashToolGUI:
             self.log(f"🔌 App端口: {app_port}\n\n")
             
             # 获取烧录工具路径
-            tool_exe = self.flash_tool_path.get()
+            tool_exe = self.flash_tool_path
             
             if not tool_exe or not os.path.exists(tool_exe):
                 self.log(f"❌ 找不到烧录工具\n", "ERROR")
