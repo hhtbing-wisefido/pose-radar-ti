@@ -263,7 +263,10 @@ cd 3-Tools
 **A**: 检查：
 1. SOP开关是否设置为SOP_MODE2 = [0011]（Debug UART模式）
 2. 串口参数：115200 8N1
-3. 是否使用了正确的串口（COM4为Debug UART）
+3. 是否使用了正确的串口：
+   - **COM3 (User UART)** - 烧录端口
+   - **COM4 (Auxiliary Data Port)** - 雷达数据输出端口
+   - HelloWorld程序输出可能在COM3或COM4，取决于程序配置
 4. 是否按下复位按钮
 
 ---

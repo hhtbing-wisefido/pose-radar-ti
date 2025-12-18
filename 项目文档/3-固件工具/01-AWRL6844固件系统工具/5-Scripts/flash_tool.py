@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.4.9"
+VERSION = "1.5.0"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
@@ -47,8 +47,9 @@ DEVICE_CONFIGS = {
     'AWRL6844': {
         'name': 'AWRL6844',
         'image_type': 'MultiCore',
-        'sbl_port_name': 'XDS110 Class Auxiliary Data Port',
-        'app_port_name': 'XDS110 Class Application/User UART',
+        # 【实测验证】端口功能说明
+        'sbl_port_name': 'XDS110 Class Application/User UART',     # COM3 - 用于Flash烧录
+        'app_port_name': 'XDS110 Class Auxiliary Data Port',       # COM4 - 雷达数据输出端口
         'sbl_baudrate': 115200,
         'app_baudrate': 115200,
         'flash_timeout': 180,
