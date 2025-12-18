@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.0.8 - 模块化版本
+Ti AWRL6844 固件烧录工具 v1.4.2 - 模块化版本
 主入口文件 - 调用各标签页模块
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.4.1"
+VERSION = "1.4.2"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
@@ -609,6 +609,9 @@ class FlashToolGUI:
         # 初始化端口
         self.refresh_ports()
         
+        # 检测烧录工具
+        self.check_flash_tool()
+        
     def create_widgets(self):
         """创建界面组件 - 使用模块化标签页"""
         
@@ -700,6 +703,22 @@ class FlashToolGUI:
                     'pid': p.pid
                 }
         return None
+    
+    def check_flash_tool(self):
+        """检测烧录工具是否存在"""
+        sdk_path = self.device_config.get('sdk_path', 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01')
+        tool_exe = os.path.join(sdk_path, 'tools', 'FlashingTool', 'arprog_cmdline_6844.exe')
+        
+        if os.path.exists(tool_exe):
+            # 工具存在
+            if hasattr(self, 'tool_status_label'):
+                self.tool_status_label.config(text="✅ 已找到", fg="green")
+            return True
+        else:
+            # 工具不存在
+            if hasattr(self, 'tool_status_label'):
+                self.tool_status_label.config(text="❌ 未找到", fg="red")
+            return False
     
     def test_port(self, port, baudrate=115200):
         """测试端口连接"""
