@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.5.0
+版本: v1.5.1
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -165,28 +165,20 @@ class FlashTab:
             bg="#ecf0f1"
         ).grid(row=4, column=0, sticky=tk.W, pady=(5, 2))
         
-        self.app.tool_status_label = tk.Label(
+        # 工具选择下拉框
+        self.app.tool_combo = ttk.Combobox(
             firmware_frame,
-            text="❌ 未找到",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1",
-            fg="red"
+            width=18,
+            state="readonly",
+            font=("Consolas", 8)
         )
-        self.app.tool_status_label.grid(row=4, column=1, sticky=tk.W, pady=(5, 2), padx=(5, 0))
+        self.app.tool_combo.grid(row=4, column=1, columnspan=2, sticky=tk.EW, pady=(5, 2), padx=(5, 0))
         
-        # 选择工具按钮
-        tk.Button(
-            firmware_frame,
-            text="选择",
-            font=("Microsoft YaHei UI", 8),
-            command=self.app.select_flash_tool,
-            bg="#3498db",
-            fg="white",
-            relief=tk.FLAT,
-            padx=5,
-            pady=1,
-            cursor="hand2"
-        ).grid(row=4, column=2, sticky=tk.E, pady=(5, 2))
+        # 初始化工具选项
+        self._init_tool_options()
+        
+        # 选择变更时的回调
+        self.app.tool_combo.bind('<<ComboboxSelected>>', self._on_tool_selected)
         
         # 工具路径显示
         self.app.tool_path_label = tk.Label(
@@ -198,10 +190,25 @@ class FlashTab:
             wraplength=220,
             justify=tk.LEFT
         )
-        self.app.tool_path_label.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=(0, 5))
+        self.app.tool_path_label.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=(0, 2))
+        
+        # 选择自定义工具按钮
+        tk.Button(
+            firmware_frame,
+            text="📂 选择自定义工具",
+            font=("Microsoft YaHei UI", 8),
+            command=self.app.select_flash_tool,
+            bg="#95a5a6",
+            fg="white",
+            relief=tk.FLAT,
+            padx=5,
+            pady=2,
+            cursor="hand2"
+        ).grid(row=6, column=0, columnspan=3, sticky=tk.EW, pady=(2, 5))
         
         # 按钮区域
         button_container = tk.Frame(firmware_frame, bg="#ecf0f1")
+        button_container.grid(row=7, column=0, columnspan=3, pady=(10, 0), sticky=tk.EW)
         button_container.grid(row=6, column=0, columnspan=3, pady=(10, 0), sticky=tk.EW)
         
         # 分析已选固件按钮
@@ -649,6 +656,74 @@ class FlashTab:
         except Exception as e:
             from tkinter import messagebox
             messagebox.showerror("错误", f"无法打开SBL检测对话框：{str(e)}")
+    
+    def _init_tool_options(self):
+        """初始化烧录工具选项"""
+        import os
+        from pathlib import Path
+        
+        # 工具选项字典 {显示名称: 完整路径}
+        self.tool_options = {}
+        
+        # 选项1: 项目内工具（动态路径）
+        try:
+            # 获取当前脚本的父目录（5-Scripts）
+            script_dir = Path(__file__).parent.parent
+            # 构建相对路径到3-Tools
+            project_tool = script_dir / ".." / "3-Tools" / "arprog_cmdline_6844.exe"
+            project_tool = project_tool.resolve()
+            
+            if project_tool.exists():
+                self.tool_options["📦 项目内工具 (推荐)"] = str(project_tool)
+        except Exception as e:
+            print(f"项目内工具路径解析失败: {e}")
+        
+        # 选项2: SDK工具
+        sdk_tool = Path(r"C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool\arprog_cmdline_6844.exe")
+        if sdk_tool.exists():
+            self.tool_options["🔧 SDK工具"] = str(sdk_tool)
+        
+        # 选项3: 自定义工具（如果已设置）
+        if hasattr(self.app, 'flash_tool_path') and self.app.flash_tool_path:
+            custom_path = Path(self.app.flash_tool_path)
+            if custom_path.exists() and str(custom_path) not in self.tool_options.values():
+                self.tool_options["✨ 自定义工具"] = str(custom_path)
+        
+        # 更新下拉框
+        if self.tool_options:
+            self.app.tool_combo['values'] = list(self.tool_options.keys())
+            # 默认选择第一个（项目内工具）
+            self.app.tool_combo.current(0)
+            # 触发选择事件来更新路径显示和主程序变量
+            self._on_tool_selected(None)
+        else:
+            self.app.tool_combo['values'] = ["❌ 未找到可用工具"]
+            self.app.tool_combo.current(0)
+            self.app.tool_path_label.config(text="未找到烧录工具，请手动选择", fg="red")
+    
+    def _on_tool_selected(self, event):
+        """工具选择变更时的回调"""
+        selected_name = self.app.tool_combo.get()
+        
+        if selected_name in self.tool_options:
+            tool_path = self.tool_options[selected_name]
+            
+            # 更新主程序的工具路径
+            self.app.flash_tool_path = tool_path
+            
+            # 更新路径显示
+            self.app.tool_path_label.config(
+                text=tool_path,
+                fg="#27ae60"  # 绿色表示有效
+            )
+            
+            # 更新日志
+            self.app.log_text.insert(
+                tk.END,
+                f"[INFO] 已选择烧录工具: {selected_name}\n      路径: {tool_path}\n",
+                "info"
+            )
+            self.app.log_text.see(tk.END)
 
 
 # 如果直接运行此文件，显示错误提示

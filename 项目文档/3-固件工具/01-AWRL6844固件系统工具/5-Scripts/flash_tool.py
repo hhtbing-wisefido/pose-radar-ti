@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
@@ -849,17 +849,34 @@ class FlashToolGUI:
                 ("Executable Files", "*.exe"),
                 ("All Files", "*.*")
             ],
-            initialdir=os.path.dirname(self.flash_tool_path.get()) if self.flash_tool_path.get() else None
+            initialdir=os.path.dirname(self.flash_tool_path) if self.flash_tool_path else None
         )
         if filename:
-            self.flash_tool_path.set(filename)
-            self.log(f"✅ 已选择烧录工具: {filename}\n", "SUCCESS")
+            self.flash_tool_path = filename
+            self.log(f"✅ 已选择自定义烧录工具: {filename}\n", "SUCCESS")
             
-            # 更新界面状态
-            if hasattr(self, 'tool_status_label'):
-                self.tool_status_label.config(text="✅ 已选择", fg="green")
-            if hasattr(self, 'tool_path_label'):
-                self.tool_path_label.config(text=filename)
+            # 更新下拉框中的自定义工具选项
+            if hasattr(self, 'tool_combo'):
+                from pathlib import Path
+                # 获取flash_tab实例
+                flash_tab = self.flash_tab
+                
+                # 添加或更新自定义工具选项
+                custom_key = "✨ 自定义工具"
+                flash_tab.tool_options[custom_key] = filename
+                
+                # 更新下拉框值
+                self.tool_combo['values'] = list(flash_tab.tool_options.keys())
+                
+                # 选中自定义工具
+                for i, key in enumerate(flash_tab.tool_options.keys()):
+                    if key == custom_key:
+                        self.tool_combo.current(i)
+                        break
+                
+                # 更新路径显示
+                if hasattr(self, 'tool_path_label'):
+                    self.tool_path_label.config(text=filename, fg="#27ae60")
     
     def test_port(self, port, baudrate=115200):
         """测试端口连接"""
