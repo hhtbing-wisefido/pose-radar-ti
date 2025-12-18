@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-tab_basic.py - 基本烧录标签页
-版本: v1.0.8
+tab_flash.py - 烧录功能标签页（整合版）
+版本: v1.4.7
 作者: Benson@Wisefido
+
+整合了原来的基本烧录、高级功能、串口监视、端口管理功能
 
 ⚠️ 此模块不能单独运行，必须从 flash_tool.py 主入口启动！
 """
@@ -12,12 +14,12 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, filedialog, messagebox
 from pathlib import Path
 
-class BasicTab:
-    """基本烧录标签页类"""
+class FlashTab:
+    """烧录功能标签页类（整合版）"""
     
     def __init__(self, parent_frame, app):
         """
-        初始化基本烧录标签页
+        初始化烧录功能标签页
         
         Args:
             parent_frame: 父容器（tk.Frame）
@@ -37,7 +39,7 @@ class BasicTab:
         """显示错误并退出"""
         import sys
         print("=" * 70)
-        print("⚠️  错误：tab_basic 模块不能单独运行！")
+        print("⚠️  错误：tab_flash 模块不能单独运行！")
         print("=" * 70)
         print()
         print("请从主入口启动烧录工具：")
@@ -50,8 +52,6 @@ class BasicTab:
     
     def create_ui(self):
         """创建标签页UI"""
-        # ttk.Frame不支持bg参数，使用默认主题
-        
         # 主容器 - 两列布局
         left_col = tk.Frame(self.frame, bg="#ecf0f1")
         left_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(10, 5), pady=10)
@@ -59,7 +59,7 @@ class BasicTab:
         right_col = tk.Frame(self.frame, bg="#ecf0f1")
         right_col.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 10), pady=10)
         
-        # ============= 左列：固件文件 + 端口设置 + 烧录按钮 =============
+        # ============= 左列：所有功能区 =============
         
         # --- 固件文件状态 ---
         firmware_frame = tk.LabelFrame(
@@ -282,7 +282,7 @@ class BasicTab:
         
         tk.Button(
             button_frame,
-            text="🔎 板载SBL存在性检测",
+            text="🔎 SBL检测",
             font=("Microsoft YaHei UI", 8),
             command=self.check_sbl,
             bg="#9b59b6",
@@ -293,23 +293,198 @@ class BasicTab:
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
         
-        # --- 完整烧录按钮（大按钮） ---
-        flash_button_frame = tk.Frame(left_col, bg="#ecf0f1")
-        flash_button_frame.pack(fill=tk.X, pady=10)
+        # --- 烧录操作区 ---
+        flash_frame = tk.LabelFrame(
+            left_col,
+            text="🔥 烧录操作",
+            font=("Microsoft YaHei UI", 10, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            padx=10,
+            pady=10
+        )
+        flash_frame.pack(fill=tk.X, pady=(0, 10))
         
+        # 完整烧录按钮
         tk.Button(
-            flash_button_frame,
+            flash_frame,
             text="🚀 完整烧录 (SBL + App)",
-            font=("Microsoft YaHei UI", 12, "bold"),
+            font=("Microsoft YaHei UI", 11, "bold"),
             command=self.app.flash_firmware,
             bg="#27ae60",
             fg="white",
             relief=tk.FLAT,
-            padx=20,
-            pady=15,
+            padx=15,
+            pady=10,
             cursor="hand2",
             activebackground="#229954"
-        ).pack(fill=tk.X)
+        ).pack(fill=tk.X, pady=(0, 5))
+        
+        # 单独烧录按钮（两列）
+        single_flash_frame = tk.Frame(flash_frame, bg="#ecf0f1")
+        single_flash_frame.pack(fill=tk.X)
+        
+        tk.Button(
+            single_flash_frame,
+            text="🔥 仅SBL",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            command=self.app.flash_sbl_only,
+            bg="#e67e22",
+            fg="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=6,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        
+        tk.Button(
+            single_flash_frame,
+            text="🔥 仅App",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            command=self.app.flash_app_only,
+            bg="#3498db",
+            fg="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=6,
+            cursor="hand2"
+        ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
+        
+        # --- 串口监视 ---
+        monitor_frame = tk.LabelFrame(
+            left_col,
+            text="📡 串口监视",
+            font=("Microsoft YaHei UI", 10, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            padx=10,
+            pady=10
+        )
+        monitor_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # 监视按钮（两列）
+        monitor_button_frame = tk.Frame(monitor_frame, bg="#ecf0f1")
+        monitor_button_frame.pack(fill=tk.X)
+        
+        tk.Button(
+            monitor_button_frame,
+            text="📟 监视COM3",
+            font=("Microsoft YaHei UI", 9),
+            command=lambda: self.app.open_serial_monitor("COM3"),
+            bg="#27ae60",
+            fg="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=6,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        
+        tk.Button(
+            monitor_button_frame,
+            text="📟 监视COM4",
+            font=("Microsoft YaHei UI", 9),
+            command=lambda: self.app.open_serial_monitor("COM4"),
+            bg="#e67e22",
+            fg="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=6,
+            cursor="hand2"
+        ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
+        
+        # --- 端口管理 ---
+        port_mgmt_frame = tk.LabelFrame(
+            left_col,
+            text="🔧 端口管理",
+            font=("Microsoft YaHei UI", 10, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            padx=10,
+            pady=10
+        )
+        port_mgmt_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # 端口选择
+        port_select_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
+        port_select_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        tk.Label(
+            port_select_frame,
+            text="端口:",
+            font=("Microsoft YaHei UI", 9),
+            bg="#ecf0f1"
+        ).pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.port_mgmt_combo = ttk.Combobox(
+            port_select_frame,
+            values=["COM3", "COM4", "COM5", "COM6"],
+            state="readonly",
+            width=8,
+            font=("Consolas", 9)
+        )
+        self.port_mgmt_combo.set("COM3")
+        self.port_mgmt_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        # 管理按钮（两列）
+        port_mgmt_button_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
+        port_mgmt_button_frame.pack(fill=tk.X)
+        
+        tk.Button(
+            port_mgmt_button_frame,
+            text="🔍 测试端口",
+            font=("Microsoft YaHei UI", 9),
+            command=lambda: self.app.test_port(self.port_mgmt_combo.get()),
+            bg="#3498db",
+            fg="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=6,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        
+        tk.Button(
+            port_mgmt_button_frame,
+            text="🔓 释放端口",
+            font=("Microsoft YaHei UI", 9),
+            command=lambda: self.app.release_port(self.port_mgmt_combo.get()),
+            bg="#e74c3c",
+            fg="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=6,
+            cursor="hand2"
+        ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
+        
+        # --- 高级设置 ---
+        advanced_frame = tk.LabelFrame(
+            left_col,
+            text="⚙️ 高级设置",
+            font=("Microsoft YaHei UI", 10, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            padx=10,
+            pady=10
+        )
+        advanced_frame.pack(fill=tk.X)
+        
+        # 超时设置
+        tk.Label(
+            advanced_frame,
+            text="烧录超时:",
+            font=("Microsoft YaHei UI", 9),
+            bg="#ecf0f1"
+        ).grid(row=0, column=0, sticky=tk.W, pady=5)
+        
+        timeout_options = ["120秒（标准）", "180秒（推荐）", "300秒（大文件）"]
+        self.app.timeout_combo = ttk.Combobox(
+            advanced_frame,
+            values=timeout_options,
+            state="readonly",
+            width=15,
+            font=("Microsoft YaHei UI", 8)
+        )
+        self.app.timeout_combo.set(timeout_options[1])  # 默认180秒
+        self.app.timeout_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
         
         # ============= 右列：日志输出 =============
         
@@ -382,7 +557,7 @@ class BasicTab:
             self.app.log_text.config(state=tk.DISABLED)
     
     def check_sbl(self):
-        """检测SBL是否存在 (v1.1.0)"""
+        """检测SBL是否存在"""
         port = self.app.flash_port_combo.get()
         
         if not port:
@@ -412,7 +587,7 @@ class BasicTab:
 if __name__ == "__main__":
     import sys
     print("=" * 70)
-    print("⚠️  错误：tab_basic.py 不能单独运行！")
+    print("⚠️  错误：tab_flash.py 不能单独运行！")
     print("=" * 70)
     print()
     print("请从主入口启动烧录工具：")
