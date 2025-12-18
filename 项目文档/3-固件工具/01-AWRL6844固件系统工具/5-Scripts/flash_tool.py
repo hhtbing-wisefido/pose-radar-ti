@@ -875,6 +875,9 @@ class FlashToolGUI:
             self.log("\n" + "="*60 + "\n")
             self.log("🚀 开始完整烧录流程（SBL + App）\n", "INFO")
             self.log("="*60 + "\n\n")
+            # SOP 提示（来自官方文档与SOP修正说明）
+            self.log("🧭 SOP提示：烧录前将开关置于 SOP_MODE1 → S8=OFF, S7=OFF\n", "WARN")
+            self.log("🧭 SOP提示：烧录完成运行前改为 SOP_MODE2 → S8=OFF, S7=ON\n\n", "WARN")
             
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 SBL端口: {sbl_port}\n")
@@ -1016,6 +1019,8 @@ class FlashToolGUI:
             self.log("\n" + "="*60 + "\n")
             self.log("🔧 开始SBL烧录\n", "INFO")
             self.log("="*60 + "\n\n")
+            # SOP 提示
+            self.log("🧭 SOP提示：SBL烧录请使用 SOP_MODE1 → S8=OFF, S7=OFF\n\n", "WARN")
             
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 SBL端口: {sbl_port}\n\n")
@@ -1097,6 +1102,8 @@ class FlashToolGUI:
             self.log("\n" + "="*60 + "\n")
             self.log("📱 开始App烧录\n", "INFO")
             self.log("="*60 + "\n\n")
+            # SOP 提示
+            self.log("🧭 SOP提示：App烧录通常仍建议 SOP_MODE1；运行测试请切换 SOP_MODE2\n\n", "WARN")
             
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 App端口: {app_port}\n\n")
