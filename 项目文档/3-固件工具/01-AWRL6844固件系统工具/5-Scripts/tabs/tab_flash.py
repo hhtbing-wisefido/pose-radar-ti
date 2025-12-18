@@ -717,13 +717,14 @@ class FlashTab:
                 fg="#27ae60"  # 绿色表示有效
             )
             
-            # 更新日志
-            self.app.log_text.insert(
-                tk.END,
-                f"[INFO] 已选择烧录工具: {selected_name}\n      路径: {tool_path}\n",
-                "info"
-            )
-            self.app.log_text.see(tk.END)
+            # 更新日志（如果log_text已创建）
+            if hasattr(self.app, 'log_text'):
+                self.app.log_text.insert(
+                    tk.END,
+                    f"[INFO] 已选择烧录工具: {selected_name}\n      路径: {tool_path}\n",
+                    "info"
+                )
+                self.app.log_text.see(tk.END)
 
 
 # 如果直接运行此文件，显示错误提示
