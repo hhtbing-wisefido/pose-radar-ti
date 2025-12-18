@@ -174,13 +174,7 @@ class FlashTab:
         )
         self.app.tool_combo.grid(row=4, column=1, columnspan=2, sticky=tk.EW, pady=(5, 2), padx=(5, 0))
         
-        # 初始化工具选项
-        self._init_tool_options()
-        
-        # 选择变更时的回调
-        self.app.tool_combo.bind('<<ComboboxSelected>>', self._on_tool_selected)
-        
-        # 工具路径显示
+        # 工具路径显示（先创建，后面再初始化）
         self.app.tool_path_label = tk.Label(
             firmware_frame,
             text="",
@@ -205,6 +199,12 @@ class FlashTab:
             pady=2,
             cursor="hand2"
         ).grid(row=6, column=0, columnspan=3, sticky=tk.EW, pady=(2, 5))
+        
+        # 初始化工具选项（放在界面元素创建之后）
+        self._init_tool_options()
+        
+        # 选择变更时的回调
+        self.app.tool_combo.bind('<<ComboboxSelected>>', self._on_tool_selected)
         
         # 按钮区域
         button_container = tk.Frame(firmware_frame, bg="#ecf0f1")
