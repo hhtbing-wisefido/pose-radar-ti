@@ -864,7 +864,7 @@ class FirmwareManagerTab:
             # 如果没有手动选择，使用推荐列表的第一个
             sbl_items = self.match_sbl_tree.get_children()
             if not sbl_items:
-                messagebox.showwarning("警告", "没有可用的SBL固件推荐\\n\\n请先选择一个应用固件触发智能匹配")
+                messagebox.showwarning("警告", "没有可用的SBL固件推荐\n\n请先选择一个应用固件触发智能匹配")
                 return
             sbl_selection = [sbl_items[0]]
         
@@ -873,25 +873,25 @@ class FirmwareManagerTab:
         # 设置到主应用的固件路径
         try:
             # 更新SBL路径显示
-            if hasattr(self.app, 'sbl_path_label'):
-                self.app.sbl_path_label.config(text=sbl_path)
-            if hasattr(self.app, 'sbl_status_label'):
-                self.app.sbl_status_label.config(text="✅ 已选择", fg="green")
+            if hasattr(self.main_app, 'sbl_path_label'):
+                self.main_app.sbl_path_label.config(text=sbl_path)
+            if hasattr(self.main_app, 'sbl_status_label'):
+                self.main_app.sbl_status_label.config(text="✅ 已选择", fg="green")
             
             # 更新App路径显示
-            if hasattr(self.app, 'app_path_label'):
-                self.app.app_path_label.config(text=app_path)
-            if hasattr(self.app, 'app_status_label'):
-                self.app.app_status_label.config(text="✅ 已选择", fg="green")
+            if hasattr(self.main_app, 'app_path_label'):
+                self.main_app.app_path_label.config(text=app_path)
+            if hasattr(self.main_app, 'app_status_label'):
+                self.main_app.app_status_label.config(text="✅ 已选择", fg="green")
             
             # 切换到基本烧录标签页
-            if hasattr(self.app, 'notebook'):
-                self.app.notebook.select(0)  # 切换到第一个标签页（基本烧录）
+            if hasattr(self.main_app, 'notebook'):
+                self.main_app.notebook.select(0)  # 切换到第一个标签页（基本烧录）
             
             messagebox.showinfo(
                 "成功",
-                f"已添加到基本烧录:\\n\\n" +
-                f"SBL固件: {Path(sbl_path).name}\\n" +
+                f"已添加到基本烧录:\n\n" +
+                f"SBL固件: {Path(sbl_path).name}\n" +
                 f"App固件: {Path(app_path).name}"
             )
             
