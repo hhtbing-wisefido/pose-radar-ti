@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.4.4 - 模块化版本
+Ti AWRL6844 固件烧录工具 v1.4.5 - 模块化版本
 主入口文件 - 调用各标签页模块
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.4.4"
+VERSION = "1.4.5"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
@@ -778,8 +778,11 @@ class FlashToolGUI:
             self.log("⚠️ 烧录正在进行中...\n", "WARN")
             return
         
-        # 获取固件文件
-        firmware_file = self.firmware_file.get()
+        # 获取固件文件 - 优先使用sbl_file/app_file，如果不存在则使用firmware_file
+        sbl_file = self.sbl_file.get()
+        app_file = self.app_file.get()
+        firmware_file = sbl_file or app_file or self.firmware_file.get()
+        
         if not firmware_file or not os.path.exists(firmware_file):
             messagebox.showerror("错误", "请先选择有效的固件文件！")
             return
@@ -1094,6 +1097,13 @@ class FlashToolGUI:
             self.sbl_file.set(filename)
             self.firmware_file.set(filename)  # 兼容旧代码
             self.log(f"✅ 已选择SBL文件: {filename}\n", "SUCCESS")
+            
+            # 更新界面状态
+            if hasattr(self, 'sbl_status_label'):
+                self.sbl_status_label.config(text="✅ 已选择", fg="green")
+            if hasattr(self, 'sbl_path_label'):
+                self.sbl_path_label.config(text=filename)
+            
             # 验证文件
             valid, msg = verify_firmware_file(filename)
             if valid:
@@ -1115,6 +1125,13 @@ class FlashToolGUI:
             self.app_file.set(filename)
             self.firmware_file.set(filename)  # 兼容旧代码
             self.log(f"✅ 已选择App文件: {filename}\n", "SUCCESS")
+            
+            # 更新界面状态
+            if hasattr(self, 'app_status_label'):
+                self.app_status_label.config(text="✅ 已选择", fg="green")
+            if hasattr(self, 'app_path_label'):
+                self.app_path_label.config(text=filename)
+            
             # 验证文件
             valid, msg = verify_firmware_file(filename)
             if valid:
@@ -1187,17 +1204,38 @@ class FlashToolGUI:
         """刷新COM端口列表"""
         self.log("\n🔄 正在刷新端口列表...\n", "INFO")
         
+        # 获取所有端口
+        all_ports = list(serial.tools.list_ports.comports())
+        
+        self.log(f"\n🔍 扫描到 {len(all_ports)} 个端口:\n")
+        for port in all_ports:
+            self.log(f"  - {port.device}: {port.description}\n")
+            if port.hwid:
+                self.log(f"    HWID: {port.hwid}\n")
+        
         sbl_ports, app_ports = self.refresh_ports()
         
         if sbl_ports or app_ports:
-            self.log(f"✅ 刷新成功！\n", "SUCCESS")
+            self.log(f"\n✅ 刷新成功！\n", "SUCCESS")
             if sbl_ports:
                 self.log(f"  🔌 找到烧录端口: {', '.join(sbl_ports)}\n", "SUCCESS")
+                for port in sbl_ports:
+                    port_info = self.get_port_info(port)
+                    if port_info:
+                        self.log(f"     - 描述: {port_info['description']}\n")
+                        if port_info.get('vid') and port_info.get('pid'):
+                            self.log(f"     - VID:PID = {port_info['vid']:04X}:{port_info['pid']:04X}\n")
             else:
                 self.log(f"  ⚠️ 未找到烧录端口 (XDS110 Auxiliary Data Port)\n", "WARN")
             
             if app_ports:
                 self.log(f"  🔌 找到调试端口: {', '.join(app_ports)}\n", "SUCCESS")
+                for port in app_ports:
+                    port_info = self.get_port_info(port)
+                    if port_info:
+                        self.log(f"     - 描述: {port_info['description']}\n")
+                        if port_info.get('vid') and port_info.get('pid'):
+                            self.log(f"     - VID:PID = {port_info['vid']:04X}:{port_info['pid']:04X}\n")
             else:
                 self.log(f"  ⚠️ 未找到调试端口 (XDS110 Application/User UART)\n", "WARN")
         else:
