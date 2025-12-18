@@ -326,6 +326,7 @@ class PreFlashCheckDialog(tk.Toplevel):
     
     def __init__(self, parent):
         super().__init__(parent)
+        self.parent = parent
         self.title("烧录前检查")
         self.result = False
         self.create_widgets()
@@ -356,7 +357,7 @@ class PreFlashCheckDialog(tk.Toplevel):
         ttk.Button(button_frame, text="取消", 
                   command=self.on_cancel).pack(side=tk.LEFT, padx=5)
         
-        self.transient(parent)
+        self.transient(self.parent)
         self.grab_set()
         
     def on_ok(self):
@@ -372,6 +373,7 @@ class SBLCheckDialog(tk.Toplevel):
     
     def __init__(self, parent, port, baudrate=115200):
         super().__init__(parent)
+        self.parent = parent
         self.title("SBL存在性检测")
         self.port = port
         self.baudrate = baudrate
@@ -432,12 +434,12 @@ class SBLCheckDialog(tk.Toplevel):
         self.close_btn = ttk.Button(
             button_frame,
             text="关闭",
-            command=self.destroy,
             state=tk.DISABLED
         )
         self.close_btn.pack()
         
-        self.transient(parent)
+        self.transient(self.parent)
+        self.grab_set()parent)
         self.grab_set()
     
     def start_check(self):
