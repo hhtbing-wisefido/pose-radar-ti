@@ -31,8 +31,8 @@ C:\ti\MMWAVE_L_SDK_06_01_00_01\    # SDK根目录
 
 1. ✅ **SBL Bootloader** - 二级引导程序
 2. ✅ **HelloWorld应用** - 最简单的验证程序
-3. ✅ **配套配置文件** - 所有必需的.json/.cfg文件
-4. ✅ **烧录工具** - arprog_cmdline_6844.exe
+3. ✅ **烧录工具** - arprog_cmdline_6844.exe
+4. ✅ **Python GUI工具** - flash_tool.py v1.4.1 ⭐
 5. ✅ **完整文档** - 分步操作指南
 
 ---
@@ -54,23 +54,30 @@ C:\ti\MMWAVE_L_SDK_06_01_00_01\    # SDK根目录
 │   └── README.md                         # 应用说明
 │
 ├── 📂 3-Tools/                           # 烧录工具
-│   ├── arprog_cmdline_6844.exe           # 串口烧录工具（必需）
+│   ├── arprog_cmdline_6844.exe           # 串口烧录工具（必需）⭐
+│   ├── buildImage_creator.exe            # Meta Header生成工具
+│   ├── flashHeader_creator.exe           # Flash Header生成工具
+│   ├── metaImage_creator.exe             # Meta Image生成工具
 │   └── README.md                         # 工具说明
 │
-├── 📂 4-Generated/                       # 临时文件目录（可选，调试用）
-│   └── README.md                         # 说明
+├── 📂 4-Generated/                       # 临时文件目录
+│   └── README.md                         # 预留给固件生成工具使用
 │
-├── 📂 5-Scripts/                         # Python烧录工具
-    ├── flash_tool.py                     # 交互式烧录工具⭐
+└── 📂 5-Scripts/                         # Python烧录工具 ⭐⭐⭐
+    ├── flash_tool.py                     # GUI烧录工具 v1.4.1
+    ├── tabs/                             # 标签页模块
+    │   ├── tab_basic.py                  # 基本烧录
+    │   ├── tab_advanced.py               # 高级功能
+    │   ├── tab_firmware_manager.py       # 固件管理（智能匹配）
+    │   ├── tab_monitor.py                # 串口监视
+    │   └── tab_ports.py                  # 端口管理
+    ├── awrl6844_firmware_matcher.py      # 固件智能匹配引擎
+    ├── config/                           # 配置文件
+    │   └── scan_paths.json               # 固件扫描路径
     ├── requirements.txt                  # Python依赖
-    ├── PYTHON_TOOL_README.md             # 详细使用说明
-    └── README.md                         # 工具说明
-
-注：已删除的文件（不再需要）：
-  ❌ 1_generate_sbl_meta.bat              (不需要生成meta)
-  ❌ 2_generate_app_meta.bat              (不需要生成meta)
-  ❌ buildImage_creator.exe               (SDK编译已生成.appimage)
-  ❌ metaImage_creator.exe                (烧录工具自动创建flash头)
+    ├── pyrightconfig.json                # Python类型检查配置
+    ├── README.md                         # 详细使用说明
+    └── 烧录操作指南.md                    # 操作指南
 ```
 
 ---
@@ -82,9 +89,11 @@ C:\ti\MMWAVE_L_SDK_06_01_00_01\    # SDK根目录
 - [x] AWRL6844EVM开发板
 - [x] USB数据线
 - [x] Windows PC（已安装XDS110驱动）
-- [x] 串口调试工具（推荐：TeraTerm、PuTTY）
+- [x] Python 3.8+ (推荐使用Python GUI工具)
 
-### 一键完整烧录（推荐）⭐
+---
+
+### Python GUI工具（推荐）⭐⭐⭐
 
 ```bash
 cd 5-Scripts
@@ -92,16 +101,36 @@ cd 5-Scripts
 # 首次运行安装依赖
 pip install -r requirements.txt
 
-# 运行python工具
+# 启动GUI工具
 python flash_tool.py
 ```
 
-**工具特性**:
-1. ✅ 自动扫描COM口
-2. ✅ 交互式菜单选择
-3. ✅ 实时进度显示
-4. ✅ 超时自动检测
-5. ✅ 错误自动处理
+**flash_tool.py v1.4.1 特性**:
+
+1. ✅ **5个功能标签页**
+   - 基本烧录：完整/SBL/App烧录，自动扫描端口
+   - 高级功能：固件分析、SBL检测、分步烧录
+   - 固件管理：智能匹配SBL和App，一键添加
+   - 串口监视：实时监控串口输出
+   - 端口管理：COM口测试和管理
+
+2. ✅ **智能固件匹配引擎**
+   - 自动扫描多个目录查找固件
+   - 智能匹配SBL和App配对
+   - 置信度评分和推荐
+
+3. ✅ **友好的图形界面**
+   - 实时日志输出
+   - 进度提示
+   - 错误提醒
+
+4. ✅ **完整的烧录功能**
+   - 完整烧录（SBL + App）
+   - 仅烧录SBL
+   - 仅烧录App
+   - SBL存在性检测
+
+**详细使用说明**: 查看 `5-Scripts/README.md`
 
 **耗时**: 约2-3分钟
 
