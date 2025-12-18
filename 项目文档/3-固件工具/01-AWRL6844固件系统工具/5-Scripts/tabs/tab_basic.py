@@ -282,7 +282,7 @@ class BasicTab:
         
         tk.Button(
             button_frame,
-            text="🔎 检测SBL",
+            text="🔎 板载SBL存在性检测",
             font=("Microsoft YaHei UI", 8),
             command=self.check_sbl,
             bg="#9b59b6",

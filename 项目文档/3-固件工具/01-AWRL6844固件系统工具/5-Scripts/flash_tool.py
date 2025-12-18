@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.4.3 - 模块化版本
+Ti AWRL6844 固件烧录工具 v1.4.4 - 模块化版本
 主入口文件 - 调用各标签页模块
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.4.3"
+VERSION = "1.4.4"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
@@ -456,7 +456,8 @@ class SBLCheckDialog(tk.Toplevel):
         self.close_btn = ttk.Button(
             button_frame,
             text="关闭",
-            state=tk.DISABLED
+            state=tk.DISABLED,
+            command=self.destroy
         )
         self.close_btn.pack()
         
@@ -614,7 +615,9 @@ class FlashToolGUI:
         self.device_config = DEVICE_CONFIGS['AWRL6844']
         
         # 状态变量
-        self.firmware_file = tk.StringVar()
+        self.firmware_file = tk.StringVar()  # 兼容旧代码
+        self.sbl_file = tk.StringVar()  # SBL固件文件
+        self.app_file = tk.StringVar()  # App固件文件
         self.sbl_port = tk.StringVar()
         self.app_port = tk.StringVar()
         self.flash_timeout = tk.IntVar(value=self.device_config['flash_timeout'])
@@ -1085,10 +1088,11 @@ class FlashToolGUI:
                 ("AppImage Files", "*.appimage"),
                 ("All Files", "*.*")
             ],
-            initialdir=os.path.dirname(self.firmware_file.get()) if self.firmware_file.get() else None
+            initialdir=os.path.dirname(self.sbl_file.get()) if self.sbl_file.get() else None
         )
         if filename:
-            self.firmware_file.set(filename)
+            self.sbl_file.set(filename)
+            self.firmware_file.set(filename)  # 兼容旧代码
             self.log(f"✅ 已选择SBL文件: {filename}\n", "SUCCESS")
             # 验证文件
             valid, msg = verify_firmware_file(filename)
@@ -1105,10 +1109,11 @@ class FlashToolGUI:
                 ("AppImage Files", "*.appimage"),
                 ("All Files", "*.*")
             ],
-            initialdir=os.path.dirname(self.firmware_file.get()) if self.firmware_file.get() else None
+            initialdir=os.path.dirname(self.app_file.get()) if self.app_file.get() else None
         )
         if filename:
-            self.firmware_file.set(filename)
+            self.app_file.set(filename)
+            self.firmware_file.set(filename)  # 兼容旧代码
             self.log(f"✅ 已选择App文件: {filename}\n", "SUCCESS")
             # 验证文件
             valid, msg = verify_firmware_file(filename)
@@ -1119,36 +1124,64 @@ class FlashToolGUI:
     
     def analyze_firmware(self):
         """分析已选择的固件文件"""
-        firmware_file = self.firmware_file.get()
+        sbl_file = self.sbl_file.get()
+        app_file = self.app_file.get()
         
-        if not firmware_file:
-            self.log("\n⚠️ 请先选择固件文件！\n", "WARN")
+        if not sbl_file and not app_file:
+            self.log("\n⚠️ 请先选择SBL或App固件文件！\n", "WARN")
             return
         
-        if not os.path.exists(firmware_file):
-            self.log(f"\n❌ 固件文件不存在: {firmware_file}\n", "ERROR")
-            return
+        # 分析SBL固件
+        if sbl_file:
+            if not os.path.exists(sbl_file):
+                self.log(f"\n❌ SBL固件文件不存在: {sbl_file}\n", "ERROR")
+            else:
+                self.log(f"\n🔍 分析SBL固件: {os.path.basename(sbl_file)}\n", "INFO")
+                self.log(f"完整路径: {sbl_file}\n\n")
+                
+                info = analyze_appimage_structure(sbl_file)
+                if info:
+                    self.log("=" * 50 + "\n")
+                    self.log(f"📊 SBL固件结构分析结果\n", "SUCCESS")
+                    self.log("=" * 50 + "\n")
+                    self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
+                    self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
+                    self.log(f"版本: {info.get('version', 'N/A')}\n")
+                    self.log(f"\nSBL信息:\n")
+                    self.log(f"  - 偏移: 0x{info['sbl_offset']:X} ({info['sbl_offset']} 字节)\n")
+                    self.log(f"  - 大小: {info['sbl_size']:,} 字节 ({info['sbl_size']/1024:.2f} KB)\n")
+                    self.log(f"\nApp信息:\n")
+                    self.log(f"  - 偏移: 0x{info['app_offset']:X} ({info['app_offset']} 字节)\n")
+                    self.log(f"  - 大小: {info['app_size']:,} 字节 ({info['app_size']/1024:.2f} KB)\n")
+                    self.log("=" * 50 + "\n")
+                else:
+                    self.log("❌ SBL分析失败：无法解析固件文件结构\n", "ERROR")
         
-        self.log(f"\n🔍 分析固件: {os.path.basename(firmware_file)}\n", "INFO")
-        self.log(f"完整路径: {firmware_file}\n\n")
-        
-        info = analyze_appimage_structure(firmware_file)
-        if info:
-            self.log("=" * 50 + "\n")
-            self.log(f"📊 固件结构分析结果\n", "SUCCESS")
-            self.log("=" * 50 + "\n")
-            self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
-            self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
-            self.log(f"版本: {info.get('version', 'N/A')}\n")
-            self.log(f"\nSBL信息:\n")
-            self.log(f"  - 偏移: 0x{info['sbl_offset']:X} ({info['sbl_offset']} 字节)\n")
-            self.log(f"  - 大小: {info['sbl_size']:,} 字节 ({info['sbl_size']/1024:.2f} KB)\n")
-            self.log(f"\nApp信息:\n")
-            self.log(f"  - 偏移: 0x{info['app_offset']:X} ({info['app_offset']} 字节)\n")
-            self.log(f"  - 大小: {info['app_size']:,} 字节 ({info['app_size']/1024:.2f} KB)\n")
-            self.log("=" * 50 + "\n")
-        else:
-            self.log("❌ 分析失败：无法解析固件文件结构\n", "ERROR")
+        # 分析App固件
+        if app_file and app_file != sbl_file:  # 避免重复分析
+            if not os.path.exists(app_file):
+                self.log(f"\n❌ App固件文件不存在: {app_file}\n", "ERROR")
+            else:
+                self.log(f"\n🔍 分析App固件: {os.path.basename(app_file)}\n", "INFO")
+                self.log(f"完整路径: {app_file}\n\n")
+                
+                info = analyze_appimage_structure(app_file)
+                if info:
+                    self.log("=" * 50 + "\n")
+                    self.log(f"📊 App固件结构分析结果\n", "SUCCESS")
+                    self.log("=" * 50 + "\n")
+                    self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
+                    self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
+                    self.log(f"版本: {info.get('version', 'N/A')}\n")
+                    self.log(f"\nSBL信息:\n")
+                    self.log(f"  - 偏移: 0x{info['sbl_offset']:X} ({info['sbl_offset']} 字节)\n")
+                    self.log(f"  - 大小: {info['sbl_size']:,} 字节 ({info['sbl_size']/1024:.2f} KB)\n")
+                    self.log(f"\nApp信息:\n")
+                    self.log(f"  - 偏移: 0x{info['app_offset']:X} ({info['app_offset']} 字节)\n")
+                    self.log(f"  - 大小: {info['app_size']:,} 字节 ({info['app_size']/1024:.2f} KB)\n")
+                    self.log("=" * 50 + "\n")
+                else:
+                    self.log("❌ App分析失败：无法解析固件文件结构\n", "ERROR")
     
     def refresh_com_ports(self):
         """刷新COM端口列表"""
