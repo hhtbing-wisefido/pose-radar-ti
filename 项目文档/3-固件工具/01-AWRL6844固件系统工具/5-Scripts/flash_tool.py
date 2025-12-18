@@ -21,13 +21,13 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.3.3"
+VERSION = "1.3.4"
 BUILD_DATE = "2025-12-18"
 AUTHOR = "Benson@Wisefido"
 
 # 导入标签页模块
 try:
-    from tabs import BasicTab, AdvancedTab, MonitorTab, PortsTab
+    from tabs import BasicTab, AdvancedTab, MonitorTab, PortsTab, FirmwareManagerTab
 except ImportError as e:
     messagebox.showerror(
         "模块导入错误",
@@ -37,7 +37,8 @@ except ImportError as e:
         "- tab_basic.py\n"
         "- tab_advanced.py\n"
         "- tab_monitor.py\n"
-        "- tab_ports.py"
+        "- tab_ports.py\n"
+        "- tab_firmware_manager.py"
     )
     sys.exit(1)
 
@@ -634,18 +635,21 @@ class FlashToolGUI:
         # 创建各个标签页的Frame
         basic_frame = ttk.Frame(self.notebook)
         advanced_frame = ttk.Frame(self.notebook)
+        firmware_manager_frame = ttk.Frame(self.notebook)
         monitor_frame = ttk.Frame(self.notebook)
         ports_frame = ttk.Frame(self.notebook)
         
         # 添加到Notebook
         self.notebook.add(basic_frame, text="  基本烧录  ")
         self.notebook.add(advanced_frame, text="  高级功能  ")
+        self.notebook.add(firmware_manager_frame, text="  固件管理  ")
         self.notebook.add(monitor_frame, text="  串口监视  ")
         self.notebook.add(ports_frame, text="  端口管理  ")
         
         # 实例化各标签页模块
         self.basic_tab = BasicTab(basic_frame, self)
         self.advanced_tab = AdvancedTab(advanced_frame, self)
+        self.firmware_manager_tab = FirmwareManagerTab(firmware_manager_frame, self)
         self.monitor_tab = MonitorTab(monitor_frame, self)
         self.ports_tab = PortsTab(ports_frame, self)
         
