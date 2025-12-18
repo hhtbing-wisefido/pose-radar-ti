@@ -14,7 +14,7 @@ tabs 模块 - TI毫米波雷达烧录工具标签页
 ⚠️ 注意：这些模块不能单独运行，必须从 flash_tool.py 主入口启动
 """
 
-__version__ = "v1.3.4"
+__version__ = "v1.3.5"
 __author__ = "Benson@Wisefido"
 
 # 导入所有标签页类
