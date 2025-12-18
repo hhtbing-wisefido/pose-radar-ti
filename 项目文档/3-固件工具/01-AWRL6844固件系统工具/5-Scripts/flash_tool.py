@@ -439,7 +439,6 @@ class SBLCheckDialog(tk.Toplevel):
         self.close_btn.pack()
         
         self.transient(self.parent)
-        self.grab_set()parent)
         self.grab_set()
     
     def start_check(self):
