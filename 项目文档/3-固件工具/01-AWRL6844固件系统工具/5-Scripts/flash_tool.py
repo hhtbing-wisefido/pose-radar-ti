@@ -783,18 +783,20 @@ class FlashToolGUI:
             )
             
             # 读取输出
-            for line in process.stdout:
-                self.log(line)
-                if "Error" in line or "error" in line:
-                    self.log(f"⚠️ {line}", "ERROR")
+            if process.stdout:
+                for line in process.stdout:
+                    self.log(line)
+                    if "Error" in line or "error" in line:
+                        self.log(f"⚠️ {line}", "ERROR")
             
             process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
-                stderr = process.stderr.read()
-                if stderr:
-                    self.log(f"错误信息: {stderr}\n", "ERROR")
+                if process.stderr:
+                    stderr = process.stderr.read()
+                    if stderr:
+                        self.log(f"错误信息: {stderr}\n", "ERROR")
                 return
             
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
@@ -822,18 +824,20 @@ class FlashToolGUI:
             )
             
             # 读取输出
-            for line in process.stdout:
-                self.log(line)
-                if "Error" in line or "error" in line:
-                    self.log(f"⚠️ {line}", "ERROR")
+            if process.stdout:
+                for line in process.stdout:
+                    self.log(line)
+                    if "Error" in line or "error" in line:
+                        self.log(f"⚠️ {line}", "ERROR")
             
             process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
-                stderr = process.stderr.read()
-                if stderr:
-                    self.log(f"错误信息: {stderr}\n", "ERROR")
+                if process.stderr:
+                    stderr = process.stderr.read()
+                    if stderr:
+                        self.log(f"错误信息: {stderr}\n", "ERROR")
                 return
             
             self.log("\n✅ App烧录成功！\n", "SUCCESS")
@@ -905,8 +909,6 @@ class FlashToolGUI:
                 firmware_file
             ]
             
-            self.log(f"执行命令: {' '.join(cmd)}\n")
-            
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -915,12 +917,15 @@ class FlashToolGUI:
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            for line in process.stdout:
-                self.log(line)
+            if process.stdout:
+                for line in process.stdout:
+                    self.log(line)
             
             process.wait()
             
             if process.returncode != 0:
+                self.log("\n❌ SBL烧录失败！\n", "ERROR")
+                return.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
                 return
             
@@ -991,19 +996,20 @@ class FlashToolGUI:
             
             process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            for line in process.stdout:
-                self.log(line)
+            if process.stdout:
+                for line in process.stdout:
+                    self.log(line)
             
             process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
+                returnog("\n❌ App烧录失败！\n", "ERROR")
                 return
             
             self.log("\n✅ App烧录成功！\n", "SUCCESS")
@@ -1126,21 +1132,18 @@ class FlashToolGUI:
         current_tab = self.notebook.select()
         tab_index = self.notebook.index(current_tab)
         
-        # 根据标签页索引调用对应的日志方法
+        # 只有基本烧录标签页有log功能
         if tab_index == 0 and hasattr(self.basic_tab, 'log'):
             self.basic_tab.log(message, tag)
-        elif tab_index == 1 and hasattr(self.advanced_tab, 'log'):
-            self.advanced_tab.log(message, tag)
     
     def clear_log(self):
         """清空日志"""
         current_tab = self.notebook.select()
         tab_index = self.notebook.index(current_tab)
         
+        # 只有基本烧录标签页有clear_log功能
         if tab_index == 0 and hasattr(self.basic_tab, 'clear_log'):
             self.basic_tab.clear_log()
-        elif tab_index == 1 and hasattr(self.advanced_tab, 'clear_log'):
-            self.advanced_tab.clear_log()
     
     # =========== 状态栏方法 ===========
     
