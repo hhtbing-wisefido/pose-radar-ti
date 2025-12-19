@@ -1161,7 +1161,7 @@ class FlashToolGUI:
             sbl_offset = self.device_config.get('sbl_offset', 0x2000)
             
             sbl_image = sbl_file
-            sbl_cmd = [tool_exe, "-p", sbl_port, str(sbl_offset), sbl_image]
+            sbl_cmd = [tool_exe, "-p", sbl_port, "-f", sbl_image, "-of", str(sbl_offset)]
             
             self.log(f"执行命令: {' '.join(sbl_cmd)}\n")
             
@@ -1198,7 +1198,7 @@ class FlashToolGUI:
             app_offset = self.device_config.get('app_offset', 0x42000)
             
             app_image = app_file
-            app_cmd = [tool_exe, "-p", app_port, str(app_offset), app_image]
+            app_cmd = [tool_exe, "-p", app_port, "-f", app_image, "-of", str(app_offset)]
             
             self.log(f"执行命令: {' '.join(app_cmd)}\n")
             
@@ -1294,8 +1294,10 @@ class FlashToolGUI:
                 tool_exe,
                 "-p",
                 sbl_port,
-                str(sbl_offset),
-                firmware_file
+                "-f",
+                firmware_file,
+                "-of",
+                str(sbl_offset)
             ]
             
             process = subprocess.Popen(
@@ -1377,8 +1379,10 @@ class FlashToolGUI:
                 tool_exe,
                 "-p",
                 app_port,
-                str(app_offset),
-                firmware_file
+                "-f",
+                firmware_file,
+                "-of",
+                str(app_offset)
             ]
             
             self.log(f"执行命令: {' '.join(cmd)}\n")
