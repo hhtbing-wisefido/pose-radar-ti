@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.5.3 - 固件路径动态化
+Ti AWRL6844 固件烧录工具 v1.5.4 - 可拖动布局优化
 主入口文件 - 单一烧录功能标签页
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.5.3"
+VERSION = "1.5.4"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 

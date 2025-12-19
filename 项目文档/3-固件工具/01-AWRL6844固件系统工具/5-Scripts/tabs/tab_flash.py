@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.5.3
+版本: v1.5.4
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -52,12 +52,17 @@ class FlashTab:
     
     def create_ui(self):
         """创建标签页UI"""
-        # 主容器 - 两列布局
-        left_col = tk.Frame(self.frame, bg="#ecf0f1")
-        left_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(10, 5), pady=10)
+        # 使用PanedWindow创建可拖动分隔的两列布局
+        paned_window = ttk.PanedWindow(self.frame, orient=tk.HORIZONTAL)
+        paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        right_col = tk.Frame(self.frame, bg="#ecf0f1")
-        right_col.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 10), pady=10)
+        # 左列容器（固件选择和控制区）- 初始宽度增加10%
+        left_col = tk.Frame(paned_window, bg="#ecf0f1")
+        paned_window.add(left_col, weight=2)  # weight=2 表示占比更大
+        
+        # 右列容器（日志显示区）- 初始宽度减少10%
+        right_col = tk.Frame(paned_window, bg="#ecf0f1")
+        paned_window.add(right_col, weight=3)  # weight=3 表示占比相对小一些
         
         # ============= 左列：所有功能区 =============
         
