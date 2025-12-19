@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.5.6
+版本: v1.5.7
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -232,109 +232,6 @@ class FlashTab:
             cursor="hand2"
         ).pack(fill=tk.X, expand=True)
         
-        # --- 端口设置 ---
-        port_frame = tk.LabelFrame(
-            left_col,
-            text="🔌 端口设置",
-            font=("Microsoft YaHei UI", 10, "bold"),
-            bg="#ecf0f1",
-            fg="#2c3e50",
-            padx=10,
-            pady=10
-        )
-        port_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 烧录端口（COM3 - User UART）- 实测验证
-        tk.Label(
-            port_frame,
-            text="烧录端口(COM3):",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1"
-        ).grid(row=0, column=0, sticky=tk.W, pady=5)
-        
-        self.app.flash_port_combo = ttk.Combobox(
-            port_frame,
-            width=10,
-            state="readonly",
-            font=("Consolas", 9)
-        )
-        self.app.flash_port_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
-        self.app.flash_port_combo.set("COM3")
-        # 同步到主程序变量
-        try:
-            self.app.sbl_port.set(self.app.flash_port_combo.get())
-        except Exception:
-            pass
-        # 选择变更时同步
-        self.app.flash_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.sbl_port.set(self.app.flash_port_combo.get()))
-        
-        # 数据输出端口（COM4 - Auxiliary Data Port）- 实测验证
-        tk.Label(
-            port_frame,
-            text="数据输出端口(COM4):",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1"
-        ).grid(row=1, column=0, sticky=tk.W, pady=5)
-        
-        self.app.debug_port_combo = ttk.Combobox(
-            port_frame,
-            width=10,
-            state="readonly",
-            font=("Consolas", 9)
-        )
-        self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(5, 0))
-        self.app.debug_port_combo.set("COM4")
-        # 同步到主程序变量
-        try:
-            self.app.app_port.set(self.app.debug_port_combo.get())
-        except Exception:
-            pass
-        # 选择变更时同步
-        self.app.debug_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.app_port.set(self.app.debug_port_combo.get()))
-        
-        # 刷新按钮 + 测试按钮 + SBL检测按钮
-        button_frame = tk.Frame(port_frame, bg="#ecf0f1")
-        button_frame.grid(row=2, column=0, columnspan=2, pady=(5, 0), sticky=tk.EW)
-        
-        tk.Button(
-            button_frame,
-            text="🔄 刷新",
-            font=("Microsoft YaHei UI", 8),
-            command=self.app.refresh_com_ports,
-            bg="#3498db",
-            fg="white",
-            relief=tk.FLAT,
-            padx=6,
-            pady=4,
-            cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
-        
-        tk.Button(
-            button_frame,
-            text="🔍 测试",
-            font=("Microsoft YaHei UI", 8),
-            command=self.app.test_all_ports,
-            bg="#27ae60",
-            fg="white",
-            relief=tk.FLAT,
-            padx=6,
-            pady=4,
-            cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
-        
-        tk.Button(
-            button_frame,
-            text="🔎 SBL检测",
-            font=("Microsoft YaHei UI", 8),
-            command=self.check_sbl,
-            bg="#9b59b6",
-            fg="white",
-            relief=tk.FLAT,
-            padx=6,
-            pady=4,
-            cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
-        
         # --- 烧录操作区（整合超时设置）---
         flash_frame = tk.LabelFrame(
             left_col,
@@ -414,7 +311,7 @@ class FlashTab:
             cursor="hand2"
         ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
         
-        # --- 端口管理（整合串口监视和端口管理）---
+        # --- 端口管理（整合端口设置、串口监视和端口管理）---
         port_mgmt_frame = tk.LabelFrame(
             left_col,
             text="🔧 端口管理",
@@ -426,6 +323,101 @@ class FlashTab:
         )
         port_mgmt_frame.pack(fill=tk.X)
         
+        # 端口配置区
+        port_config_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
+        port_config_frame.pack(fill=tk.X, pady=(0, 8))
+        
+        # 烧录端口（COM3 - User UART）
+        tk.Label(
+            port_config_frame,
+            text="烧录端口(COM3):",
+            font=("Microsoft YaHei UI", 9),
+            bg="#ecf0f1"
+        ).grid(row=0, column=0, sticky=tk.W, pady=5)
+        
+        self.app.flash_port_combo = ttk.Combobox(
+            port_config_frame,
+            width=10,
+            state="readonly",
+            font=("Consolas", 9)
+        )
+        self.app.flash_port_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
+        self.app.flash_port_combo.set("COM3")
+        # 同步到主程序变量
+        try:
+            self.app.sbl_port.set(self.app.flash_port_combo.get())
+        except Exception:
+            pass
+        # 选择变更时同步
+        self.app.flash_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.sbl_port.set(self.app.flash_port_combo.get()))
+        
+        # 数据输出端口（COM4 - Auxiliary Data Port）
+        tk.Label(
+            port_config_frame,
+            text="数据输出端口(COM4):",
+            font=("Microsoft YaHei UI", 9),
+            bg="#ecf0f1"
+        ).grid(row=1, column=0, sticky=tk.W, pady=5)
+        
+        self.app.debug_port_combo = ttk.Combobox(
+            port_config_frame,
+            width=10,
+            state="readonly",
+            font=("Consolas", 9)
+        )
+        self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(5, 0))
+        self.app.debug_port_combo.set("COM4")
+        # 同步到主程序变量
+        try:
+            self.app.app_port.set(self.app.debug_port_combo.get())
+        except Exception:
+            pass
+        # 选择变更时同步
+        self.app.debug_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.app_port.set(self.app.debug_port_combo.get()))
+        
+        # 端口操作按钮行（刷新 + 测试 + SBL检测）
+        port_action_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
+        port_action_frame.pack(fill=tk.X, pady=(0, 8))
+        
+        tk.Button(
+            port_action_frame,
+            text="🔄 刷新",
+            font=("Microsoft YaHei UI", 8),
+            command=self.app.refresh_com_ports,
+            bg="#3498db",
+            fg="white",
+            relief=tk.FLAT,
+            padx=6,
+            pady=4,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        
+        tk.Button(
+            port_action_frame,
+            text="🔍 测试",
+            font=("Microsoft YaHei UI", 8),
+            command=self.app.test_all_ports,
+            bg="#27ae60",
+            fg="white",
+            relief=tk.FLAT,
+            padx=6,
+            pady=4,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
+        
+        tk.Button(
+            port_action_frame,
+            text="🔎 SBL检测",
+            font=("Microsoft YaHei UI", 8),
+            command=self.check_sbl,
+            bg="#9b59b6",
+            fg="white",
+            relief=tk.FLAT,
+            padx=6,
+            pady=4,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
+        
         # 串口监视按钮（两列）
         monitor_button_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
         monitor_button_frame.pack(fill=tk.X, pady=(0, 8))
@@ -435,6 +427,19 @@ class FlashTab:
             text="📟 监视COM3",
             font=("Microsoft YaHei UI", 9),
             command=lambda: self.app.open_serial_monitor("COM3"),
+            bg="#27ae60",
+            fg="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=6,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        
+        tk.Button(
+            monitor_button_frame,
+            text="📟 监视COM4",
+            font=("Microsoft YaHei UI", 9),
+            command=lambda: self.app.open_serial_monitor("COM4"),
             bg="#27ae60",
             fg="white",
             relief=tk.FLAT,
