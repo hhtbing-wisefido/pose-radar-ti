@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.5.5
+版本: v1.5.6
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -335,7 +335,7 @@ class FlashTab:
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
         
-        # --- 烧录操作区 ---
+        # --- 烧录操作区（整合超时设置）---
         flash_frame = tk.LabelFrame(
             left_col,
             text="🔥 烧录操作",
@@ -346,6 +346,28 @@ class FlashTab:
             pady=10
         )
         flash_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # 超时设置（放在烧录按钮上方）
+        timeout_frame = tk.Frame(flash_frame, bg="#ecf0f1")
+        timeout_frame.pack(fill=tk.X, pady=(0, 8))
+        
+        tk.Label(
+            timeout_frame,
+            text="烧录超时:",
+            font=("Microsoft YaHei UI", 9),
+            bg="#ecf0f1"
+        ).pack(side=tk.LEFT)
+        
+        timeout_options = ["120秒（标准）", "180秒（推荐）", "300秒（大文件）"]
+        self.app.timeout_combo = ttk.Combobox(
+            timeout_frame,
+            values=timeout_options,
+            state="readonly",
+            width=15,
+            font=("Microsoft YaHei UI", 8)
+        )
+        self.app.timeout_combo.set(timeout_options[1])  # 默认180秒
+        self.app.timeout_combo.pack(side=tk.LEFT, padx=(5, 0))
         
         # 完整烧录按钮
         tk.Button(
@@ -392,21 +414,21 @@ class FlashTab:
             cursor="hand2"
         ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
         
-        # --- 串口监视 ---
-        monitor_frame = tk.LabelFrame(
+        # --- 端口管理（整合串口监视和端口管理）---
+        port_mgmt_frame = tk.LabelFrame(
             left_col,
-            text="📡 串口监视",
+            text="🔧 端口管理",
             font=("Microsoft YaHei UI", 10, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
             padx=10,
             pady=10
         )
-        monitor_frame.pack(fill=tk.X, pady=(0, 10))
+        port_mgmt_frame.pack(fill=tk.X)
         
-        # 监视按钮（两列）
-        monitor_button_frame = tk.Frame(monitor_frame, bg="#ecf0f1")
-        monitor_button_frame.pack(fill=tk.X)
+        # 串口监视按钮（两列）
+        monitor_button_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
+        monitor_button_frame.pack(fill=tk.X, pady=(0, 8))
         
         tk.Button(
             monitor_button_frame,
@@ -434,25 +456,13 @@ class FlashTab:
             cursor="hand2"
         ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
         
-        # --- 端口管理 ---
-        port_mgmt_frame = tk.LabelFrame(
-            left_col,
-            text="🔧 端口管理",
-            font=("Microsoft YaHei UI", 10, "bold"),
-            bg="#ecf0f1",
-            fg="#2c3e50",
-            padx=10,
-            pady=10
-        )
-        port_mgmt_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 端口选择
+        # 端口选择和管理
         port_select_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
         port_select_frame.pack(fill=tk.X, pady=(0, 5))
         
         tk.Label(
             port_select_frame,
-            text="端口:",
+            text="管理端口:",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1"
         ).pack(side=tk.LEFT, padx=(0, 5))
@@ -496,37 +506,6 @@ class FlashTab:
             pady=6,
             cursor="hand2"
         ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
-        
-        # --- 高级设置 ---
-        advanced_frame = tk.LabelFrame(
-            left_col,
-            text="⚙️ 高级设置",
-            font=("Microsoft YaHei UI", 10, "bold"),
-            bg="#ecf0f1",
-            fg="#2c3e50",
-            padx=10,
-            pady=10
-        )
-        advanced_frame.pack(fill=tk.X)
-        
-        # 超时设置
-        tk.Label(
-            advanced_frame,
-            text="烧录超时:",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1"
-        ).grid(row=0, column=0, sticky=tk.W, pady=5)
-        
-        timeout_options = ["120秒（标准）", "180秒（推荐）", "300秒（大文件）"]
-        self.app.timeout_combo = ttk.Combobox(
-            advanced_frame,
-            values=timeout_options,
-            state="readonly",
-            width=15,
-            font=("Microsoft YaHei UI", 8)
-        )
-        self.app.timeout_combo.set(timeout_options[1])  # 默认180秒
-        self.app.timeout_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
         
         # ============= 右列：日志输出 =============
         

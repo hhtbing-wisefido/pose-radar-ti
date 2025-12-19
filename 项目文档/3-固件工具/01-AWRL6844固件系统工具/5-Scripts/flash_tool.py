@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.5.5 - 端口测试增强
+Ti AWRL6844 固件烧录工具 v1.5.6 - 界面整合优化
 主入口文件 - 单一烧录功能标签页
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.5.5"
+VERSION = "1.5.6"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -802,38 +802,99 @@ class FlashToolGUI:
         t.start()
 
     def release_port(self, port):
-        """尝试释放端口（关闭本程序可能占用的句柄，并提示外部占用）"""
+        """尝试释放端口（关闭占用的句柄）"""
         if not port:
             self.log("\n⚠️ 未指定端口，无法释放\n", "WARN")
+            messagebox.showwarning("警告", "请选择要释放的端口！")
             return False
+        
         self.log(f"\n🔓 尝试释放端口: {port}\n", "INFO")
-        # 尝试以独占方式打开并立即关闭
+        
+        # 首先尝试直接打开关闭（如果端口可用）
         try:
             ser = serial.Serial(port, 115200, timeout=0.2)
             ser.close()
-            self.log("✅ 端口可用，无需释放\n", "SUCCESS")
+            self.log(f"✅ 端口 {port} 可用，无需释放\n", "SUCCESS")
+            messagebox.showinfo("成功", f"端口 {port} 可用，无需释放")
             return True
-        except Exception as e:
-            self.log(f"⚠️ 端口当前不可用: {str(e)}\n", "WARN")
-            # 检查可能占用的进程（基于进程名/命令行的启发式）
-            suspects = ["putty", "teraterm", "sscom", "python", "pycharm", "code"]
-            found = []
-            for proc in psutil.process_iter(['pid','name','cmdline']):
-                try:
-                    name = (proc.info.get('name') or '').lower()
-                    cmd = ' '.join(proc.info.get('cmdline') or []).lower()
-                    if any(s in name for s in suspects) or any(s in cmd for s in suspects):
-                        if port.lower() in cmd:
-                            found.append((proc.pid, name))
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    continue
-            if found:
-                self.log("🔎 可能占用该端口的进程: \n")
+        except serial.SerialException as e:
+            self.log(f"⚠️ 端口 {port} 当前被占用\n", "WARN")
+        
+        # 查找并尝试关闭占用端口的进程
+        suspects = ["putty", "teraterm", "sscom", "python", "pycharm", "code", "serial"]
+        found = []
+        killed = []
+        
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                name = (proc.info.get('name') or '').lower()
+                cmd = ' '.join(proc.info.get('cmdline') or []).lower()
+                
+                # 检查是否可能占用串口
+                if any(s in name for s in suspects):
+                    # 不杀死当前Python进程
+                    if proc.pid == os.getpid():
+                        continue
+                    found.append((proc.pid, proc.info.get('name')))
+                    
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        if found:
+            self.log("🔎 发现可能占用端口的进程:\n", "INFO")
+            for pid, name in found:
+                self.log(f"  • PID {pid}: {name}\n", "INFO")
+            
+            # 询问用户是否终止这些进程
+            result = messagebox.askyesno(
+                "发现占用进程",
+                f"发现以下进程可能占用端口 {port}:\n\n" +
+                "\n".join([f"• {name} (PID: {pid})" for pid, name in found]) +
+                f"\n\n是否尝试终止这些进程以释放端口？"
+            )
+            
+            if result:
                 for pid, name in found:
-                    self.log(f"  • PID {pid}: {name}\n")
-                self.log("如需强制释放，请手动关闭以上程序后重试。\n", "WARN")
+                    try:
+                        proc = psutil.Process(pid)
+                        proc.terminate()
+                        proc.wait(timeout=3)
+                        killed.append(name)
+                        self.log(f"✅ 已终止进程: {name} (PID: {pid})\n", "SUCCESS")
+                    except psutil.TimeoutExpired:
+                        try:
+                            proc.kill()
+                            killed.append(name)
+                            self.log(f"✅ 已强制终止进程: {name} (PID: {pid})\n", "SUCCESS")
+                        except Exception as e:
+                            self.log(f"❌ 无法终止进程 {name}: {str(e)}\n", "ERROR")
+                    except Exception as e:
+                        self.log(f"❌ 终止进程 {name} 失败: {str(e)}\n", "ERROR")
+                
+                # 等待一下，再次尝试打开端口
+                time.sleep(0.5)
+                try:
+                    ser = serial.Serial(port, 115200, timeout=0.2)
+                    ser.close()
+                    self.log(f"✅ 端口 {port} 已成功释放！\n", "SUCCESS")
+                    messagebox.showinfo("成功", f"端口 {port} 已释放！\n已终止: {', '.join(killed)}")
+                    return True
+                except Exception as e:
+                    self.log(f"⚠️ 端口仍然被占用: {str(e)}\n", "WARN")
+                    messagebox.showwarning(
+                        "部分成功",
+                        f"已终止部分进程，但端口仍被占用。\n\n建议:\n1. 重新插拔USB设备\n2. 在设备管理器中禁用/启用端口\n3. 重启系统"
+                    )
+                    return False
             else:
-                self.log("未发现明显的占用进程。可尝试：\n  1) 重新插拔USB\n  2) 设备复位\n  3) 设备管理器禁用/启用该端口\n", "WARN")
+                self.log("⚠️ 用户取消释放操作\n", "WARN")
+                return False
+        else:
+            self.log("未发现明显的占用进程\n", "WARN")
+            messagebox.showwarning(
+                "未找到占用进程",
+                f"端口 {port} 被占用，但未找到明显的占用进程。\n\n建议:\n1. 重新插拔USB设备\n2. 在设备管理器中禁用/启用端口\n3. 检查其他可能占用串口的程序"
+            )
             return False
     
     def get_port_info(self, port):
