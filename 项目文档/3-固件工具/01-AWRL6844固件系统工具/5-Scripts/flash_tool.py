@@ -28,7 +28,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.6.4"
+VERSION = "1.6.5"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -637,6 +637,8 @@ class FlashToolGUI:
         # 烧录状态
         self.flashing = False
         self.flash_thread = None
+        self.flash_process = None  # 当前烧录进程
+        self.stop_flashing = False  # 停止烧录标志
         
         # 创建界面
         self.create_widgets()
@@ -1129,12 +1131,32 @@ class FlashToolGUI:
         
         # 启动烧录线程
         self.flashing = True
+        self.stop_flashing = False
         self.flash_thread = threading.Thread(
             target=self._flash_firmware_thread,
             args=(sbl_file, app_file, sbl_port, app_port),
             daemon=True
         )
         self.flash_thread.start()
+    
+    def stop_flash(self):
+        """停止烧录"""
+        if not self.flashing:
+            self.log("⚠️ 当前没有正在进行的烧录任务\n", "WARN")
+            return
+        
+        self.log("\n🛑 用户请求停止烧录...\n", "WARN")
+        self.stop_flashing = True
+        
+        # 终止当前进程
+        if self.flash_process and self.flash_process.poll() is None:
+            try:
+                self.flash_process.kill()
+                self.log("✅ 烧录进程已终止\n", "INFO")
+            except Exception as e:
+                self.log(f"❌ 终止进程失败: {e}\n", "ERROR")
+        
+        self.flashing = False
     
     def _flash_firmware_thread(self, sbl_file, app_file, sbl_port, app_port):
         """烧录线程（完整烧录：依次烧录 SBL 与 App）
@@ -1148,15 +1170,21 @@ class FlashToolGUI:
             
             # SOP模式人工确认
             sop_confirm = messagebox.askyesno(
-                "SOP模式确认",
-                "请确认硬件SOP模式配置：\n\n"
-                "烧录模式（SOP_MODE1）：\n"
-                "• S8 = OFF\n"
-                "• S7 = OFF\n\n"
-                "运行模式（SOP_MODE2）：\n"
-                "• S8 = OFF\n"
-                "• S7 = ON\n\n"
-                "当前是否已设置为烧录模式（SOP_MODE1）？"
+                "⚠️ 烧录前准备",
+                "请完成以下准备：\n\n"
+                "1️⃣ 确认SOP开关设置：\n"
+                "   - S8 = OFF（断开）\n"
+                "   - S7 = OFF（断开）\n"
+                "   - 模式 = SOP_MODE1（烧录模式）\n\n"
+                "2️⃣【重要】准备手动复位设备：\n"
+                "   - 找到并按住上方 RESET 按钮\n"
+                "   - 等待到提示：'---- please restart the device ----'\n"
+                "   - 立即按下 RESET 按钮\n\n"
+                "3️⃣ 烧录将自动开始\n"
+                "   - 显示进度：[========>]\n"
+                "   - 完成提示：Done MetaImage: 0\n\n"
+                "============================================================\n"
+                "是否已确认以上设置？"
             )
             if not sop_confirm:
                 self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
@@ -1164,15 +1192,15 @@ class FlashToolGUI:
             
             self.log(f"📁 SBL文件: {sbl_file}\n")
             self.log(f"📁 App文件: {app_file}\n")
-            self.log(f"🔌 SBL端口: {sbl_port}\n")
-            self.log(f"🔌 App端口: {app_port}\n\n")
+            self.log(f"🔌 烧录端口: {sbl_port} (XDS110 Class Application/User UART)\n\n")
             
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
                 f"请确认烧录端口：\n\n"
-                f"SBL端口: {sbl_port}\n"
-                f"App端口: {app_port}\n\n"
+                f"烧录端口: {sbl_port}\n"
+                f"端口说明: XDS110 Class Application/User UART\n\n"
+                f"注意：SBL和App使用同一个烧录端口\n\n"
                 f"端口是否正确？"
             )
             if not port_confirm:
@@ -1216,6 +1244,11 @@ class FlashToolGUI:
             
             self.log(f"执行命令: {' '.join(sbl_cmd)}\n")
             
+            # 检查是否已停止
+            if self.stop_flashing:
+                self.log("❌ 烧录已停止\n", "ERROR")
+                return
+            
             process = subprocess.Popen(
                 sbl_cmd,
                 stdout=subprocess.PIPE,
@@ -1224,15 +1257,24 @@ class FlashToolGUI:
                 bufsize=1,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
+            self.flash_process = process  # 保存进程引用
             
             # 读取输出
             if process.stdout:
                 for line in process.stdout:
+                    if self.stop_flashing:
+                        process.kill()
+                        self.log("\n❌ 烧录已停止\n", "ERROR")
+                        return
                     self.log(line)
                     if process.poll() is not None:
                         break
             
             process.wait()
+            
+            if self.stop_flashing:
+                self.log("\n❌ 烧录已停止\n", "ERROR")
+                return
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
@@ -1270,6 +1312,11 @@ class FlashToolGUI:
             
             self.log(f"执行命令: {' '.join(app_cmd)}\n")
             
+            # 检查是否已停止
+            if self.stop_flashing:
+                self.log("❌ 烧录已停止\n", "ERROR")
+                return
+            
             process = subprocess.Popen(
                 app_cmd,
                 stdout=subprocess.PIPE,
@@ -1278,10 +1325,24 @@ class FlashToolGUI:
                 bufsize=1,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
+            self.flash_process = process  # 更新进程引用
             
             # 读取输出
             if process.stdout:
                 for line in process.stdout:
+                    if self.stop_flashing:
+                        process.kill()
+                        self.log("\n❌ 烧录已停止\n", "ERROR")
+                        return
+                    self.log(line)
+                    if process.poll() is not None:
+                        break
+            
+            process.wait()
+            
+            if self.stop_flashing:
+                self.log("\n❌ 烧录已停止\n", "ERROR")
+                return
                     self.log(line)
                     if process.poll() is not None:
                         break

@@ -273,7 +273,7 @@ class FlashTab:
             activebackground="#229954"
         ).pack(fill=tk.X, pady=(0, 5))
         
-        # 单独烧录按钮（两列）
+        # 单独烧录按钮（三列：仅SBL、仅App、停止烧录）
         single_flash_frame = tk.Frame(flash_frame, bg="#ecf0f1")
         single_flash_frame.pack(fill=tk.X)
         
@@ -296,6 +296,19 @@ class FlashTab:
             font=("Microsoft YaHei UI", 9, "bold"),
             command=self.app.flash_app_only,
             bg="#3498db",
+            fg="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=6,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
+        
+        tk.Button(
+            single_flash_frame,
+            text="🛑 停止",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            command=self.app.stop_flash,
+            bg="#e74c3c",
             fg="white",
             relief=tk.FLAT,
             padx=8,
