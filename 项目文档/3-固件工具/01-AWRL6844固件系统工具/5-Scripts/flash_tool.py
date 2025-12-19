@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v2.0.0 - 真正解决单行进度条问题！
+Ti AWRL6844 固件烧录工具 v2.1.0 - 增强版时间统计和百分比显示
 主入口文件 - 单一烧录功能标签页
+
+更新日志 v2.1.0:
+- 📊 进度条百分比显示：从arprog输出提取百分比，实时显示烧录进度
+- ⏱️ 总执行时间实时显示：独立Label动态显示总耗时（每秒更新）
+- 🎨 增强UI布局：进度条和时间并排显示，信息更丰富
 
 更新日志 v2.0.0:
 - 🎉 真正解决单行进度条问题！
@@ -32,7 +37,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 BUILD_DATE = "2025-12-20"
 AUTHOR = "Benson@Wisefido"
 
@@ -1163,7 +1168,27 @@ class FlashToolGUI:
             except Exception as e:
                 self.log(f"❌ 终止进程失败: {e}\n", "ERROR")
         
+        self.time_update_running = False  # 停止时间更新
         self.flashing = False
+    
+    def _update_total_time_display(self, start_time):
+        """实时更新总执行时间显示（后台线程）"""
+        while self.time_update_running:
+            try:
+                elapsed = time.time() - start_time
+                minutes = int(elapsed // 60)
+                seconds = int(elapsed % 60)
+                
+                if hasattr(self, 'total_time_label'):
+                    if minutes > 0:
+                        time_text = f"⏱️ 总时间: {minutes}分{seconds}秒"
+                    else:
+                        time_text = f"⏱️ 总时间: {seconds}秒"
+                    self.total_time_label.config(text=time_text)
+                
+                time.sleep(1)  # 每秒更新一次
+            except:
+                break
     
     def _flash_firmware_thread(self, sbl_file, app_file, sbl_port, app_port):
         """烧录线程（完整烧录：依次烧录 SBL 与 App）
@@ -1172,6 +1197,15 @@ class FlashToolGUI:
         """
         try:
             total_start_time = time.time()  # 总执行时间计时器（从开始到结束）
+            
+            # 启动总时间实时更新线程
+            self.time_update_running = True
+            time_thread = threading.Thread(
+                target=self._update_total_time_display,
+                args=(total_start_time,),
+                daemon=True
+            )
+            time_thread.start()
             
             self.log("\n" + "="*60 + "\n")
             self.log("🚀 开始完整烧录流程（SBL + App）\n", "INFO")
@@ -1285,6 +1319,7 @@ class FlashToolGUI:
                 if self.stop_flashing:
                     process.kill()
                     self.log("\n❌ 烧录已停止\n", "ERROR")
+                    self.time_update_running = False
                     return
                 
                 byte = process.stdout.read(1)
@@ -1297,15 +1332,23 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line:  # 所有\r结尾的非空行都是进度更新
+                            # 提取百分比（如果有）
+                            percent_match = re.search(r'(\d+)%', line)
+                            if percent_match:
+                                percent = percent_match.group(1)
+                                display_line = f"[{percent}%] {line}"
+                            else:
+                                display_line = line
+                            
                             if progress_mark is None:
                                 if hasattr(self, 'log_text'):
                                     self.log_text.config(state=tk.NORMAL)
-                                    self.log_text.insert(tk.END, line + '\n')
+                                    self.log_text.insert(tk.END, display_line + '\n')
                                     self.log_text.see(tk.END)
                                     self.log_text.config(state=tk.DISABLED)
                                     progress_mark = self.get_last_line_start()
                             else:
-                                self.update_line_at_mark(progress_mark, line + '\n')
+                                self.update_line_at_mark(progress_mark, display_line + '\n')
                     except:
                         pass
                     buffer = b''
@@ -1324,10 +1367,12 @@ class FlashToolGUI:
             
             if self.stop_flashing:
                 self.log("\n❌ 烧录已停止\n", "ERROR")
+                self.time_update_running = False
                 return
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
+                self.time_update_running = False
                 return
             
             # 计算SBL烧录耗时（进度条时间）
@@ -1406,6 +1451,7 @@ class FlashToolGUI:
                 if self.stop_flashing:
                     process.kill()
                     self.log("\n❌ 烧录已停止\n", "ERROR")
+                    self.time_update_running = False
                     return
                 
                 byte = process.stdout.read(1)
@@ -1418,8 +1464,15 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line and hasattr(self, 'progress_label'):
+                            # 提取百分比（如果有）
+                            percent_match = re.search(r'(\d+)%', line)
+                            if percent_match:
+                                percent = percent_match.group(1)
+                                display_line = f"[{percent}%] {line}"
+                            else:
+                                display_line = line
                             # 使用Label显示进度
-                            self.progress_label.config(text=line)
+                            self.progress_label.config(text=display_line)
                             self.progress_label.update()
                     except:
                         pass
@@ -1441,10 +1494,12 @@ class FlashToolGUI:
             
             if self.stop_flashing:
                 self.log("\n❌ 烧录已停止\n", "ERROR")
+                self.time_update_running = False
                 return
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
+                self.time_update_running = False
                 return
             
             # 计算App烧录耗时（进度条时间）
@@ -1479,6 +1534,7 @@ class FlashToolGUI:
             self.log(f"\n❌ 烧录过程出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
         finally:
+            self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
     
     def flash_sbl_only(self):
@@ -1512,6 +1568,15 @@ class FlashToolGUI:
         """烧录线程（仅SBL）"""
         try:
             total_start_time = time.time()  # 总执行时间计时器（从开始到结束）
+            
+            # 启动总时间实时更新线程
+            self.time_update_running = True
+            time_thread = threading.Thread(
+                target=self._update_total_time_display,
+                args=(total_start_time,),
+                daemon=True
+            )
+            time_thread.start()
             
             self.log("\n" + "="*60 + "\n")
             self.log("🔧 开始SBL烧录\n", "INFO")
@@ -1614,7 +1679,14 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line and hasattr(self, 'progress_label'):
-                            self.progress_label.config(text=line)
+                            # 提取百分比（如果有）- SBL only
+                            percent_match = re.search(r'(\d+)%', line)
+                            if percent_match:
+                                percent = percent_match.group(1)
+                                display_line = f"[{percent}%] {line}"
+                            else:
+                                display_line = line
+                            self.progress_label.config(text=display_line)
                             self.progress_label.update()
                     except:
                         pass
@@ -1675,6 +1747,7 @@ class FlashToolGUI:
             self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
         finally:
+            self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
     
     def flash_app_only(self):
@@ -1708,6 +1781,15 @@ class FlashToolGUI:
         """烧录线程（仅应用固件）"""
         try:
             total_start_time = time.time()  # 总执行时间计时器（从开始到结束）
+            
+            # 启动总时间实时更新线程
+            self.time_update_running = True
+            time_thread = threading.Thread(
+                target=self._update_total_time_display,
+                args=(total_start_time,),
+                daemon=True
+            )
+            time_thread.start()
             
             self.log("\n" + "="*60 + "\n")
             self.log("📱 开始应用固件烧录\n", "INFO")
@@ -1814,7 +1896,14 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line and hasattr(self, 'progress_label'):
-                            self.progress_label.config(text=line)
+                            # 提取百分比（如果有）- App only
+                            percent_match = re.search(r'(\d+)%', line)
+                            if percent_match:
+                                percent = percent_match.group(1)
+                                display_line = f"[{percent}%] {line}"
+                            else:
+                                display_line = line
+                            self.progress_label.config(text=display_line)
                             self.progress_label.update()
                     except:
                         pass
@@ -1873,6 +1962,7 @@ class FlashToolGUI:
             self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
         finally:
+            self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
     
     # =========== 文件选择方法 ===========

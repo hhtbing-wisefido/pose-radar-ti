@@ -469,9 +469,13 @@ class FlashTab:
         self.app.log_text.tag_config("WARN", foreground="#f39c12")
         self.app.log_text.tag_config("ERROR", foreground="#e74c3c")
         
-        # 进度条显示区域（独立Label，解决Text widget渲染问题）
-        progress_frame = tk.Frame(log_frame, bg="#1a1a2e", height=50)
-        progress_frame.pack(fill=tk.X, pady=(5, 0))
+        # 进度条和时间显示区域
+        progress_container = tk.Frame(log_frame, bg="#1a1a2e")
+        progress_container.pack(fill=tk.X, pady=(5, 0))
+        
+        # 进度条显示区域（独立Label，解决Text widget渲染问题）- 左侧占70%
+        progress_frame = tk.Frame(progress_container, bg="#1a1a2e", height=50)
+        progress_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         progress_frame.pack_propagate(False)
         
         self.app.progress_label = tk.Label(
@@ -484,6 +488,22 @@ class FlashTab:
             justify=tk.LEFT
         )
         self.app.progress_label.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
+        
+        # 总执行时间实时显示区域 - 右侧占30%
+        time_frame = tk.Frame(progress_container, bg="#1a1a2e", height=50, width=200)
+        time_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        time_frame.pack_propagate(False)
+        
+        self.app.total_time_label = tk.Label(
+            time_frame,
+            text="⏱️ 总时间: 0秒",
+            font=("Microsoft YaHei UI", 10, "bold"),
+            bg="#1a1a2e",
+            fg="#f39c12",
+            anchor="center",
+            justify=tk.CENTER
+        )
+        self.app.total_time_label.pack(fill=tk.BOTH, expand=True, padx=5, pady=8)
         
         # 清除日志按钮
         tk.Button(
