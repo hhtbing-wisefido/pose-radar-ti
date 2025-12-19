@@ -109,7 +109,7 @@ class FlashTab:
         self.app.sbl_path_label = tk.Label(
             firmware_frame,
             text="",
-            font=("Consolas", 7),
+            font=("Microsoft YaHei UI", 8),
             bg="#ecf0f1",
             fg="#7f8c8d",
             anchor="w",
@@ -154,7 +154,7 @@ class FlashTab:
         self.app.app_path_label = tk.Label(
             firmware_frame,
             text="",
-            font=("Consolas", 7),
+            font=("Microsoft YaHei UI", 8),
             bg="#ecf0f1",
             fg="#7f8c8d",
             anchor="w",
@@ -216,7 +216,7 @@ class FlashTab:
         self.app.tool_path_label = tk.Label(
             firmware_frame,
             text="",
-            font=("Consolas", 7),
+            font=("Microsoft YaHei UI", 8),
             bg="#ecf0f1",
             fg="#7f8c8d",
             anchor="w",

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.7.6 - 优化按钮文字显示
+Ti AWRL6844 固件烧录工具 v1.7.7 - 优化界面字体显示
 主入口文件 - 单一烧录功能标签页
 
-更新日志 v1.7.6:
-- 将烧录工具浏览按钮的"..."改为"选择"
-- 按钮宽度从3调整为4，适应中文文字
-- 统一所有文件选择按钮使用"选择"文字
+更新日志 v1.7.7:
+- 优化路径显示字体：从Consolas 7号改为Microsoft YaHei UI 8号
+- 提升路径文字可读性和美观度
+- 统一界面字体风格
 """
 
 import tkinter as tk
@@ -26,7 +26,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.7.6"
+VERSION = "1.7.7"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
