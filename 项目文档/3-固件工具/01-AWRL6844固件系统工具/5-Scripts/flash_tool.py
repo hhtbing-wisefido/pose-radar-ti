@@ -1289,7 +1289,7 @@ class FlashToolGUI:
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
-                        if line and '[' in line:
+                        if line:  # 所有\r结尾的非空行都是进度更新
                             if progress_mark is None:
                                 if hasattr(self, 'log_text'):
                                     self.log_text.config(state=tk.NORMAL)
@@ -1402,7 +1402,7 @@ class FlashToolGUI:
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
-                        if line and '[' in line:
+                        if line:  # 所有\r结尾的非空行都是进度更新
                             if progress_mark is None:
                                 if hasattr(self, 'log_text'):
                                     self.log_text.config(state=tk.NORMAL)
@@ -1580,7 +1580,7 @@ class FlashToolGUI:
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
-                        if line and '[' in line:
+                        if line:  # 所有\r结尾的非空行都是进度更新
                             if progress_mark is None:
                                 if hasattr(self, 'log_text'):
                                     self.log_text.config(state=tk.NORMAL)
@@ -1765,7 +1765,7 @@ class FlashToolGUI:
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
-                        if line and '[' in line:
+                        if line:  # 所有\r结尾的非空行都是进度更新
                             if progress_mark is None:
                                 if hasattr(self, 'log_text'):
                                     self.log_text.config(state=tk.NORMAL)
