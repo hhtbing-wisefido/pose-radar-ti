@@ -664,24 +664,28 @@ class FlashToolGUI:
                 self.sbl_file.set(str(sbl_path))
                 # 更新界面显示
                 if hasattr(self, 'sbl_status_label'):
-                    self.sbl_status_label.config(text="✅ 已选择", fg="green")
+                    self.sbl_status_label.config(text="✅ 已找到", fg="green")
                 if hasattr(self, 'sbl_path_label'):
                     self.sbl_path_label.config(text=str(sbl_path))
                 self.log(f"✅ 自动加载SBL固件: {sbl_path}\n", "SUCCESS")
             else:
                 self.sbl_file.set("")
+                if hasattr(self, 'sbl_status_label'):
+                    self.sbl_status_label.config(text="❌ 未找到", fg="red")
                 
             # 检查App文件是否存在并设置
             if app_path.exists():
                 self.app_file.set(str(app_path))
                 # 更新界面显示
                 if hasattr(self, 'app_status_label'):
-                    self.app_status_label.config(text="✅ 已选择", fg="green")
+                    self.app_status_label.config(text="✅ 已找到", fg="green")
                 if hasattr(self, 'app_path_label'):
                     self.app_path_label.config(text=str(app_path))
                 self.log(f"✅ 自动加载App固件: {app_path}\n", "SUCCESS")
             else:
                 self.app_file.set("")
+                if hasattr(self, 'app_status_label'):
+                    self.app_status_label.config(text="❌ 未找到", fg="red")
                 
         except Exception as e:
             # 初始化失败时使用空值

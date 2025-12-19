@@ -1,0 +1,8 @@
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3

@@ -1,0 +1,28 @@
+=== App烧录测试 ===
+
+1. 拔插USB
+2. 按Enter
+
+准备好:
+
+开始...
+
+SW version: 0.8
+Meta Image offset not specified
+Connecting Com Port....        
+connect to device
+INFO : Port Opened
+set break signal
+--- please restart the device ---
+connection succeeded
+INFO : Port Opened
+INFO: Send start download command
+close command
+downloading [270336] and size [224256]
+INFO : Port Opened
+INFO: Send start download command
+[========================================>]
+ Done Metaimage: 0
+disconnecting device....
+
+完成
