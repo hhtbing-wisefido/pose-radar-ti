@@ -628,7 +628,6 @@ class FlashToolGUI:
         self.device_config = DEVICE_CONFIGS['AWRL6844']
         
         # 状态变量
-        self.firmware_file = tk.StringVar()  # 兼容旧代码
         self.sbl_file = tk.StringVar()  # SBL固件文件
         self.app_file = tk.StringVar()  # App固件文件
         self.flash_tool_path = ""  # 烧录工具路径（改为字符串）
@@ -1105,19 +1104,18 @@ class FlashToolGUI:
             self.log("⚠️ 烧录正在进行中...\n", "WARN")
             return
         
-        # 获取固件文件 - 优先使用sbl_file/app_file，如果不存在则使用firmware_file
+        # 获取固件文件
         sbl_file = (self.sbl_file.get() or '').strip()
         app_file = (self.app_file.get() or '').strip()
-        fallback = (self.firmware_file.get() or '').strip()
         
-        if (not sbl_file and not app_file) and (not fallback or not os.path.exists(fallback)):
-            messagebox.showerror("错误", "请先选择SBL或App固件文件！")
+        if not sbl_file or not app_file:
+            messagebox.showerror("错误", "请先选择SBL和App固件文件！")
             return
-        # 校验存在性（分别校验）
-        if sbl_file and not os.path.exists(sbl_file):
+        # 校验存在性
+        if not os.path.exists(sbl_file):
             messagebox.showerror("错误", f"SBL文件不存在：{sbl_file}")
             return
-        if app_file and not os.path.exists(app_file):
+        if not os.path.exists(app_file):
             messagebox.showerror("错误", f"App文件不存在：{app_file}")
             return
         
@@ -1133,7 +1131,7 @@ class FlashToolGUI:
         self.flashing = True
         self.flash_thread = threading.Thread(
             target=self._flash_firmware_thread,
-            args=(sbl_file or fallback, app_file or fallback, sbl_port, app_port),
+            args=(sbl_file, app_file, sbl_port, app_port),
             daemon=True
         )
         self.flash_thread.start()
@@ -1474,7 +1472,6 @@ class FlashToolGUI:
         )
         if filename:
             self.sbl_file.set(filename)
-            self.firmware_file.set(filename)  # 兼容旧代码
             self.log(f"✅ 已选择SBL文件: {filename}\n", "SUCCESS")
             
             # 更新界面状态
@@ -1502,7 +1499,6 @@ class FlashToolGUI:
         )
         if filename:
             self.app_file.set(filename)
-            self.firmware_file.set(filename)  # 兼容旧代码
             self.log(f"✅ 已选择App文件: {filename}\n", "SUCCESS")
             
             # 更新界面状态
