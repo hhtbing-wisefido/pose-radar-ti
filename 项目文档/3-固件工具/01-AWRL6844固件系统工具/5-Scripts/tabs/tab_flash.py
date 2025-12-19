@@ -338,12 +338,13 @@ class FlashTab:
         port_config_frame.pack(fill=tk.X, pady=(0, 8))
         
         # 烧录端口（COM3 - User UART）
-        tk.Label(
+        self.flash_port_label = tk.Label(
             port_config_frame,
-            text="烧录端口(COM3):",
+            text="XDS110 Class Application/User UART:",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1"
-        ).grid(row=0, column=0, sticky=tk.W, pady=5)
+        )
+        self.flash_port_label.grid(row=0, column=0, sticky=tk.W, pady=5)
         
         self.app.flash_port_combo = ttk.Combobox(
             port_config_frame,
@@ -362,12 +363,13 @@ class FlashTab:
         self.app.flash_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.sbl_port.set(self.app.flash_port_combo.get()))
         
         # 数据输出端口（COM4 - Auxiliary Data Port）
-        tk.Label(
+        self.debug_port_label = tk.Label(
             port_config_frame,
-            text="数据输出端口(COM4):",
+            text="XDS110 Class Auxiliary Data Port:",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1"
-        ).grid(row=1, column=0, sticky=tk.W, pady=5)
+        )
+        self.debug_port_label.grid(row=1, column=0, sticky=tk.W, pady=5)
         
         self.app.debug_port_combo = ttk.Combobox(
             port_config_frame,
@@ -478,6 +480,9 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(pady=(5, 0))
+        
+        # 初始化时刷新一次端口，更新Label显示
+        self.frame.after(100, self.app.refresh_com_ports)
     
     def update_port_list(self, sbl_ports, app_ports):
         """更新端口列表"""
@@ -494,6 +499,9 @@ class FlashTab:
                 # 同步变量
                 if hasattr(self.app, 'sbl_port'):
                     self.app.sbl_port.set(self.app.flash_port_combo.get())
+                # 更新Label显示实际端口号
+                if hasattr(self, 'flash_port_label') and values_sbl:
+                    self.flash_port_label.config(text=f"XDS110 Class Application/User UART ({values_sbl[0]}):")
         except Exception:
             pass
         
@@ -510,6 +518,9 @@ class FlashTab:
                 # 同步变量
                 if hasattr(self.app, 'app_port'):
                     self.app.app_port.set(self.app.debug_port_combo.get())
+                # 更新Label显示实际端口号
+                if hasattr(self, 'debug_port_label') and values_app:
+                    self.debug_port_label.config(text=f"XDS110 Class Auxiliary Data Port ({values_app[0]}):")
         except Exception:
             pass
     
