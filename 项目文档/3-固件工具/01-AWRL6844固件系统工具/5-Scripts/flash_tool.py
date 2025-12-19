@@ -57,9 +57,6 @@ DEVICE_CONFIGS = {
         'app_port_name': 'XDS110 Class Auxiliary Data Port',       # COM4 - 雷达数据输出端口
         'sbl_baudrate': 115200,
         'app_baudrate': 115200,
-        'flash_timeout': 180,
-        'sbl_timeout': 60,
-        'app_timeout': 120,
         # Flash地址配置
         'sbl_offset': 0x2000,      # SBL烧录地址（8KB偏移）
         'app_offset': 0x42000,     # App烧录地址（264KB偏移）
@@ -635,9 +632,6 @@ class FlashToolGUI:
         self.flash_tool_path = ""  # 烧录工具路径（改为字符串）
         self.sbl_port = tk.StringVar()
         self.app_port = tk.StringVar()
-        self.flash_timeout = tk.IntVar(value=self.device_config['flash_timeout'])
-        self.sbl_timeout = tk.IntVar(value=self.device_config['sbl_timeout'])
-        self.app_timeout = tk.IntVar(value=self.device_config['app_timeout'])
         
         # 烧录状态
         self.flashing = False
