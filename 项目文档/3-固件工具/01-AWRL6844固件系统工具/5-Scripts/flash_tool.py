@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v2.1.0 - 增强版时间统计和百分比显示
+Ti AWRL6844 固件烧录工具 v2.1.1 - BUG修复版
 主入口文件 - 单一烧录功能标签页
+
+更新日志 v2.1.1:
+- 🐛 修复完整烧录SBL部分调用旧Text widget方法的BUG
+- 📊 完整烧录SBL部分现已正确显示百分比
+- 🧹 删除旧的get_last_line_start()和update_line_at_mark()方法
+- ✅ 所有烧录功能现均使用Label统一显示进度
 
 更新日志 v2.1.0:
 - 📊 进度条百分比显示：从arprog输出提取百分比，实时显示烧录进度
@@ -37,7 +43,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 BUILD_DATE = "2025-12-20"
 AUTHOR = "Benson@Wisefido"
 
@@ -1311,9 +1317,8 @@ class FlashToolGUI:
             )
             self.flash_process = process  # 保存进程引用
             
-            # 读取输出（二进制模式，正确处理\r单行进度）
+            # 读取输出（使用Label显示进度，支持百分比）
             buffer = b''
-            progress_mark = None
             
             while True:
                 if self.stop_flashing:
@@ -1331,24 +1336,17 @@ class FlashToolGUI:
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
-                        if line:  # 所有\r结尾的非空行都是进度更新
-                            # 提取百分比（如果有）
+                        if line and hasattr(self, 'progress_label'):
+                            # 提取百分比（如果有）- 完整烧录SBL部分
                             percent_match = re.search(r'(\d+)%', line)
                             if percent_match:
                                 percent = percent_match.group(1)
                                 display_line = f"[{percent}%] {line}"
                             else:
                                 display_line = line
-                            
-                            if progress_mark is None:
-                                if hasattr(self, 'log_text'):
-                                    self.log_text.config(state=tk.NORMAL)
-                                    self.log_text.insert(tk.END, display_line + '\n')
-                                    self.log_text.see(tk.END)
-                                    self.log_text.config(state=tk.DISABLED)
-                                    progress_mark = self.get_last_line_start()
-                            else:
-                                self.update_line_at_mark(progress_mark, display_line + '\n')
+                            # 使用Label显示进度
+                            self.progress_label.config(text=display_line)
+                            self.progress_label.update()
                     except:
                         pass
                     buffer = b''
@@ -1357,8 +1355,10 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line:
-                            progress_mark = None
                             self.log(line + '\n')
+                            # 清空进度标签
+                            if hasattr(self, 'progress_label'):
+                                self.progress_label.config(text="")
                     except:
                         pass
                     buffer = b''
@@ -2131,46 +2131,9 @@ class FlashToolGUI:
     
     # =========== 日志方法 ===========
     
-    def get_last_line_start(self):
-        """获取最后一行的起始位置，用于后续更新"""
-        try:
-            if hasattr(self, 'log_text'):
-                log_text = self.log_text
-                # 获取当前内容的最后一行行号
-                last_line = int(log_text.index('end-1c').split('.')[0])
-                # 返回该行的起始位置
-                return f"{last_line}.0"
-        except Exception as e:
-            return None
-    
-    def update_line_at_mark(self, mark_pos, new_text):
-        """更新指定mark位置的那一行（实现单行进度更新）"""
-        try:
-            if hasattr(self, 'log_text') and mark_pos:
-                log_text = self.log_text
-                log_text.config(state=tk.NORMAL)
-                
-                # 删除整行（从mark到下一行开始）
-                line_num = int(mark_pos.split('.')[0])
-                log_text.delete(f"{line_num}.0", f"{line_num + 1}.0")
-                # 插入新内容
-                log_text.insert(f"{line_num}.0", new_text if new_text.endswith('\n') else new_text + '\n')
-                
-                # 自动滚动到底部
-                log_text.see(tk.END)
-                log_text.config(state=tk.DISABLED)
-                log_text.update_idletasks()  # 强制刷新UI
-        except Exception as e:
-            # 如果更新失败，回退到追加模式
-            if hasattr(self, 'log_text'):
-                try:
-                    log_text = self.log_text
-                    log_text.config(state=tk.NORMAL)
-                    log_text.insert(tk.END, new_text)
-                    log_text.see(tk.END)
-                    log_text.config(state=tk.DISABLED)
-                except Exception:
-                    pass
+    # =========== 旧方法已删除 ===========
+    # get_last_line_start() 和 update_line_at_mark() 已废弃
+    # 现在所有进度条统一使用Label组件显示
     
     def log(self, message, tag=None):
         """添加日志（始终输出到烧录功能标签页）"""
