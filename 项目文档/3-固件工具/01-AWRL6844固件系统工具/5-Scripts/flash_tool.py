@@ -1194,7 +1194,7 @@ class FlashToolGUI:
             usb_confirm = messagebox.askyesno(
                 "准备烧录SBL",
                 "请拔插USB或按RESET按钮\n\n"
-                "完成后点击"是"继续烧录"
+                "完成后点击\"是\"继续烧录"
             )
             if not usb_confirm:
                 self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
@@ -1248,7 +1248,7 @@ class FlashToolGUI:
             app_usb_confirm = messagebox.askyesno(
                 "准备烧录App",
                 "请再次拔插USB或按RESET按钮\n\n"
-                "完成后点击"是"继续烧录"
+                "完成后点击\"是\"继续烧录"
             )
             if not app_usb_confirm:
                 self.log("❌ 用户取消App烧录（USB未拔插）\n", "ERROR")
@@ -1372,7 +1372,7 @@ class FlashToolGUI:
             usb_confirm = messagebox.askyesno(
                 "准备烧录",
                 "请拔插USB或按RESET按钮\n\n"
-                "完成后点击"是"继续烧录"
+                "完成后点击\"是\"继续烧录"
             )
             if not usb_confirm:
                 self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
@@ -1505,7 +1505,7 @@ class FlashToolGUI:
             usb_confirm = messagebox.askyesno(
                 "准备烧录",
                 "请拔插USB或按RESET按钮\n\n"
-                "完成后点击"是"继续烧录"
+                "完成后点击\"是\"继续烧录"
             )
             if not usb_confirm:
                 self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
