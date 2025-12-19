@@ -1265,49 +1265,53 @@ class FlashToolGUI:
                 sbl_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
+                bufsize=0,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             self.flash_process = process  # 保存进程引用
             
-            # 读取输出（使用mark标记实现单行进度更新）
+            # 读取输出（二进制模式，正确处理\r单行进度）
+            buffer = b''
             progress_mark = None
-            if process.stdout:
-                for line in process.stdout:
-                    if self.stop_flashing:
-                        process.kill()
-                        self.log("\n❌ 烧录已停止\n", "ERROR")
-                        return
+            
+            while True:
+                if self.stop_flashing:
+                    process.kill()
+                    self.log("\n❌ 烧录已停止\n", "ERROR")
+                    return
+                
+                byte = process.stdout.read(1)
+                if not byte:
+                    break
+                
+                buffer += byte
+                
+                if byte == b'\r':
+                    try:
+                        line = buffer[:-1].decode('utf-8', errors='ignore').strip()
+                        if line and '[' in line:
+                            if progress_mark is None:
+                                if hasattr(self, 'log_text'):
+                                    self.log_text.config(state=tk.NORMAL)
+                                    self.log_text.insert(tk.END, line + '\n')
+                                    self.log_text.see(tk.END)
+                                    self.log_text.config(state=tk.DISABLED)
+                                    progress_mark = self.get_last_line_start()
+                            else:
+                                self.update_line_at_mark(progress_mark, line + '\n')
+                    except:
+                        pass
+                    buffer = b''
                     
-                    line = line.rstrip()
-                    if not line:  # 跳过空行
-                        continue
-                    
-                    # 检测进度行
-                    is_progress = ('%' in line and 
-                                 ('Erasing' in line or 'Writing' in line or 
-                                  'Progress' in line or line.strip().startswith('[')))
-                    
-                    if is_progress:
-                        if progress_mark is None:
-                            # 第一次显示进度，直接插入并获取mark
-                            if hasattr(self, 'log_text'):
-                                self.log_text.config(state=tk.NORMAL)
-                                self.log_text.insert(tk.END, line + '\n')
-                                self.log_text.see(tk.END)
-                                self.log_text.config(state=tk.DISABLED)
-                                progress_mark = self.get_last_line_start()
-                        else:
-                            # 更新进度（替换mark位置的那一行）
-                            self.update_line_at_mark(progress_mark, line + '\n')
-                    else:
-                        # 非进度行，正常输出并重置mark
-                        progress_mark = None
-                        self.log(line + '\n')
-                    
-                    if process.poll() is not None:
-                        break
+                elif byte == b'\n':
+                    try:
+                        line = buffer[:-1].decode('utf-8', errors='ignore').strip()
+                        if line:
+                            progress_mark = None
+                            self.log(line + '\n')
+                    except:
+                        pass
+                    buffer = b''
             
             process.wait()
             
@@ -1374,49 +1378,53 @@ class FlashToolGUI:
                 app_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
+                bufsize=0,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             self.flash_process = process  # 更新进程引用
             
-            # 读取输出（使用mark标记实现单行进度更新）
+            # 读取输出（二进制模式，正确处理\r单行进度）
+            buffer = b''
             progress_mark = None
-            if process.stdout:
-                for line in process.stdout:
-                    if self.stop_flashing:
-                        process.kill()
-                        self.log("\n❌ 烧录已停止\n", "ERROR")
-                        return
+            
+            while True:
+                if self.stop_flashing:
+                    process.kill()
+                    self.log("\n❌ 烧录已停止\n", "ERROR")
+                    return
+                
+                byte = process.stdout.read(1)
+                if not byte:
+                    break
+                
+                buffer += byte
+                
+                if byte == b'\r':
+                    try:
+                        line = buffer[:-1].decode('utf-8', errors='ignore').strip()
+                        if line and '[' in line:
+                            if progress_mark is None:
+                                if hasattr(self, 'log_text'):
+                                    self.log_text.config(state=tk.NORMAL)
+                                    self.log_text.insert(tk.END, line + '\n')
+                                    self.log_text.see(tk.END)
+                                    self.log_text.config(state=tk.DISABLED)
+                                    progress_mark = self.get_last_line_start()
+                            else:
+                                self.update_line_at_mark(progress_mark, line + '\n')
+                    except:
+                        pass
+                    buffer = b''
                     
-                    line = line.rstrip()
-                    if not line:  # 跳过空行
-                        continue
-                    
-                    # 检测进度行
-                    is_progress = ('%' in line and 
-                                 ('Erasing' in line or 'Writing' in line or 
-                                  'Progress' in line or line.strip().startswith('[')))
-                    
-                    if is_progress:
-                        if progress_mark is None:
-                            # 第一次显示进度，直接插入并获取mark
-                            if hasattr(self, 'log_text'):
-                                self.log_text.config(state=tk.NORMAL)
-                                self.log_text.insert(tk.END, line + '\n')
-                                self.log_text.see(tk.END)
-                                self.log_text.config(state=tk.DISABLED)
-                                progress_mark = self.get_last_line_start()
-                        else:
-                            # 更新进度（替换mark位置的那一行）
-                            self.update_line_at_mark(progress_mark, line + '\n')
-                    else:
-                        # 非进度行，正常输出并重置mark
-                        progress_mark = None
-                        self.log(line + '\n')
-                    
-                    if process.poll() is not None:
-                        break
+                elif byte == b'\n':
+                    try:
+                        line = buffer[:-1].decode('utf-8', errors='ignore').strip()
+                        if line:
+                            progress_mark = None
+                            self.log(line + '\n')
+                    except:
+                        pass
+                    buffer = b''
             
             process.wait()
             
@@ -1554,43 +1562,47 @@ class FlashToolGUI:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
+                bufsize=0,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            # 实时读取并显示输出（使用mark标记实现单行进度更新）
+            # 实时读取并显示输出（二进制模式，正确处理\r单行进度）
+            buffer = b''
             progress_mark = None
-            if process.stdout:
-                for line in process.stdout:
-                    line = line.rstrip()
-                    if not line:  # 跳过空行
-                        continue
+            
+            while True:
+                byte = process.stdout.read(1)
+                if not byte:
+                    break
+                
+                buffer += byte
+                
+                if byte == b'\r':
+                    try:
+                        line = buffer[:-1].decode('utf-8', errors='ignore').strip()
+                        if line and '[' in line:
+                            if progress_mark is None:
+                                if hasattr(self, 'log_text'):
+                                    self.log_text.config(state=tk.NORMAL)
+                                    self.log_text.insert(tk.END, line + '\n')
+                                    self.log_text.see(tk.END)
+                                    self.log_text.config(state=tk.DISABLED)
+                                    progress_mark = self.get_last_line_start()
+                            else:
+                                self.update_line_at_mark(progress_mark, line + '\n')
+                    except:
+                        pass
+                    buffer = b''
                     
-                    # 检测进度行
-                    is_progress = ('%' in line and 
-                                 ('Erasing' in line or 'Writing' in line or 
-                                  'Progress' in line or line.strip().startswith('[')))
-                    
-                    if is_progress:
-                        if progress_mark is None:
-                            # 第一次显示进度，直接插入并获取mark
-                            if hasattr(self, 'log_text'):
-                                self.log_text.config(state=tk.NORMAL)
-                                self.log_text.insert(tk.END, line + '\n')
-                                self.log_text.see(tk.END)
-                                self.log_text.config(state=tk.DISABLED)
-                                progress_mark = self.get_last_line_start()
-                        else:
-                            # 更新进度（替换mark位置的那一行）
-                            self.update_line_at_mark(progress_mark, line + '\n')
-                    else:
-                        # 非进度行，正常输出并重置mark
-                        progress_mark = None
-                        self.log(line + '\n')
-                    
-                    if process.poll() is not None:
-                        break
+                elif byte == b'\n':
+                    try:
+                        line = buffer[:-1].decode('utf-8', errors='ignore').strip()
+                        if line:
+                            progress_mark = None
+                            self.log(line + '\n')
+                    except:
+                        pass
+                    buffer = b''
             
             process.wait()
             
@@ -1735,43 +1747,47 @@ class FlashToolGUI:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
+                bufsize=0,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            # 实时读取并显示输出（使用mark标记实现单行进度更新）
+            # 实时读取并显示输出（二进制模式，正确处理\r单行进度）
+            buffer = b''
             progress_mark = None
-            if process.stdout:
-                for line in process.stdout:
-                    line = line.rstrip()
-                    if not line:  # 跳过空行
-                        continue
+            
+            while True:
+                byte = process.stdout.read(1)
+                if not byte:
+                    break
+                
+                buffer += byte
+                
+                if byte == b'\r':
+                    try:
+                        line = buffer[:-1].decode('utf-8', errors='ignore').strip()
+                        if line and '[' in line:
+                            if progress_mark is None:
+                                if hasattr(self, 'log_text'):
+                                    self.log_text.config(state=tk.NORMAL)
+                                    self.log_text.insert(tk.END, line + '\n')
+                                    self.log_text.see(tk.END)
+                                    self.log_text.config(state=tk.DISABLED)
+                                    progress_mark = self.get_last_line_start()
+                            else:
+                                self.update_line_at_mark(progress_mark, line + '\n')
+                    except:
+                        pass
+                    buffer = b''
                     
-                    # 检测进度行
-                    is_progress = ('%' in line and 
-                                 ('Erasing' in line or 'Writing' in line or 
-                                  'Progress' in line or line.strip().startswith('[')))
-                    
-                    if is_progress:
-                        if progress_mark is None:
-                            # 第一次显示进度，直接插入并获取mark
-                            if hasattr(self, 'log_text'):
-                                self.log_text.config(state=tk.NORMAL)
-                                self.log_text.insert(tk.END, line + '\n')
-                                self.log_text.see(tk.END)
-                                self.log_text.config(state=tk.DISABLED)
-                                progress_mark = self.get_last_line_start()
-                        else:
-                            # 更新进度（替换mark位置的那一行）
-                            self.update_line_at_mark(progress_mark, line + '\n')
-                    else:
-                        # 非进度行，正常输出并重置mark
-                        progress_mark = None
-                        self.log(line + '\n')
-                    
-                    if process.poll() is not None:
-                        break
+                elif byte == b'\n':
+                    try:
+                        line = buffer[:-1].decode('utf-8', errors='ignore').strip()
+                        if line:
+                            progress_mark = None
+                            self.log(line + '\n')
+                    except:
+                        pass
+                    buffer = b''
             
             process.wait()
             
