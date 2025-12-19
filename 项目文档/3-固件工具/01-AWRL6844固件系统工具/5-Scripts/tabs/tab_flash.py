@@ -56,13 +56,16 @@ class FlashTab:
         paned_window = ttk.PanedWindow(self.frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # 左列容器（固件选择和控制区）- 初始比例2:8
-        left_col = tk.Frame(paned_window, bg="#ecf0f1")
-        paned_window.add(left_col, weight=2)  # weight=2 左侧20%
+        # 左列容器（固件选择和控制区）- 固定宽度
+        left_col = tk.Frame(paned_window, bg="#ecf0f1", width=300)
+        paned_window.add(left_col, weight=0)  # weight=0 固定宽度
         
-        # 右列容器（日志显示区）- 初始比例2:8
+        # 右列容器（日志显示区）- 自适应
         right_col = tk.Frame(paned_window, bg="#ecf0f1")
-        paned_window.add(right_col, weight=8)  # weight=8 右侧80%
+        paned_window.add(right_col, weight=1)  # weight=1 占满剩余空间
+        
+        # 设置分隔条初始位置（左侧300像素）
+        self.frame.after(100, lambda: paned_window.sashpos(0, 300))
         
         # ============= 左列：所有功能区 =============
         

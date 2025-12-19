@@ -28,7 +28,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.6.5"
+VERSION = "1.6.6"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1190,16 +1190,24 @@ class FlashToolGUI:
                 self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
                 return
             
+            # 查询实际COM端口描述
+            ports = serial.tools.list_ports.comports()
+            port_description = "未知端口"
+            for port in ports:
+                if port.device == sbl_port:
+                    port_description = port.description
+                    break
+            
             self.log(f"📁 SBL文件: {sbl_file}\n")
             self.log(f"📁 App文件: {app_file}\n")
-            self.log(f"🔌 烧录端口: {sbl_port} (XDS110 Class Application/User UART)\n\n")
+            self.log(f"🔌 烧录端口: {sbl_port} ({port_description})\n\n")
             
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
                 f"请确认烧录端口：\n\n"
                 f"烧录端口: {sbl_port}\n"
-                f"端口说明: XDS110 Class Application/User UART\n\n"
+                f"端口说明: {port_description}\n\n"
                 f"注意：SBL和App使用同一个烧录端口\n\n"
                 f"端口是否正确？"
             )
@@ -1410,14 +1418,23 @@ class FlashToolGUI:
                 self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
                 return
             
+            # 查询实际COM端口描述
+            ports = serial.tools.list_ports.comports()
+            port_description = "未知端口"
+            for port in ports:
+                if port.device == sbl_port:
+                    port_description = port.description
+                    break
+            
             self.log(f"📁 固件文件: {firmware_file}\n")
-            self.log(f"🔌 SBL端口: {sbl_port}\n\n")
+            self.log(f"🔌 SBL端口: {sbl_port} ({port_description})\n\n")
             
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
                 f"请确认烧录端口：\n\n"
-                f"SBL端口: {sbl_port}\n\n"
+                f"SBL端口: {sbl_port}\n"
+                f"端口说明: {port_description}\n\n"
                 f"端口是否正确？"
             )
             if not port_confirm:
@@ -1543,14 +1560,23 @@ class FlashToolGUI:
                 self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
                 return
             
+            # 查询实际COM端口描述
+            ports = serial.tools.list_ports.comports()
+            port_description = "未知端口"
+            for port in ports:
+                if port.device == app_port:
+                    port_description = port.description
+                    break
+            
             self.log(f"📁 固件文件: {firmware_file}\n")
-            self.log(f"🔌 App端口: {app_port}\n\n")
+            self.log(f"🔌 App端口: {app_port} ({port_description})\n\n")
             
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
                 f"请确认烧录端口：\n\n"
-                f"App端口: {app_port}\n\n"
+                f"App端口: {app_port}\n"
+                f"端口说明: {port_description}\n\n"
                 f"端口是否正确？"
             )
             if not port_confirm:
