@@ -469,6 +469,22 @@ class FlashTab:
         self.app.log_text.tag_config("WARN", foreground="#f39c12")
         self.app.log_text.tag_config("ERROR", foreground="#e74c3c")
         
+        # 进度条显示区域（独立Label，解决Text widget渲染问题）
+        progress_frame = tk.Frame(log_frame, bg="#2c3e50", height=35)
+        progress_frame.pack(fill=tk.X, pady=(5, 0))
+        progress_frame.pack_propagate(False)
+        
+        self.app.progress_label = tk.Label(
+            progress_frame,
+            text="",
+            font=("Consolas", 9),
+            bg="#2c3e50",
+            fg="#27ae60",
+            anchor="w",
+            justify=tk.LEFT
+        )
+        self.app.progress_label.pack(fill=tk.BOTH, expand=True, padx=5, pady=3)
+        
         # 清除日志按钮
         tk.Button(
             log_frame,

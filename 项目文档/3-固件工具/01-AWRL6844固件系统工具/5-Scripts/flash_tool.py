@@ -1383,9 +1383,8 @@ class FlashToolGUI:
             )
             self.flash_process = process  # 更新进程引用
             
-            # 读取输出（二进制模式，正确处理\r单行进度）
+            # 读取输出（二进制模式，使用Label显示进度）
             buffer = b''
-            progress_mark = None
             
             while True:
                 if self.stop_flashing:
@@ -1402,16 +1401,10 @@ class FlashToolGUI:
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
-                        if line:  # 所有\r结尾的非空行都是进度更新
-                            if progress_mark is None:
-                                if hasattr(self, 'log_text'):
-                                    self.log_text.config(state=tk.NORMAL)
-                                    self.log_text.insert(tk.END, line + '\n')
-                                    self.log_text.see(tk.END)
-                                    self.log_text.config(state=tk.DISABLED)
-                                    progress_mark = self.get_last_line_start()
-                            else:
-                                self.update_line_at_mark(progress_mark, line + '\n')
+                        if line and hasattr(self, 'progress_label'):
+                            # 使用Label显示进度
+                            self.progress_label.config(text=line)
+                            self.progress_label.update()
                     except:
                         pass
                     buffer = b''
@@ -1420,8 +1413,10 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line:
-                            progress_mark = None
                             self.log(line + '\n')
+                            # 清空进度标签
+                            if hasattr(self, 'progress_label'):
+                                self.progress_label.config(text="")
                     except:
                         pass
                     buffer = b''
@@ -1566,9 +1561,8 @@ class FlashToolGUI:
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            # 实时读取并显示输出（二进制模式，正确处理\r单行进度）
+            # 实时读取并显示输出（使用Label显示进度）
             buffer = b''
-            progress_mark = None
             
             while True:
                 byte = process.stdout.read(1)
@@ -1580,16 +1574,9 @@ class FlashToolGUI:
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
-                        if line:  # 所有\r结尾的非空行都是进度更新
-                            if progress_mark is None:
-                                if hasattr(self, 'log_text'):
-                                    self.log_text.config(state=tk.NORMAL)
-                                    self.log_text.insert(tk.END, line + '\n')
-                                    self.log_text.see(tk.END)
-                                    self.log_text.config(state=tk.DISABLED)
-                                    progress_mark = self.get_last_line_start()
-                            else:
-                                self.update_line_at_mark(progress_mark, line + '\n')
+                        if line and hasattr(self, 'progress_label'):
+                            self.progress_label.config(text=line)
+                            self.progress_label.update()
                     except:
                         pass
                     buffer = b''
@@ -1598,8 +1585,9 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line:
-                            progress_mark = None
                             self.log(line + '\n')
+                            if hasattr(self, 'progress_label'):
+                                self.progress_label.config(text="")
                     except:
                         pass
                     buffer = b''
@@ -1751,9 +1739,8 @@ class FlashToolGUI:
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            # 实时读取并显示输出（二进制模式，正确处理\r单行进度）
+            # 实时读取并显示输出（使用Label显示进度）
             buffer = b''
-            progress_mark = None
             
             while True:
                 byte = process.stdout.read(1)
@@ -1765,16 +1752,9 @@ class FlashToolGUI:
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
-                        if line:  # 所有\r结尾的非空行都是进度更新
-                            if progress_mark is None:
-                                if hasattr(self, 'log_text'):
-                                    self.log_text.config(state=tk.NORMAL)
-                                    self.log_text.insert(tk.END, line + '\n')
-                                    self.log_text.see(tk.END)
-                                    self.log_text.config(state=tk.DISABLED)
-                                    progress_mark = self.get_last_line_start()
-                            else:
-                                self.update_line_at_mark(progress_mark, line + '\n')
+                        if line and hasattr(self, 'progress_label'):
+                            self.progress_label.config(text=line)
+                            self.progress_label.update()
                     except:
                         pass
                     buffer = b''
@@ -1783,8 +1763,9 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line:
-                            progress_mark = None
                             self.log(line + '\n')
+                            if hasattr(self, 'progress_label'):
+                                self.progress_label.config(text="")
                     except:
                         pass
                     buffer = b''
