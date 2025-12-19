@@ -502,7 +502,7 @@ class FlashTab:
                     self.app.sbl_port.set(self.app.flash_port_combo.get())
                 # 更新Label显示实际端口号
                 if hasattr(self, 'flash_port_label') and values_sbl:
-                    self.flash_port_label.config(text=f"XDS110 Class Application/User UART ({values_sbl[0]}):")
+                    self.flash_port_label.config(text=f"烧录端口 - XDS110 Class Application/User UART ({values_sbl[0]}):")
         except Exception:
             pass
         
@@ -521,7 +521,7 @@ class FlashTab:
                     self.app.app_port.set(self.app.debug_port_combo.get())
                 # 更新Label显示实际端口号
                 if hasattr(self, 'debug_port_label') and values_app:
-                    self.debug_port_label.config(text=f"XDS110 Class Auxiliary Data Port ({values_app[0]}):")
+                    self.debug_port_label.config(text=f"测试数据端口 - XDS110 Class Auxiliary Data Port ({values_app[0]}):")
         except Exception:
             pass
     
