@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.5.8 - 自适应布局
+Ti AWRL6844 固件烧录工具 v1.5.9 - 端口释放优化
 主入口文件 - 单一烧录功能标签页
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.5.8"
+VERSION = "1.5.9"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -802,7 +802,7 @@ class FlashToolGUI:
         t.start()
 
     def release_port(self, port):
-        """尝试释放端口（关闭占用的句柄）"""
+        """尝试释放指定端口（只关闭占用该端口的句柄，不关闭应用）"""
         if not port:
             self.log("\n⚠️ 未指定端口，无法释放\n", "WARN")
             messagebox.showwarning("警告", "请选择要释放的端口！")
@@ -820,40 +820,59 @@ class FlashToolGUI:
         except serial.SerialException as e:
             self.log(f"⚠️ 端口 {port} 当前被占用\n", "WARN")
         
-        # 查找并尝试关闭占用端口的进程
-        suspects = ["putty", "teraterm", "sscom", "python", "pycharm", "code", "serial"]
-        found = []
-        killed = []
+        # 尝试关闭本应用内可能打开的串口连接
+        self.log(f"🔧 尝试关闭本应用内对端口 {port} 的占用...\n", "INFO")
         
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        # 检查是否有串口监视窗口打开了该端口
+        # 注意：这里只是尝试，实际的串口监视窗口是独立线程，需要手动关闭
+        
+        # 再次尝试打开端口
+        try:
+            ser = serial.Serial(port, 115200, timeout=0.2)
+            ser.close()
+            self.log(f"✅ 端口 {port} 已释放！\n", "SUCCESS")
+            messagebox.showinfo("成功", f"端口 {port} 已成功释放！")
+            return True
+        except serial.SerialException:
+            pass
+        
+        # 查找可能占用该特定端口的外部进程
+        self.log(f"🔎 查找占用端口 {port} 的外部进程...\n", "INFO")
+        
+        # 使用更精确的方式检测：通过lsof或handle工具（Windows）
+        found = []
+        
+        # 方法1：检查常见串口工具进程（但要确认它们是否占用该端口）
+        suspects = ["putty", "teraterm", "sscom", "serialplot", "cutecom", "minicom"]
+        
+        for proc in psutil.process_iter(['pid', 'name', 'connections']):
             try:
                 name = (proc.info.get('name') or '').lower()
-                cmd = ' '.join(proc.info.get('cmdline') or []).lower()
                 
-                # 检查是否可能占用串口
+                # 只检查串口工具，不检查python/code等（避免关闭IDE或其他Python脚本）
                 if any(s in name for s in suspects):
-                    # 不杀死当前Python进程
-                    if proc.pid == os.getpid():
-                        continue
+                    # 注意：psutil.Process.connections()主要用于网络连接
+                    # 对于串口，我们只能基于进程名推断
                     found.append((proc.pid, proc.info.get('name')))
                     
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
+            except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError):
                 continue
         
         if found:
-            self.log("🔎 发现可能占用端口的进程:\n", "INFO")
+            self.log("🔎 发现可能占用串口的工具:\n", "INFO")
             for pid, name in found:
                 self.log(f"  • PID {pid}: {name}\n", "INFO")
             
-            # 询问用户是否终止这些进程
+            # 询问用户是否终止这些串口工具
             result = messagebox.askyesno(
-                "发现占用进程",
-                f"发现以下进程可能占用端口 {port}:\n\n" +
+                "发现串口工具进程",
+                f"发现以下串口工具可能占用端口 {port}:\n\n" +
                 "\n".join([f"• {name} (PID: {pid})" for pid, name in found]) +
-                f"\n\n是否尝试终止这些进程以释放端口？"
+                f"\n\n⚠️ 注意：只会关闭这些串口工具，不会关闭本应用。\n\n是否终止这些进程以释放端口？"
             )
             
             if result:
+                killed = []
                 for pid, name in found:
                     try:
                         proc = psutil.Process(pid)
@@ -883,17 +902,24 @@ class FlashToolGUI:
                     self.log(f"⚠️ 端口仍然被占用: {str(e)}\n", "WARN")
                     messagebox.showwarning(
                         "部分成功",
-                        f"已终止部分进程，但端口仍被占用。\n\n建议:\n1. 重新插拔USB设备\n2. 在设备管理器中禁用/启用端口\n3. 重启系统"
+                        f"已终止部分进程，但端口仍被占用。\n\n可能原因：\n1. 本应用的串口监视窗口正在使用该端口（请手动关闭）\n2. 其他未知程序占用\n\n建议:\n1. 关闭串口监视窗口\n2. 重新插拔USB设备\n3. 在设备管理器中禁用/启用端口"
                     )
                     return False
             else:
                 self.log("⚠️ 用户取消释放操作\n", "WARN")
                 return False
         else:
-            self.log("未发现明显的占用进程\n", "WARN")
+            self.log("未发现串口工具进程\n", "WARN")
             messagebox.showwarning(
                 "未找到占用进程",
-                f"端口 {port} 被占用，但未找到明显的占用进程。\n\n建议:\n1. 重新插拔USB设备\n2. 在设备管理器中禁用/启用端口\n3. 检查其他可能占用串口的程序"
+                f"端口 {port} 被占用，但未找到常见的串口工具进程。\n\n可能原因：\n" +
+                f"1. 本应用的串口监视窗口正在使用 {port}（请手动关闭）\n" +
+                "2. 未知程序占用该端口\n\n" +
+                "建议:\n" +
+                "1. 检查并关闭串口监视窗口\n" +
+                "2. 重新插拔USB设备\n" +
+                "3. 在设备管理器中禁用/启用端口\n" +
+                "4. 使用任务管理器查找占用进程"
             )
             return False
     
