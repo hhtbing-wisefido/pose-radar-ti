@@ -638,11 +638,11 @@ class FlashToolGUI:
         self.flashing = False
         self.flash_thread = None
         
-        # 初始化默认固件路径（使用动态相对路径）
-        self._init_default_firmware_paths()
-        
         # 创建界面
         self.create_widgets()
+        
+        # 初始化默认固件路径（使用动态相对路径）- 必须在界面创建后
+        self._init_default_firmware_paths()
         
         # 初始化端口
         self.refresh_ports()
@@ -663,11 +663,15 @@ class FlashToolGUI:
             # 检查文件是否存在并设置
             if sbl_path.exists():
                 self.sbl_file.set(str(sbl_path))
+                # 更新界面显示
+                self.update_firmware_status()
             else:
                 self.sbl_file.set("")
                 
             if app_path.exists():
                 self.app_file.set(str(app_path))
+                # 更新界面显示
+                self.update_firmware_status()
             else:
                 self.app_file.set("")
                 
