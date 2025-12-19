@@ -29,7 +29,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.8.0"
+VERSION = "1.8.1"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1970,10 +1970,11 @@ class FlashToolGUI:
         try:
             if hasattr(self, 'log_text'):
                 log_text = self.log_text
-                # 获取当前最后一行的起始位置
-                # end-1c是最后一个字符，linestart是该行的开始
-                return log_text.index("end-1c linestart")
-        except Exception:
+                # 获取当前内容的最后一行行号
+                last_line = int(log_text.index('end-1c').split('.')[0])
+                # 返回该行的起始位置
+                return f"{last_line}.0"
+        except Exception as e:
             return None
     
     def update_line_at_mark(self, mark_pos, new_text):
@@ -1983,10 +1984,11 @@ class FlashToolGUI:
                 log_text = self.log_text
                 log_text.config(state=tk.NORMAL)
                 
-                # 删除从mark到行尾的内容（不包括换行符）
-                log_text.delete(mark_pos, f"{mark_pos} lineend")
-                # 插入新内容（不加换行符，因为原行的换行符还在）
-                log_text.insert(mark_pos, new_text.rstrip('\n'))
+                # 删除整行（从mark到下一行开始）
+                line_num = int(mark_pos.split('.')[0])
+                log_text.delete(f"{line_num}.0", f"{line_num + 1}.0")
+                # 插入新内容
+                log_text.insert(f"{line_num}.0", new_text if new_text.endswith('\n') else new_text + '\n')
                 
                 # 自动滚动到底部
                 log_text.see(tk.END)
