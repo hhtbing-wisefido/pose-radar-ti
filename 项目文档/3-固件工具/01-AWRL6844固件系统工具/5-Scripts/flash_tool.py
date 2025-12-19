@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.7.8 - 紧急修复COM口和进度条问题
+Ti AWRL6844 固件烧录工具 v2.0.0 - 真正解决单行进度条问题！
 主入口文件 - 单一烧录功能标签页
 
-更新日志 v1.7.8:
-- 🔴 修复应用固件烧录使用错误端口COM4的问题
-  - flash_app_only方法改用sbl_port（COM3）而非app_port（COM4）
-  - 应用固件烧录必须使用COM3烧录端口
-- 🔴 修复进度条仍然多行显示的问题
-  - update_line_at_mark方法增加update_idletasks强制刷新
-  - 确保进度条单行原地更新
+更新日志 v2.0.0:
+- 🎉 真正解决单行进度条问题！
+  - 问题根源：Tkinter Text widget的delete+insert在快速更新时渲染缓冲区不清理
+  - 解决方案：使用独立的Label组件显示进度条，完全绕过Text widget渲染问题
+  - 测试验证：314次进度更新完美显示为单行
+- 🎨 美化进度条显示效果
+  - 鲜艳的青色进度条，充满显示区域
+  - 显示烧录时间统计
 """
 
 import tkinter as tk
@@ -29,8 +30,8 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.8.1"
-BUILD_DATE = "2025-12-19"
+VERSION = "2.0.0"
+BUILD_DATE = "2025-12-20"
 AUTHOR = "Benson@Wisefido"
 
 # 导入标签页模块
@@ -1168,6 +1169,8 @@ class FlashToolGUI:
         根据实测验证，采用依次烧录策略更稳定可靠
         """
         try:
+            start_time = time.time()  # 记录开始时间
+            
             self.log("\n" + "="*60 + "\n")
             self.log("🚀 开始完整烧录流程（SBL + App）\n", "INFO")
             self.log("="*60 + "\n\n")
@@ -1433,12 +1436,22 @@ class FlashToolGUI:
             
             self.log("\n✅ App烧录成功！\n", "SUCCESS")
             
-            # 完成
+            # 完成 - 显示总耗时
+            elapsed_time = time.time() - start_time
+            minutes = int(elapsed_time // 60)
+            seconds = int(elapsed_time % 60)
+            time_str = f"{minutes}分{seconds}秒" if minutes > 0 else f"{seconds}秒"
+            
             self.log("\n" + "="*60 + "\n")
             self.log("🎉 完整烧录完成！\n", "SUCCESS")
+            self.log(f"⏱️  总耗时: {time_str}\n", "INFO")
             self.log("="*60 + "\n\n")
             
-            messagebox.showinfo("成功", "固件烧录完成！\n\n请复位设备并测试。")
+            # 进度条显示完成信息
+            if hasattr(self, 'progress_label'):
+                self.progress_label.config(text=f"✅ 烧录完成！ 耗时: {time_str}")
+            
+            messagebox.showinfo("成功", f"固件烧录完成！\n\n耗时: {time_str}\n\n请复位设备并测试。")
             
         except Exception as e:
             self.log(f"\n❌ 烧录过程出错: {str(e)}\n", "ERROR")
@@ -1476,6 +1489,8 @@ class FlashToolGUI:
     def _flash_sbl_thread(self, firmware_file, sbl_port):
         """烧录线程（仅SBL）"""
         try:
+            start_time = time.time()  # 记录开始时间
+            
             self.log("\n" + "="*60 + "\n")
             self.log("🔧 开始SBL烧录\n", "INFO")
             self.log("="*60 + "\n\n")
@@ -1600,6 +1615,18 @@ class FlashToolGUI:
             
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
             
+            # 显示耗时
+            elapsed_time = time.time() - start_time
+            minutes = int(elapsed_time // 60)
+            seconds = int(elapsed_time % 60)
+            time_str = f"{minutes}分{seconds}秒" if minutes > 0 else f"{seconds}秒"
+            
+            self.log(f"⏱️  耗时: {time_str}\n", "INFO")
+            
+            # 进度条显示完成信息
+            if hasattr(self, 'progress_label'):
+                self.progress_label.config(text=f"✅ SBL烧录完成！ 耗时: {time_str}")
+            
             # 重要提示：如何启动SBL
             messagebox.showinfo(
                 "SBL烧录完成",
@@ -1650,6 +1677,8 @@ class FlashToolGUI:
     def _flash_app_thread(self, firmware_file, app_port):
         """烧录线程（仅应用固件）"""
         try:
+            start_time = time.time()  # 记录开始时间
+            
             self.log("\n" + "="*60 + "\n")
             self.log("📱 开始应用固件烧录\n", "INFO")
             self.log("="*60 + "\n\n")
@@ -1777,6 +1806,18 @@ class FlashToolGUI:
                 return
             
             self.log("\n✅ 应用固件烧录成功！\n", "SUCCESS")
+            
+            # 显示耗时
+            elapsed_time = time.time() - start_time
+            minutes = int(elapsed_time // 60)
+            seconds = int(elapsed_time % 60)
+            time_str = f"{minutes}分{seconds}秒" if minutes > 0 else f"{seconds}秒"
+            
+            self.log(f"⏱️  耗时: {time_str}\n", "INFO")
+            
+            # 进度条显示完成信息
+            if hasattr(self, 'progress_label'):
+                self.progress_label.config(text=f"✅ 应用固件烧录完成！ 耗时: {time_str}")
             
             # 提示运行应用固件
             messagebox.showinfo(

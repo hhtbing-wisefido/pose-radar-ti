@@ -346,3 +346,5 @@ SFLASH
 C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\mmwave_demo.release.appimage
 270336
 SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3
