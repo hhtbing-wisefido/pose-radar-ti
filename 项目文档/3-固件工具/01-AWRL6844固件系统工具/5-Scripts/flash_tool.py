@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.5.4 - 可拖动布局优化
+Ti AWRL6844 固件烧录工具 v1.5.5 - 端口测试增强
 主入口文件 - 单一烧录功能标签页
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.5.4"
+VERSION = "1.5.5"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -921,8 +921,71 @@ class FlashToolGUI:
                 if hasattr(self, 'tool_path_label'):
                     self.tool_path_label.config(text=filename, fg="#27ae60")
     
+    def test_all_ports(self):
+        """测试所有相关端口（烧录端口COM3 + 数据输出端口COM4）"""
+        self.log("\n" + "="*60 + "\n", "INFO")
+        self.log("🔍 开始测试所有端口...\n", "INFO")
+        
+        # 获取当前选择的端口
+        flash_port = ""
+        debug_port = ""
+        
+        if hasattr(self, 'flash_port_combo'):
+            flash_port = self.flash_port_combo.get()
+        if hasattr(self, 'debug_port_combo'):
+            debug_port = self.debug_port_combo.get()
+        
+        # 如果界面端口未设置，使用默认值
+        if not flash_port:
+            flash_port = self.sbl_port.get() or "COM3"
+        if not debug_port:
+            debug_port = self.app_port.get() or "COM4"
+        
+        results = []
+        
+        # 测试烧录端口（COM3 - User UART）
+        self.log(f"\n📌 测试烧录端口: {flash_port}\n", "INFO")
+        try:
+            ser = serial.Serial(flash_port, 115200, timeout=1)
+            ser.close()
+            self.log(f"✅ 端口 {flash_port} 连接正常！\n", "SUCCESS")
+            results.append(f"✅ {flash_port} (烧录端口): 连接正常")
+        except Exception as e:
+            error_msg = f"❌ 端口 {flash_port} 连接失败: {str(e)}"
+            self.log(f"{error_msg}\n", "ERROR")
+            results.append(f"❌ {flash_port} (烧录端口): {str(e)}")
+        
+        # 测试数据输出端口（COM4 - Auxiliary Data Port）
+        self.log(f"\n📌 测试数据输出端口: {debug_port}\n", "INFO")
+        try:
+            ser = serial.Serial(debug_port, 115200, timeout=1)
+            ser.close()
+            self.log(f"✅ 端口 {debug_port} 连接正常！\n", "SUCCESS")
+            results.append(f"✅ {debug_port} (数据输出端口): 连接正常")
+        except Exception as e:
+            error_msg = f"❌ 端口 {debug_port} 连接失败: {str(e)}"
+            self.log(f"{error_msg}\n", "ERROR")
+            results.append(f"❌ {debug_port} (数据输出端口): {str(e)}")
+        
+        # 汇总结果
+        self.log("\n" + "="*60 + "\n", "INFO")
+        self.log("📊 端口测试结果汇总:\n", "INFO")
+        for result in results:
+            if "✅" in result:
+                self.log(f"  {result}\n", "SUCCESS")
+            else:
+                self.log(f"  {result}\n", "ERROR")
+        self.log("="*60 + "\n\n", "INFO")
+        
+        # 显示消息框
+        result_text = "\n".join(results)
+        if all("✅" in r for r in results):
+            messagebox.showinfo("端口测试成功", f"所有端口测试通过！\n\n{result_text}")
+        else:
+            messagebox.showwarning("端口测试完成", f"部分端口测试失败！\n\n{result_text}")
+    
     def test_port(self, port, baudrate=115200):
-        """测试端口连接"""
+        """测试单个端口连接"""
         if not port:
             self.log("\n⚠️ 请先选择端口！\n", "WARN")
             messagebox.showwarning("警告", "请先选择要测试的端口！")

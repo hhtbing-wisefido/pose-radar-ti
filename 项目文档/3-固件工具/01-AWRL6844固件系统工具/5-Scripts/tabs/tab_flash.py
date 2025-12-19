@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.5.4
+版本: v1.5.5
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -313,7 +313,7 @@ class FlashTab:
             button_frame,
             text="🔍 测试",
             font=("Microsoft YaHei UI", 8),
-            command=lambda: self.app.test_port(self.app.flash_port_combo.get()),
+            command=self.app.test_all_ports,
             bg="#27ae60",
             fg="white",
             relief=tk.FLAT,
