@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.6.0 - 界面优化
+Ti AWRL6844 固件烧录工具 v1.6.1 - 修复烧录功能
 主入口文件 - 单一烧录功能标签页
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.6.0"
+VERSION = "1.6.1"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1161,7 +1161,7 @@ class FlashToolGUI:
             sbl_offset = self.device_config.get('sbl_offset', 0x2000)
             
             sbl_image = sbl_file
-            sbl_cmd = [tool_exe, sbl_port, str(sbl_offset), sbl_image]
+            sbl_cmd = [tool_exe, "-p", sbl_port, str(sbl_offset), sbl_image]
             
             self.log(f"执行命令: {' '.join(sbl_cmd)}\n")
             
@@ -1198,7 +1198,7 @@ class FlashToolGUI:
             app_offset = self.device_config.get('app_offset', 0x42000)
             
             app_image = app_file
-            app_cmd = [tool_exe, app_port, str(app_offset), app_image]
+            app_cmd = [tool_exe, "-p", app_port, str(app_offset), app_image]
             
             self.log(f"执行命令: {' '.join(app_cmd)}\n")
             
@@ -1292,6 +1292,7 @@ class FlashToolGUI:
             
             cmd = [
                 tool_exe,
+                "-p",
                 sbl_port,
                 str(sbl_offset),
                 firmware_file
@@ -1374,6 +1375,7 @@ class FlashToolGUI:
             
             cmd = [
                 tool_exe,
+                "-p",
                 app_port,
                 str(app_offset),
                 firmware_file
