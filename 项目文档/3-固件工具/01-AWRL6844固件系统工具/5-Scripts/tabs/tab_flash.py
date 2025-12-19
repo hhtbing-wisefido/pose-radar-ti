@@ -56,13 +56,13 @@ class FlashTab:
         paned_window = ttk.PanedWindow(self.frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # 左列容器（固件选择和控制区）- 初始宽度增加10%
+        # 左列容器（固件选择和控制区）- 初始比例3:7
         left_col = tk.Frame(paned_window, bg="#ecf0f1")
-        paned_window.add(left_col, weight=2)  # weight=2 表示占比更大
+        paned_window.add(left_col, weight=3)  # weight=3 左侧30%
         
-        # 右列容器（日志显示区）- 初始宽度减少10%
+        # 右列容器（日志显示区）- 初始比例3:7
         right_col = tk.Frame(paned_window, bg="#ecf0f1")
-        paned_window.add(right_col, weight=3)  # weight=3 表示占比相对小一些
+        paned_window.add(right_col, weight=7)  # weight=7 右侧70%
         
         # ============= 左列：所有功能区 =============
         
@@ -389,7 +389,7 @@ class FlashTab:
         # 选择变更时同步
         self.app.debug_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.app_port.set(self.app.debug_port_combo.get()))
         
-        # 端口操作按钮行（刷新 + 测试 + SBL检测）
+        # 端口操作按钮行（刷新 + 测试）
         port_action_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
         port_action_frame.pack(fill=tk.X, pady=(0, 8))
         
@@ -417,11 +417,15 @@ class FlashTab:
             padx=6,
             pady=4,
             cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
+        
+        # 板载SBL固件存在性检测（单独一行）
+        sbl_check_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
+        sbl_check_frame.pack(fill=tk.X, pady=(0, 8))
         
         tk.Button(
-            port_action_frame,
-            text="🔎 SBL检测",
+            sbl_check_frame,
+            text="🔎 板载SBL固件存在性检测",
             font=("Microsoft YaHei UI", 8),
             command=self.check_sbl,
             bg="#9b59b6",
@@ -430,101 +434,7 @@ class FlashTab:
             padx=6,
             pady=4,
             cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
-        
-        # 串口监视按钮（两列）
-        monitor_button_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
-        monitor_button_frame.pack(fill=tk.X, pady=(0, 8))
-        
-        tk.Button(
-            monitor_button_frame,
-            text="📟 监视COM3",
-            font=("Microsoft YaHei UI", 9),
-            command=lambda: self.app.open_serial_monitor("COM3"),
-            bg="#27ae60",
-            fg="white",
-            relief=tk.FLAT,
-            padx=8,
-            pady=6,
-            cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
-        
-        tk.Button(
-            monitor_button_frame,
-            text="📟 监视COM4",
-            font=("Microsoft YaHei UI", 9),
-            command=lambda: self.app.open_serial_monitor("COM4"),
-            bg="#27ae60",
-            fg="white",
-            relief=tk.FLAT,
-            padx=8,
-            pady=6,
-            cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
-        
-        tk.Button(
-            monitor_button_frame,
-            text="📟 监视COM4",
-            font=("Microsoft YaHei UI", 9),
-            command=lambda: self.app.open_serial_monitor("COM4"),
-            bg="#e67e22",
-            fg="white",
-            relief=tk.FLAT,
-            padx=8,
-            pady=6,
-            cursor="hand2"
-        ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
-        
-        # 端口选择和管理
-        port_select_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
-        port_select_frame.pack(fill=tk.X, pady=(0, 5))
-        
-        tk.Label(
-            port_select_frame,
-            text="管理端口:",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1"
-        ).pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.port_mgmt_combo = ttk.Combobox(
-            port_select_frame,
-            values=["COM3", "COM4", "COM5", "COM6"],
-            state="readonly",
-            width=8,
-            font=("Consolas", 9)
-        )
-        self.port_mgmt_combo.set("COM3")
-        self.port_mgmt_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        # 管理按钮（两列）
-        port_mgmt_button_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
-        port_mgmt_button_frame.pack(fill=tk.X)
-        
-        tk.Button(
-            port_mgmt_button_frame,
-            text="🔍 测试端口",
-            font=("Microsoft YaHei UI", 9),
-            command=lambda: self.app.test_port(self.port_mgmt_combo.get()),
-            bg="#3498db",
-            fg="white",
-            relief=tk.FLAT,
-            padx=8,
-            pady=6,
-            cursor="hand2"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
-        
-        tk.Button(
-            port_mgmt_button_frame,
-            text="🔓 释放端口",
-            font=("Microsoft YaHei UI", 9),
-            command=lambda: self.app.release_port(self.port_mgmt_combo.get()),
-            bg="#e74c3c",
-            fg="white",
-            relief=tk.FLAT,
-            padx=8,
-            pady=6,
-            cursor="hand2"
-        ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
+        ).pack(fill=tk.X, expand=True)
         
         # ============= 右列：日志输出 =============
         
@@ -604,17 +514,6 @@ class FlashTab:
                 # 同步变量
                 if hasattr(self.app, 'app_port'):
                     self.app.app_port.set(self.app.debug_port_combo.get())
-        except Exception:
-            pass
-        
-        # 更新端口管理下拉：合并并去重
-        try:
-            if hasattr(self, 'port_mgmt_combo'):
-                all_ports = list(dict.fromkeys((sbl_ports or []) + (app_ports or [])))
-                if all_ports:
-                    self.port_mgmt_combo['values'] = all_ports
-                    if self.port_mgmt_combo.get() not in all_ports:
-                        self.port_mgmt_combo.set(all_ports[0])
         except Exception:
             pass
     
