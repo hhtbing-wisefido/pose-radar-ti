@@ -1343,11 +1343,6 @@ class FlashToolGUI:
             if self.stop_flashing:
                 self.log("\n❌ 烧录已停止\n", "ERROR")
                 return
-                    self.log(line)
-                    if process.poll() is not None:
-                        break
-            
-            process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
