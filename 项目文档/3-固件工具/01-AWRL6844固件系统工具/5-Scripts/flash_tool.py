@@ -29,7 +29,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.7.9"
+VERSION = "1.8.0"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1291,9 +1291,13 @@ class FlashToolGUI:
                     
                     if is_progress:
                         if progress_mark is None:
-                            # 第一次显示进度，创建mark
-                            self.log(line + '\n')
-                            progress_mark = self.get_last_line_start()
+                            # 第一次显示进度，直接插入并获取mark
+                            if hasattr(self, 'log_text'):
+                                self.log_text.config(state=tk.NORMAL)
+                                self.log_text.insert(tk.END, line + '\n')
+                                self.log_text.see(tk.END)
+                                self.log_text.config(state=tk.DISABLED)
+                                progress_mark = self.get_last_line_start()
                         else:
                             # 更新进度（替换mark位置的那一行）
                             self.update_line_at_mark(progress_mark, line + '\n')
@@ -1396,9 +1400,13 @@ class FlashToolGUI:
                     
                     if is_progress:
                         if progress_mark is None:
-                            # 第一次显示进度，创建mark
-                            self.log(line + '\n')
-                            progress_mark = self.get_last_line_start()
+                            # 第一次显示进度，直接插入并获取mark
+                            if hasattr(self, 'log_text'):
+                                self.log_text.config(state=tk.NORMAL)
+                                self.log_text.insert(tk.END, line + '\n')
+                                self.log_text.see(tk.END)
+                                self.log_text.config(state=tk.DISABLED)
+                                progress_mark = self.get_last_line_start()
                         else:
                             # 更新进度（替换mark位置的那一行）
                             self.update_line_at_mark(progress_mark, line + '\n')
@@ -1566,9 +1574,13 @@ class FlashToolGUI:
                     
                     if is_progress:
                         if progress_mark is None:
-                            # 第一次显示进度，创建mark
-                            self.log(line + '\n')
-                            progress_mark = self.get_last_line_start()
+                            # 第一次显示进度，直接插入并获取mark
+                            if hasattr(self, 'log_text'):
+                                self.log_text.config(state=tk.NORMAL)
+                                self.log_text.insert(tk.END, line + '\n')
+                                self.log_text.see(tk.END)
+                                self.log_text.config(state=tk.DISABLED)
+                                progress_mark = self.get_last_line_start()
                         else:
                             # 更新进度（替换mark位置的那一行）
                             self.update_line_at_mark(progress_mark, line + '\n')
@@ -1743,9 +1755,13 @@ class FlashToolGUI:
                     
                     if is_progress:
                         if progress_mark is None:
-                            # 第一次显示进度，创建mark
-                            self.log(line + '\n')
-                            progress_mark = self.get_last_line_start()
+                            # 第一次显示进度，直接插入并获取mark
+                            if hasattr(self, 'log_text'):
+                                self.log_text.config(state=tk.NORMAL)
+                                self.log_text.insert(tk.END, line + '\n')
+                                self.log_text.see(tk.END)
+                                self.log_text.config(state=tk.DISABLED)
+                                progress_mark = self.get_last_line_start()
                         else:
                             # 更新进度（替换mark位置的那一行）
                             self.update_line_at_mark(progress_mark, line + '\n')
