@@ -133,10 +133,10 @@ class FlashTab:
             cursor="hand2"
         ).grid(row=1, column=2, sticky=tk.E, pady=(0, 5))
         
-        # App固件标签
+        # 应用固件标签
         tk.Label(
             firmware_frame,
-            text="App固件:",
+            text="应用固件:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1"
         ).grid(row=2, column=0, sticky=tk.W, pady=2)
@@ -278,7 +278,7 @@ class FlashTab:
             activebackground="#229954"
         ).pack(fill=tk.X, pady=(0, 5))
         
-        # 单独烧录按钮（三列：仅SBL、仅App、停止烧录）
+        # 单独烧录按钮（三列：仅SBL、仅应用固件、停止烧录）
         single_flash_frame = tk.Frame(flash_frame, bg="#ecf0f1")
         single_flash_frame.pack(fill=tk.X)
         
@@ -297,7 +297,7 @@ class FlashTab:
         
         tk.Button(
             single_flash_frame,
-            text="🔥 仅App",
+            text="🔥 仅应用固件",
             font=("Microsoft YaHei UI", 9, "bold"),
             command=self.app.flash_app_only,
             bg="#3498db",

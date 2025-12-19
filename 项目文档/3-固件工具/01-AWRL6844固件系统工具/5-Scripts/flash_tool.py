@@ -5,7 +5,7 @@ Ti AWRL6844 固件烧录工具 v1.6.3 - 确认烧录功能完整性
 主入口文件 - 单一烧录功能标签页
 
 更新日志 v1.6.3:
-- 确认3种烧录方式完整实现（完整烧录、仅SBL、仅App）
+- 确认3种烧录方式完整实现（完整烧录、仅SBL、仅应用固件）
 - 确认所有烧录方法使用正确命令格式（-f1/-of1/-s SFLASH/-c）
 - 确认依次烧录策略（根据测试报告验证）
 - 删除烧录超时相关功能
@@ -28,7 +28,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.7.2"
+VERSION = "1.7.3"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -61,7 +61,7 @@ DEVICE_CONFIGS = {
         'app_baudrate': 115200,
         # Flash地址配置
         'sbl_offset': 0x2000,      # SBL烧录地址（8KB偏移）
-        'app_offset': 0x42000,     # App烧录地址（264KB偏移）
+        'app_offset': 0x42000,     # 应用固件烧录地址（264KB偏移）
         # SDK路径配置
         'sdk_path': 'C:\\ti\\MMWAVE_L_SDK_06_01_00_01'
     }
@@ -629,7 +629,7 @@ class FlashToolGUI:
         
         # 状态变量
         self.sbl_file = tk.StringVar()  # SBL固件文件
-        self.app_file = tk.StringVar()  # App固件文件
+        self.app_file = tk.StringVar()  # 应用固件文件
         self.flash_tool_path = ""  # 烧录工具路径（改为字符串）
         self.sbl_port = tk.StringVar()
         self.app_port = tk.StringVar()
@@ -684,7 +684,7 @@ class FlashToolGUI:
                     self.app_status_label.config(text="✅ 已找到", fg="green")
                 if hasattr(self, 'app_path_label'):
                     self.app_path_label.config(text=str(app_path))
-                self.log(f"✅ 自动加载App固件: {app_path}\n", "SUCCESS")
+                self.log(f"✅ 自动加载应用固件: {app_path}\n", "SUCCESS")
             else:
                 self.app_file.set("")
                 if hasattr(self, 'app_status_label'):
@@ -1111,7 +1111,7 @@ class FlashToolGUI:
         app_file = (self.app_file.get() or '').strip()
         
         if not sbl_file or not app_file:
-            messagebox.showerror("错误", "请先选择SBL和App固件文件！")
+            messagebox.showerror("错误", "请先选择SBL和应用固件文件！")
             return
         # 校验存在性
         if not os.path.exists(sbl_file):
@@ -1317,31 +1317,31 @@ class FlashToolGUI:
             messagebox.showinfo(
                 "SBL烧录完成",
                 "✅ SBL已成功烧录到Flash\n\n"
-                "⚠️ 接下来请准备烧录App：\n\n"
+                "⚠️ 接下来请准备烧录应用固件：\n\n"
                 "📌 硬件操作：\n"
                 "   • 保持SOP开关在烧录模式 [0 0]\n"
                 "   • 拔插USB或按RESET按钮\n\n"
-                "💡 如果不烧录App：\n"
+                "💡 如果不烧录应用固件：\n"
                 "   1. 切换SOP开关到 [0 1]（运行模式）\n"
                 "   2. 按RESET按钮启动SBL\n\n"
-                "点击确定继续烧录App..."
+                "点击确定继续烧录应用固件..."
             )
             time.sleep(0.5)
             
-            # 步骤2: 烧录App
-            self.log("\n📝 步骤 2/2: 烧录App (应用程序)\n", "INFO")
+            # 步骤2: 烧录应用固件
+            self.log("\n📝 步骤 2/2: 烧录应用固件\n", "INFO")
             
-            # App烧录前确认
+            # 应用固件烧录前确认
             app_usb_confirm = messagebox.askyesno(
-                "准备烧录App",
+                "准备烧录应用固件",
                 "请再次拔插USB或按RESET按钮\n\n"
                 "完成后点击\"是\"继续烧录"
             )
             if not app_usb_confirm:
-                self.log("❌ 用户取消App烧录（USB未拔插）\n", "ERROR")
+                self.log("❌ 用户取消应用固件烧录（USB未拔插）\n", "ERROR")
                 return
             
-            self.log("开始烧录App...\n\n")
+            self.log("开始烧录应用固件...\n\n")
             
             app_offset = self.device_config.get('app_offset', 0x42000)
             
@@ -1595,7 +1595,7 @@ class FlashToolGUI:
                 "   2. 按RESET按钮启动设备\n\n"
                 "💡 现在可以：\n"
                 "   • 启动SBL验证烧录成功\n"
-                "   • 或继续烧录App固件"
+                "   • 或继续烧录应用固件"
             )
             
         except Exception as e:
@@ -1605,15 +1605,15 @@ class FlashToolGUI:
             self.flashing = False
     
     def flash_app_only(self):
-        """仅烧录App"""
+        """仅烧录应用固件"""
         if self.flashing:
             self.log("⚠️ 烧录正在进行中...\n", "WARN")
             return
         
-        # 获取App固件文件
+        # 获取应用固件文件
         firmware_file = self.app_file.get()
         if not firmware_file or not os.path.exists(firmware_file):
-            messagebox.showerror("错误", "请先选择有效的App固件文件！")
+            messagebox.showerror("错误", "请先选择有效的应用固件文件！")
             return
         
         # 获取端口
@@ -1632,10 +1632,10 @@ class FlashToolGUI:
         self.flash_thread.start()
     
     def _flash_app_thread(self, firmware_file, app_port):
-        """烧录线程（仅App）"""
+        """烧录线程（仅应用固件）"""
         try:
             self.log("\n" + "="*60 + "\n")
-            self.log("📱 开始App烧录\n", "INFO")
+            self.log("📱 开始应用固件烧录\n", "INFO")
             self.log("="*60 + "\n\n")
             
             # SOP模式确认
@@ -1648,7 +1648,7 @@ class FlashToolGUI:
                 "运行模式（SOP_MODE2）：\n"
                 "• S8 = OFF\n"
                 "• S7 = ON\n\n"
-                "App烧录建议使用SOP_MODE1\n"
+                "应用固件烧录建议使用SOP_MODE1\n"
                 "当前是否已设置为烧录模式？"
             )
             if not sop_confirm:
@@ -1664,13 +1664,13 @@ class FlashToolGUI:
                     break
             
             self.log(f"📁 固件文件: {firmware_file}\n")
-            self.log(f"🔌 App端口: {app_port} ({port_description})\n\n")
+            self.log(f"🔌 应用固件端口: {app_port} ({port_description})\n\n")
             
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
                 f"请确认烧录端口：\n\n"
-                f"App端口: {app_port}\n"
+                f"应用固件端口: {app_port}\n"
                 f"端口说明: {port_description}\n\n"
                 f"端口是否正确？"
             )
@@ -1756,16 +1756,16 @@ class FlashToolGUI:
             process.wait()
             
             if process.returncode != 0:
-                self.log("\n❌ App烧录失败！\n", "ERROR")
+                self.log("\n❌ 应用固件烧录失败！\n", "ERROR")
                 return
             
-            self.log("\n✅ App烧录成功！\n", "SUCCESS")
+            self.log("\n✅ 应用固件烧录成功！\n", "SUCCESS")
             
-            # 提示运行App
+            # 提示运行应用固件
             messagebox.showinfo(
-                "App烧录完成",
-                "✅ App已成功烧录到Flash\n\n"
-                "📌 运行App的步骤：\n"
+                "应用固件烧录完成",
+                "✅ 应用固件已成功烧录到Flash\n\n"
+                "📌 运行应用固件的步骤：\n"
                 "   1. 切换SOP开关到 [0 1]（运行模式）\n"
                 "      S8 = OFF, S7 = ON\n\n"
                 "   2. 按RESET按钮启动设备\n\n"
@@ -1809,9 +1809,9 @@ class FlashToolGUI:
                 self.log(f"⚠️ {msg}\n", "WARN")
     
     def select_app_file(self):
-        """选择App固件文件"""
+        """选择应用固件文件"""
         filename = filedialog.askopenfilename(
-            title="选择App固件文件",
+            title="选择应用固件文件",
             filetypes=[
                 ("AppImage Files", "*.appimage"),
                 ("All Files", "*.*")
@@ -1820,7 +1820,7 @@ class FlashToolGUI:
         )
         if filename:
             self.app_file.set(filename)
-            self.log(f"✅ 已选择App文件: {filename}\n", "SUCCESS")
+            self.log(f"✅ 已选择应用固件文件: {filename}\n", "SUCCESS")
             
             # 更新界面状态
             if hasattr(self, 'app_status_label'):
@@ -1846,7 +1846,7 @@ class FlashToolGUI:
         self.log(f"App文件变量值: '{app_file}'\n")
         
         if not sbl_file and not app_file:
-            self.log("\n⚠️ 请先选择SBL或App固件文件！\n", "WARN")
+            self.log("\n⚠️ 请先选择SBL或应用固件文件！\n", "WARN")
             self.log("提示: 点击左侧的「选择」按钮来选择固件文件\n")
             return
         
