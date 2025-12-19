@@ -340,9 +340,10 @@ class FlashTab:
         # 烧录端口（COM3 - User UART）
         self.flash_port_label = tk.Label(
             port_config_frame,
-            text="XDS110 Class Application/User UART:",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1"
+            text="烧录端口 (User UART):",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50"
         )
         self.flash_port_label.grid(row=0, column=0, sticky=tk.W, pady=5)
         
@@ -354,20 +355,26 @@ class FlashTab:
         )
         self.app.flash_port_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
         self.app.flash_port_combo.set("COM3")
-        # 同步到主程序变量
+        # 同步到主程序变量（SBL和App都使用此端口）
         try:
             self.app.sbl_port.set(self.app.flash_port_combo.get())
+            self.app.app_port.set(self.app.flash_port_combo.get())  # App也使用COM3
         except Exception:
             pass
-        # 选择变更时同步
-        self.app.flash_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.sbl_port.set(self.app.flash_port_combo.get()))
+        # 选择变更时同步到两个变量
+        def sync_flash_port(e):
+            port = self.app.flash_port_combo.get()
+            self.app.sbl_port.set(port)
+            self.app.app_port.set(port)  # App也同步
+        self.app.flash_port_combo.bind('<<ComboboxSelected>>', sync_flash_port)
         
         # 数据输出端口（COM4 - Auxiliary Data Port）
         self.debug_port_label = tk.Label(
             port_config_frame,
-            text="XDS110 Class Auxiliary Data Port:",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1"
+            text="数据端口 (Aux Data):",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50"
         )
         self.debug_port_label.grid(row=1, column=0, sticky=tk.W, pady=5)
         
@@ -379,13 +386,7 @@ class FlashTab:
         )
         self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(5, 0))
         self.app.debug_port_combo.set("COM4")
-        # 同步到主程序变量
-        try:
-            self.app.app_port.set(self.app.debug_port_combo.get())
-        except Exception:
-            pass
-        # 选择变更时同步
-        self.app.debug_port_combo.bind('<<ComboboxSelected>>', lambda e: self.app.app_port.set(self.app.debug_port_combo.get()))
+        # 不同步到app_port - 调试口仅用于数据输出，不用于烧录
         
         # 端口操作按钮行（刷新 + 测试）
         port_action_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
