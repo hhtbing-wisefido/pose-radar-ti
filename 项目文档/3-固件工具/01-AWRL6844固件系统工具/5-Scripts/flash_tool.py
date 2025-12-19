@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.7.5 - 修正SBL检测提示和说明
+Ti AWRL6844 固件烧录工具 v1.7.6 - 优化按钮文字显示
 主入口文件 - 单一烧录功能标签页
 
-更新日志 v1.7.5:
-- 修正SBL存在性检测的提示信息
-- 按钮文本增加SOP模式切换说明（换行显示）
-- 增大按钮尺寸避免文字截断
-- 明确指出必须将SOP调整为功能模式[0 1]并重启
-- 根据2025-12-19_SBL烧录后检测不到的原因分析文档优化
+更新日志 v1.7.6:
+- 将烧录工具浏览按钮的"..."改为"选择"
+- 按钮宽度从3调整为4，适应中文文字
+- 统一所有文件选择按钮使用"选择"文字
 """
 
 import tkinter as tk
@@ -28,7 +26,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.7.5"
+VERSION = "1.7.6"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 

@@ -202,13 +202,13 @@ class FlashTab:
         # 浏览按钮
         tk.Button(
             tool_container,
-            text="...",
+            text="选择",
             font=("Microsoft YaHei UI", 8),
             command=self.app.select_flash_tool,
             bg="#3498db",
             fg="white",
             relief=tk.FLAT,
-            width=3,
+            width=4,
             cursor="hand2"
         ).pack(side=tk.LEFT, padx=(3, 0))
         
