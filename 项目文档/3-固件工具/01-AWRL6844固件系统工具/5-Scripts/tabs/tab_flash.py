@@ -56,18 +56,18 @@ class FlashTab:
         paned_window = ttk.PanedWindow(self.frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # 左列容器（固件选择和控制区）- 固定宽度250px
-        left_col = tk.Frame(paned_window, bg="#ecf0f1", width=250)
-        left_col.pack_propagate(False)  # 防止子组件撑大容器
-        paned_window.add(left_col, weight=0)  # weight=0 固定宽度
+        # 左列容器（固件选择和控制区）- 30%宽度
+        left_col = tk.Frame(paned_window, bg="#ecf0f1")
+        paned_window.add(left_col, weight=3)  # weight=3 占30%
         
-        # 右列容器（日志显示区）- 自适应
+        # 右列容器（日志显示区）- 70%宽度
         right_col = tk.Frame(paned_window, bg="#ecf0f1")
-        paned_window.add(right_col, weight=1)  # weight=1 占满剩余空间
+        paned_window.add(right_col, weight=7)  # weight=7 占70%
         
-        # 强制设置分隔条位置（左侧250像素）
-        paned_window.update_idletasks()
-        paned_window.sashpos(0, 250)
+        # 保存paned_window引用，用于动态调整分隔条位置
+        self.paned_window = paned_window
+        # 延迟设置分隔条位置（窗口显示后）
+        self.frame.after(10, self._adjust_sash_position)
         
         # ============= 左列：所有功能区 =============
         
@@ -625,6 +625,23 @@ class FlashTab:
                     "info"
                 )
                 self.app.log_text.see(tk.END)
+    
+    def _adjust_sash_position(self):
+        """动态调整分隔条位置为3:7比例"""
+        try:
+            if hasattr(self, 'paned_window'):
+                # 获取窗口总宽度
+                total_width = self.paned_window.winfo_width()
+                if total_width > 1:  # 确保窗口已显示
+                    # 设置为30%位置
+                    position = int(total_width * 0.3)
+                    self.paned_window.sashpos(0, position)
+                else:
+                    # 窗口未完全显示，再次尝试
+                    self.frame.after(50, self._adjust_sash_position)
+        except Exception as e:
+            # 忽略错误，避免影响程序运行
+            pass
 
 
 # 如果直接运行此文件，显示错误提示
