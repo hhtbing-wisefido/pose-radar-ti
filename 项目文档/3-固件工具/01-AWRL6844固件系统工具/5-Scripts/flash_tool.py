@@ -28,7 +28,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.7.0"
+VERSION = "1.7.1"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1267,8 +1267,8 @@ class FlashToolGUI:
             )
             self.flash_process = process  # 保存进程引用
             
-            # 读取输出（处理进度条）
-            last_progress_line = None
+            # 读取输出（使用mark标记实现单行进度更新）
+            progress_mark = None
             if process.stdout:
                 for line in process.stdout:
                     if self.stop_flashing:
@@ -1276,16 +1276,27 @@ class FlashToolGUI:
                         self.log("\n❌ 烧录已停止\n", "ERROR")
                         return
                     
-                    # 检测进度行（包含%或Erasing/Writing）
-                    if '%' in line or 'Erasing' in line or 'Writing' in line:
-                        if last_progress_line:
-                            # 删除上一行进度
-                            self.delete_last_line()
-                        self.log(line.rstrip() + '\n')
-                        last_progress_line = line
+                    line = line.rstrip()
+                    if not line:  # 跳过空行
+                        continue
+                    
+                    # 检测进度行
+                    is_progress = ('%' in line and 
+                                 ('Erasing' in line or 'Writing' in line or 
+                                  'Progress' in line or line.strip().startswith('[')))
+                    
+                    if is_progress:
+                        if progress_mark is None:
+                            # 第一次显示进度，创建mark
+                            self.log(line + '\n')
+                            progress_mark = self.get_last_line_start()
+                        else:
+                            # 更新进度（替换mark位置的那一行）
+                            self.update_line_at_mark(progress_mark, line + '\n')
                     else:
-                        last_progress_line = None
-                        self.log(line)
+                        # 非进度行，正常输出并重置mark
+                        progress_mark = None
+                        self.log(line + '\n')
                     
                     if process.poll() is not None:
                         break
@@ -1301,7 +1312,21 @@ class FlashToolGUI:
                 return
             
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
-            time.sleep(1)
+            
+            # 重要提示：SOP模式和复位
+            messagebox.showinfo(
+                "SBL烧录完成",
+                "✅ SBL已成功烧录到Flash\n\n"
+                "⚠️ 接下来请准备烧录App：\n\n"
+                "📌 硬件操作：\n"
+                "   • 保持SOP开关在烧录模式 [0 0]\n"
+                "   • 拔插USB或按RESET按钮\n\n"
+                "💡 如果不烧录App：\n"
+                "   1. 切换SOP开关到 [0 1]（运行模式）\n"
+                "   2. 按RESET按钮启动SBL\n\n"
+                "点击确定继续烧录App..."
+            )
+            time.sleep(0.5)
             
             # 步骤2: 烧录App
             self.log("\n📝 步骤 2/2: 烧录App (应用程序)\n", "INFO")
@@ -1347,8 +1372,8 @@ class FlashToolGUI:
             )
             self.flash_process = process  # 更新进程引用
             
-            # 读取输出（处理进度条）
-            last_progress_line = None
+            # 读取输出（使用mark标记实现单行进度更新）
+            progress_mark = None
             if process.stdout:
                 for line in process.stdout:
                     if self.stop_flashing:
@@ -1356,24 +1381,27 @@ class FlashToolGUI:
                         self.log("\n❌ 烧录已停止\n", "ERROR")
                         return
                     
-                    # 检测进度行：包含%且不是空白行
-                    line_stripped = line.strip()
-                    is_progress = ('%' in line_stripped and 
-                                 (line_stripped.startswith('Erasing') or 
-                                  line_stripped.startswith('Writing') or 
-                                  '完成' in line_stripped or
-                                  'Complete' in line_stripped.lower()))
+                    line = line.rstrip()
+                    if not line:  # 跳过空行
+                        continue
+                    
+                    # 检测进度行
+                    is_progress = ('%' in line and 
+                                 ('Erasing' in line or 'Writing' in line or 
+                                  'Progress' in line or line.strip().startswith('[')))
                     
                     if is_progress:
-                        if last_progress_line:
-                            # 删除上一行进度
-                            self.delete_last_line()
-                        self.log(line_stripped + '\n')
-                        last_progress_line = True
+                        if progress_mark is None:
+                            # 第一次显示进度，创建mark
+                            self.log(line + '\n')
+                            progress_mark = self.get_last_line_start()
+                        else:
+                            # 更新进度（替换mark位置的那一行）
+                            self.update_line_at_mark(progress_mark, line + '\n')
                     else:
-                        if line_stripped:  # 只输出非空行
-                            last_progress_line = False
-                            self.log(line)
+                        # 非进度行，正常输出并重置mark
+                        progress_mark = None
+                        self.log(line + '\n')
                     
                     if process.poll() is not None:
                         break
@@ -1519,28 +1547,31 @@ class FlashToolGUI:
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            # 实时读取并显示输出（处理进度条）
-            last_progress_line = None
+            # 实时读取并显示输出（使用mark标记实现单行进度更新）
+            progress_mark = None
             if process.stdout:
                 for line in process.stdout:
-                    # 检测进度行：包含%且不是空白行
-                    line_stripped = line.strip()
-                    is_progress = ('%' in line_stripped and 
-                                 (line_stripped.startswith('Erasing') or 
-                                  line_stripped.startswith('Writing') or 
-                                  '完成' in line_stripped or
-                                  'Complete' in line_stripped.lower()))
+                    line = line.rstrip()
+                    if not line:  # 跳过空行
+                        continue
+                    
+                    # 检测进度行
+                    is_progress = ('%' in line and 
+                                 ('Erasing' in line or 'Writing' in line or 
+                                  'Progress' in line or line.strip().startswith('[')))
                     
                     if is_progress:
-                        if last_progress_line:
-                            # 删除上一行进度
-                            self.delete_last_line()
-                        self.log(line_stripped + '\n')
-                        last_progress_line = True
+                        if progress_mark is None:
+                            # 第一次显示进度，创建mark
+                            self.log(line + '\n')
+                            progress_mark = self.get_last_line_start()
+                        else:
+                            # 更新进度（替换mark位置的那一行）
+                            self.update_line_at_mark(progress_mark, line + '\n')
                     else:
-                        if line_stripped:  # 只输出非空行
-                            last_progress_line = False
-                            self.log(line)
+                        # 非进度行，正常输出并重置mark
+                        progress_mark = None
+                        self.log(line + '\n')
                     
                     if process.poll() is not None:
                         break
@@ -1552,7 +1583,20 @@ class FlashToolGUI:
                 return
             
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
-            messagebox.showinfo("成功", "SBL烧录完成！")
+            
+            # 重要提示：如何启动SBL
+            messagebox.showinfo(
+                "SBL烧录完成",
+                "✅ SBL已成功烧录到Flash\n\n"
+                "⚠️ 重要：SBL还未运行！\n\n"
+                "📌 启动SBL的步骤：\n"
+                "   1. 切换SOP开关到 [0 1]（运行模式）\n"
+                "      S8 = OFF, S7 = ON\n\n"
+                "   2. 按RESET按钮启动设备\n\n"
+                "💡 现在可以：\n"
+                "   • 启动SBL验证烧录成功\n"
+                "   • 或继续烧录App固件"
+            )
             
         except Exception as e:
             self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
@@ -1680,28 +1724,31 @@ class FlashToolGUI:
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            # 实时读取并显示输出（处理进度条）
-            last_progress_line = None
+            # 实时读取并显示输出（使用mark标记实现单行进度更新）
+            progress_mark = None
             if process.stdout:
                 for line in process.stdout:
-                    # 检测进度行：包含%且不是空白行
-                    line_stripped = line.strip()
-                    is_progress = ('%' in line_stripped and 
-                                 (line_stripped.startswith('Erasing') or 
-                                  line_stripped.startswith('Writing') or 
-                                  '完成' in line_stripped or
-                                  'Complete' in line_stripped.lower()))
+                    line = line.rstrip()
+                    if not line:  # 跳过空行
+                        continue
+                    
+                    # 检测进度行
+                    is_progress = ('%' in line and 
+                                 ('Erasing' in line or 'Writing' in line or 
+                                  'Progress' in line or line.strip().startswith('[')))
                     
                     if is_progress:
-                        if last_progress_line:
-                            # 删除上一行进度
-                            self.delete_last_line()
-                        self.log(line_stripped + '\n')
-                        last_progress_line = True
+                        if progress_mark is None:
+                            # 第一次显示进度，创建mark
+                            self.log(line + '\n')
+                            progress_mark = self.get_last_line_start()
+                        else:
+                            # 更新进度（替换mark位置的那一行）
+                            self.update_line_at_mark(progress_mark, line + '\n')
                     else:
-                        if line_stripped:  # 只输出非空行
-                            last_progress_line = False
-                            self.log(line)
+                        # 非进度行，正常输出并重置mark
+                        progress_mark = None
+                        self.log(line + '\n')
                     
                     if process.poll() is not None:
                         break
@@ -1713,7 +1760,18 @@ class FlashToolGUI:
                 return
             
             self.log("\n✅ App烧录成功！\n", "SUCCESS")
-            messagebox.showinfo("成功", "App烧录完成！")
+            
+            # 提示运行App
+            messagebox.showinfo(
+                "App烧录完成",
+                "✅ App已成功烧录到Flash\n\n"
+                "📌 运行App的步骤：\n"
+                "   1. 切换SOP开关到 [0 1]（运行模式）\n"
+                "      S8 = OFF, S7 = ON\n\n"
+                "   2. 按RESET按钮启动设备\n\n"
+                "   3. 打开串口监视查看输出\n"
+                "      COM4 - 115200 8N1"
+            )
             
         except Exception as e:
             self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
@@ -1887,17 +1945,42 @@ class FlashToolGUI:
     
     # =========== 日志方法 ===========
     
-    def delete_last_line(self):
-        """删除日志的最后一行（用于更新进度条）"""
+    def get_last_line_start(self):
+        """获取最后一行的起始位置，用于后续更新"""
         try:
-            if hasattr(self, 'app') and hasattr(self.app, 'log_text'):
-                log_text = self.app.log_text
-                log_text.config(state=tk.NORMAL)
-                # 删除最后一行
-                log_text.delete("end-2l", "end-1l")
-                log_text.config(state=tk.DISABLED)
+            if hasattr(self, 'log_text'):
+                log_text = self.log_text
+                # 获取倒数第二行的位置（因为最后一行是空行）
+                return log_text.index("end-2l linestart")
         except Exception:
-            pass
+            return None
+    
+    def update_line_at_mark(self, mark_pos, new_text):
+        """更新指定mark位置的那一行（实现单行进度更新）"""
+        try:
+            if hasattr(self, 'log_text') and mark_pos:
+                log_text = self.log_text
+                log_text.config(state=tk.NORMAL)
+                
+                # 删除mark位置到该行结束的内容
+                log_text.delete(mark_pos, f"{mark_pos} lineend")
+                # 插入新内容（不包含换行，因为行已存在）
+                log_text.insert(mark_pos, new_text.rstrip('\n'))
+                
+                # 自动滚动到底部
+                log_text.see(tk.END)
+                log_text.config(state=tk.DISABLED)
+        except Exception as e:
+            # 如果更新失败，回退到追加模式
+            if hasattr(self, 'log_text'):
+                try:
+                    log_text = self.log_text
+                    log_text.config(state=tk.NORMAL)
+                    log_text.insert(tk.END, new_text)
+                    log_text.see(tk.END)
+                    log_text.config(state=tk.DISABLED)
+                except Exception:
+                    pass
     
     def log(self, message, tag=None):
         """添加日志（始终输出到烧录功能标签页）"""
