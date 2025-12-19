@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.5.7
+版本: v1.5.8
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -78,6 +78,11 @@ class FlashTab:
         )
         firmware_frame.pack(fill=tk.X, pady=(0, 10))
         
+        # 配置grid列权重，使中间列可以自动伸缩
+        firmware_frame.columnconfigure(0, weight=0)  # 标签列固定
+        firmware_frame.columnconfigure(1, weight=1)  # 内容列自适应
+        firmware_frame.columnconfigure(2, weight=0)  # 按钮列固定
+        
         # SBL固件标签
         tk.Label(
             firmware_frame,
@@ -95,17 +100,20 @@ class FlashTab:
         )
         self.app.sbl_status_label.grid(row=0, column=1, columnspan=2, sticky=tk.W, pady=2, padx=(5, 0))
         
-        # SBL路径显示
+        # SBL路径显示（自适应宽度）
         self.app.sbl_path_label = tk.Label(
             firmware_frame,
             text="",
             font=("Consolas", 7),
             bg="#ecf0f1",
             fg="#7f8c8d",
-            wraplength=220,
+            anchor="w",
             justify=tk.LEFT
         )
-        self.app.sbl_path_label.grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(0, 5), padx=(0, 5))
+        self.app.sbl_path_label.grid(row=1, column=0, columnspan=2, sticky=tk.EW, pady=(0, 5), padx=(0, 5))
+        
+        # 绑定配置事件，动态更新wraplength
+        self.app.sbl_path_label.bind('<Configure>', lambda e: self.app.sbl_path_label.config(wraplength=max(100, e.width - 10)))
         
         tk.Button(
             firmware_frame,
@@ -137,17 +145,20 @@ class FlashTab:
         )
         self.app.app_status_label.grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=2, padx=(5, 0))
         
-        # App路径显示
+        # App路径显示（自适应宽度）
         self.app.app_path_label = tk.Label(
             firmware_frame,
             text="",
             font=("Consolas", 7),
             bg="#ecf0f1",
             fg="#7f8c8d",
-            wraplength=220,
+            anchor="w",
             justify=tk.LEFT
         )
-        self.app.app_path_label.grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(0, 5), padx=(0, 5))
+        self.app.app_path_label.grid(row=3, column=0, columnspan=2, sticky=tk.EW, pady=(0, 5), padx=(0, 5))
+        
+        # 绑定配置事件，动态更新wraplength
+        self.app.app_path_label.bind('<Configure>', lambda e: self.app.app_path_label.config(wraplength=max(100, e.width - 10)))
         
         tk.Button(
             firmware_frame,
@@ -196,17 +207,20 @@ class FlashTab:
             cursor="hand2"
         ).pack(side=tk.LEFT, padx=(3, 0))
         
-        # 工具路径显示（先创建，后面再初始化）
+        # 工具路径显示（自适应宽度）
         self.app.tool_path_label = tk.Label(
             firmware_frame,
             text="",
             font=("Consolas", 7),
             bg="#ecf0f1",
             fg="#7f8c8d",
-            wraplength=220,
+            anchor="w",
             justify=tk.LEFT
         )
-        self.app.tool_path_label.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=(0, 5))
+        self.app.tool_path_label.grid(row=5, column=0, columnspan=3, sticky=tk.EW, pady=(0, 5))
+        
+        # 绑定配置事件，动态更新wraplength
+        self.app.tool_path_label.bind('<Configure>', lambda e: self.app.tool_path_label.config(wraplength=max(100, e.width - 10)))
         
         # 初始化工具选项（放在界面元素创建之后）
         self._init_tool_options()
