@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 tab_flash.py - 烧录功能标签页（整合版）
-版本: v1.5.1
+版本: v1.5.2
 作者: Benson@Wisefido
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
@@ -165,14 +165,31 @@ class FlashTab:
             bg="#ecf0f1"
         ).grid(row=4, column=0, sticky=tk.W, pady=(5, 2))
         
+        # 创建工具选择容器
+        tool_container = tk.Frame(firmware_frame, bg="#ecf0f1")
+        tool_container.grid(row=4, column=1, columnspan=2, sticky=tk.EW, pady=(5, 2), padx=(5, 0))
+        
         # 工具选择下拉框
         self.app.tool_combo = ttk.Combobox(
-            firmware_frame,
-            width=18,
+            tool_container,
+            width=15,
             state="readonly",
             font=("Consolas", 8)
         )
-        self.app.tool_combo.grid(row=4, column=1, columnspan=2, sticky=tk.EW, pady=(5, 2), padx=(5, 0))
+        self.app.tool_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        # 浏览按钮
+        tk.Button(
+            tool_container,
+            text="...",
+            font=("Microsoft YaHei UI", 8),
+            command=self.app.select_flash_tool,
+            bg="#3498db",
+            fg="white",
+            relief=tk.FLAT,
+            width=3,
+            cursor="hand2"
+        ).pack(side=tk.LEFT, padx=(3, 0))
         
         # 工具路径显示（先创建，后面再初始化）
         self.app.tool_path_label = tk.Label(
@@ -184,21 +201,7 @@ class FlashTab:
             wraplength=220,
             justify=tk.LEFT
         )
-        self.app.tool_path_label.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=(0, 2))
-        
-        # 选择自定义工具按钮
-        tk.Button(
-            firmware_frame,
-            text="📂 选择自定义工具",
-            font=("Microsoft YaHei UI", 8),
-            command=self.app.select_flash_tool,
-            bg="#95a5a6",
-            fg="white",
-            relief=tk.FLAT,
-            padx=5,
-            pady=2,
-            cursor="hand2"
-        ).grid(row=6, column=0, columnspan=3, sticky=tk.EW, pady=(2, 5))
+        self.app.tool_path_label.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=(0, 5))
         
         # 初始化工具选项（放在界面元素创建之后）
         self._init_tool_options()
@@ -208,7 +211,6 @@ class FlashTab:
         
         # 按钮区域
         button_container = tk.Frame(firmware_frame, bg="#ecf0f1")
-        button_container.grid(row=7, column=0, columnspan=3, pady=(10, 0), sticky=tk.EW)
         button_container.grid(row=6, column=0, columnspan=3, pady=(10, 0), sticky=tk.EW)
         
         # 分析已选固件按钮
