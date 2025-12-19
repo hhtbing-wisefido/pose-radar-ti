@@ -660,18 +660,27 @@ class FlashToolGUI:
             sbl_path = script_dir.parent / "1-SBL_Bootloader" / "sbl.release.appimage"
             app_path = script_dir.parent / "2-HelloWorld_App" / "hello_world_system.release.appimage"
             
-            # 检查文件是否存在并设置
+            # 检查SBL文件是否存在并设置
             if sbl_path.exists():
                 self.sbl_file.set(str(sbl_path))
                 # 更新界面显示
-                self.update_firmware_status()
+                if hasattr(self, 'sbl_status_label'):
+                    self.sbl_status_label.config(text="✅ 已选择", fg="green")
+                if hasattr(self, 'sbl_path_label'):
+                    self.sbl_path_label.config(text=str(sbl_path))
+                self.log(f"✅ 自动加载SBL固件: {sbl_path}\n", "SUCCESS")
             else:
                 self.sbl_file.set("")
                 
+            # 检查App文件是否存在并设置
             if app_path.exists():
                 self.app_file.set(str(app_path))
                 # 更新界面显示
-                self.update_firmware_status()
+                if hasattr(self, 'app_status_label'):
+                    self.app_status_label.config(text="✅ 已选择", fg="green")
+                if hasattr(self, 'app_path_label'):
+                    self.app_path_label.config(text=str(app_path))
+                self.log(f"✅ 自动加载App固件: {app_path}\n", "SUCCESS")
             else:
                 self.app_file.set("")
                 
@@ -679,6 +688,7 @@ class FlashToolGUI:
             # 初始化失败时使用空值
             self.sbl_file.set("")
             self.app_file.set("")
+            self.log(f"⚠️ 自动加载固件失败: {str(e)}\n", "WARN")
         
     def create_widgets(self):
         """创建界面组件 - 使用模块化标签页"""
