@@ -28,7 +28,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.6.3"
+VERSION = "1.6.4"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1145,14 +1145,39 @@ class FlashToolGUI:
             self.log("\n" + "="*60 + "\n")
             self.log("🚀 开始完整烧录流程（SBL + App）\n", "INFO")
             self.log("="*60 + "\n\n")
-            # SOP 提示（来自官方文档与SOP修正说明）
-            self.log("🧭 SOP提示：烧录前将开关置于 SOP_MODE1 → S8=OFF, S7=OFF\n", "WARN")
-            self.log("🧭 SOP提示：烧录完成运行前改为 SOP_MODE2 → S8=OFF, S7=ON\n\n", "WARN")
+            
+            # SOP模式人工确认
+            sop_confirm = messagebox.askyesno(
+                "SOP模式确认",
+                "请确认硬件SOP模式配置：\n\n"
+                "烧录模式（SOP_MODE1）：\n"
+                "• S8 = OFF\n"
+                "• S7 = OFF\n\n"
+                "运行模式（SOP_MODE2）：\n"
+                "• S8 = OFF\n"
+                "• S7 = ON\n\n"
+                "当前是否已设置为烧录模式（SOP_MODE1）？"
+            )
+            if not sop_confirm:
+                self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
+                return
             
             self.log(f"📁 SBL文件: {sbl_file}\n")
             self.log(f"📁 App文件: {app_file}\n")
             self.log(f"🔌 SBL端口: {sbl_port}\n")
             self.log(f"🔌 App端口: {app_port}\n\n")
+            
+            # 串口确认
+            port_confirm = messagebox.askyesno(
+                "串口确认",
+                f"请确认烧录端口：\n\n"
+                f"SBL端口: {sbl_port}\n"
+                f"App端口: {app_port}\n\n"
+                f"端口是否正确？"
+            )
+            if not port_confirm:
+                self.log("❌ 用户取消烧录（端口未确认）\n", "ERROR")
+                return
             
             # 获取烧录工具路径
             tool_exe = self.flash_tool_path
@@ -1164,7 +1189,18 @@ class FlashToolGUI:
             
             # 步骤1: 烧录SBL
             self.log("📝 步骤 1/2: 烧录SBL (Bootloader)\n", "INFO")
-            self.log("⚠️  请拔插USB或按RESET按钮，然后等待烧录开始...\n\n", "WARN")
+            
+            # 拔插USB确认
+            usb_confirm = messagebox.askyesno(
+                "准备烧录SBL",
+                "请拔插USB或按RESET按钮\n\n"
+                "完成后点击"是"继续烧录"
+            )
+            if not usb_confirm:
+                self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
+                return
+            
+            self.log("开始烧录SBL...\n\n")
             
             sbl_offset = self.device_config.get('sbl_offset', 0x2000)
             
@@ -1196,12 +1232,7 @@ class FlashToolGUI:
                     if process.poll() is not None:
                         break
             
-            try:
-                process.wait(timeout=60)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                self.log("\n⚠️ SBL烧录超时\n", "ERROR")
-                return
+            process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
@@ -1212,7 +1243,18 @@ class FlashToolGUI:
             
             # 步骤2: 烧录App
             self.log("\n📝 步骤 2/2: 烧录App (应用程序)\n", "INFO")
-            self.log("⚠️  请再次拔插USB或按RESET按钮，然后等待烧录开始...\n\n", "WARN")
+            
+            # App烧录前确认
+            app_usb_confirm = messagebox.askyesno(
+                "准备烧录App",
+                "请再次拔插USB或按RESET按钮\n\n"
+                "完成后点击"是"继续烧录"
+            )
+            if not app_usb_confirm:
+                self.log("❌ 用户取消App烧录（USB未拔插）\n", "ERROR")
+                return
+            
+            self.log("开始烧录App...\n\n")
             
             app_offset = self.device_config.get('app_offset', 0x42000)
             
@@ -1244,12 +1286,7 @@ class FlashToolGUI:
                     if process.poll() is not None:
                         break
             
-            try:
-                process.wait(timeout=120)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                self.log("\n⚠️ App烧录超时\n", "ERROR")
-                return
+            process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
@@ -1303,11 +1340,43 @@ class FlashToolGUI:
             self.log("\n" + "="*60 + "\n")
             self.log("🔧 开始SBL烧录\n", "INFO")
             self.log("="*60 + "\n\n")
-            # SOP 提示
-            self.log("🧭 SOP提示：SBL烧录请使用 SOP_MODE1 → S8=OFF, S7=OFF\n\n", "WARN")
+            
+            # SOP模式确认
+            sop_confirm = messagebox.askyesno(
+                "SOP模式确认",
+                "请确认硬件SOP模式配置：\n\n"
+                "烧录模式（SOP_MODE1）：\n"
+                "• S8 = OFF\n"
+                "• S7 = OFF\n\n"
+                "当前是否已设置为烧录模式？"
+            )
+            if not sop_confirm:
+                self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
+                return
             
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 SBL端口: {sbl_port}\n\n")
+            
+            # 串口确认
+            port_confirm = messagebox.askyesno(
+                "串口确认",
+                f"请确认烧录端口：\n\n"
+                f"SBL端口: {sbl_port}\n\n"
+                f"端口是否正确？"
+            )
+            if not port_confirm:
+                self.log("❌ 用户取消烧录（端口未确认）\n", "ERROR")
+                return
+            
+            # 拔插USB确认
+            usb_confirm = messagebox.askyesno(
+                "准备烧录",
+                "请拔插USB或按RESET按钮\n\n"
+                "完成后点击"是"继续烧录"
+            )
+            if not usb_confirm:
+                self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
+                return
             
             # 获取烧录工具路径
             tool_exe = self.flash_tool_path
@@ -1315,6 +1384,8 @@ class FlashToolGUI:
             if not tool_exe or not os.path.exists(tool_exe):
                 self.log(f"❌ 找不到烧录工具\n", "ERROR")
                 return
+            
+            self.log("开始烧录SBL...\n\n")
             
             sbl_offset = self.device_config.get('sbl_offset', 0x2000)
             
@@ -1350,12 +1421,7 @@ class FlashToolGUI:
                     if process.poll() is not None:
                         break
             
-            try:
-                process.wait(timeout=60)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                self.log("\n⚠️ SBL烧录超时\n", "ERROR")
-                return
+            process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
@@ -1403,11 +1469,47 @@ class FlashToolGUI:
             self.log("\n" + "="*60 + "\n")
             self.log("📱 开始App烧录\n", "INFO")
             self.log("="*60 + "\n\n")
-            # SOP 提示
-            self.log("🧭 SOP提示：App烧录通常仍建议 SOP_MODE1；运行测试请切换 SOP_MODE2\n\n", "WARN")
+            
+            # SOP模式确认
+            sop_confirm = messagebox.askyesno(
+                "SOP模式确认",
+                "请确认硬件SOP模式配置：\n\n"
+                "烧录模式（SOP_MODE1）：\n"
+                "• S8 = OFF\n"
+                "• S7 = OFF\n\n"
+                "运行模式（SOP_MODE2）：\n"
+                "• S8 = OFF\n"
+                "• S7 = ON\n\n"
+                "App烧录建议使用SOP_MODE1\n"
+                "当前是否已设置为烧录模式？"
+            )
+            if not sop_confirm:
+                self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
+                return
             
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 App端口: {app_port}\n\n")
+            
+            # 串口确认
+            port_confirm = messagebox.askyesno(
+                "串口确认",
+                f"请确认烧录端口：\n\n"
+                f"App端口: {app_port}\n\n"
+                f"端口是否正确？"
+            )
+            if not port_confirm:
+                self.log("❌ 用户取消烧录（端口未确认）\n", "ERROR")
+                return
+            
+            # 拔插USB确认
+            usb_confirm = messagebox.askyesno(
+                "准备烧录",
+                "请拔插USB或按RESET按钮\n\n"
+                "完成后点击"是"继续烧录"
+            )
+            if not usb_confirm:
+                self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
+                return
             
             # 获取烧录工具路径
             tool_exe = self.flash_tool_path
@@ -1415,6 +1517,8 @@ class FlashToolGUI:
             if not tool_exe or not os.path.exists(tool_exe):
                 self.log(f"❌ 找不到烧录工具\n", "ERROR")
                 return
+            
+            self.log("开始烧录App...\n\n")
             
             app_offset = self.device_config.get('app_offset', 0x42000)
             
@@ -1450,12 +1554,7 @@ class FlashToolGUI:
                     if process.poll() is not None:
                         break
             
-            try:
-                process.wait(timeout=120)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                self.log("\n⚠️ App烧录超时\n", "ERROR")
-                return
+            process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
