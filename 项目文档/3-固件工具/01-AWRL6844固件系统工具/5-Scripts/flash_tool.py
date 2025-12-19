@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.4.9 - 整合版本
+Ti AWRL6844 固件烧录工具 v1.5.3 - 固件路径动态化
 主入口文件 - 单一烧录功能标签页
 """
 
@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.5.2"
+VERSION = "1.5.3"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -638,6 +638,9 @@ class FlashToolGUI:
         self.flashing = False
         self.flash_thread = None
         
+        # 初始化默认固件路径（使用动态相对路径）
+        self._init_default_firmware_paths()
+        
         # 创建界面
         self.create_widgets()
         
@@ -646,6 +649,32 @@ class FlashToolGUI:
         
         # 检测烧录工具
         self.check_flash_tool()
+    
+    def _init_default_firmware_paths(self):
+        """初始化默认固件路径（动态相对路径，项目移动后自动适配）"""
+        try:
+            # 获取当前脚本的绝对路径
+            script_dir = Path(__file__).resolve().parent
+            
+            # 构建固件文件的相对路径
+            sbl_path = script_dir.parent / "1-SBL_Bootloader" / "sbl.release.appimage"
+            app_path = script_dir.parent / "2-HelloWorld_App" / "hello_world_system.release.appimage"
+            
+            # 检查文件是否存在并设置
+            if sbl_path.exists():
+                self.sbl_file.set(str(sbl_path))
+            else:
+                self.sbl_file.set("")
+                
+            if app_path.exists():
+                self.app_file.set(str(app_path))
+            else:
+                self.app_file.set("")
+                
+        except Exception as e:
+            # 初始化失败时使用空值
+            self.sbl_file.set("")
+            self.app_file.set("")
         
     def create_widgets(self):
         """创建界面组件 - 使用模块化标签页"""
