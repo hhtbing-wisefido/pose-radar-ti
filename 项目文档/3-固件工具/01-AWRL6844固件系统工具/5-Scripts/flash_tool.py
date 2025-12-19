@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.6.2 - 优化烧录功能
+Ti AWRL6844 固件烧录工具 v1.6.3 - 确认烧录功能完整性
 主入口文件 - 单一烧录功能标签页
 
-更新日志 v1.6.2:
+更新日志 v1.6.3:
+- 确认3种烧录方式完整实现（完整烧录、仅SBL、仅App）
+- 确认所有烧录方法使用正确命令格式（-f1/-of1/-s SFLASH/-c）
+- 确认依次烧录策略（根据测试报告验证）
 - 删除烧录超时相关功能
-- 更新烧录命令格式：使用 -f1/-of1/-s SFLASH/-c 参数
 - 根据实际测试优化烧录流程
 """
 
@@ -26,7 +28,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.6.2"
+VERSION = "1.6.3"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
