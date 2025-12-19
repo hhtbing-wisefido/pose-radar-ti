@@ -28,7 +28,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.6.8"
+VERSION = "1.6.9"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1356,16 +1356,24 @@ class FlashToolGUI:
                         self.log("\n❌ 烧录已停止\n", "ERROR")
                         return
                     
-                    # 检测进度行（包含%或Erasing/Writing）
-                    if '%' in line or 'Erasing' in line or 'Writing' in line:
+                    # 检测进度行：包含%且不是空白行
+                    line_stripped = line.strip()
+                    is_progress = ('%' in line_stripped and 
+                                 (line_stripped.startswith('Erasing') or 
+                                  line_stripped.startswith('Writing') or 
+                                  '完成' in line_stripped or
+                                  'Complete' in line_stripped.lower()))
+                    
+                    if is_progress:
                         if last_progress_line:
                             # 删除上一行进度
                             self.delete_last_line()
-                        self.log(line.rstrip() + '\n')
-                        last_progress_line = line
+                        self.log(line_stripped + '\n')
+                        last_progress_line = True
                     else:
-                        last_progress_line = None
-                        self.log(line)
+                        if line_stripped:  # 只输出非空行
+                            last_progress_line = False
+                            self.log(line)
                     
                     if process.poll() is not None:
                         break
@@ -1515,16 +1523,24 @@ class FlashToolGUI:
             last_progress_line = None
             if process.stdout:
                 for line in process.stdout:
-                    # 检测进度行（包含%或Erasing/Writing）
-                    if '%' in line or 'Erasing' in line or 'Writing' in line:
+                    # 检测进度行：包含%且不是空白行
+                    line_stripped = line.strip()
+                    is_progress = ('%' in line_stripped and 
+                                 (line_stripped.startswith('Erasing') or 
+                                  line_stripped.startswith('Writing') or 
+                                  '完成' in line_stripped or
+                                  'Complete' in line_stripped.lower()))
+                    
+                    if is_progress:
                         if last_progress_line:
                             # 删除上一行进度
                             self.delete_last_line()
-                        self.log(line.rstrip() + '\n')
-                        last_progress_line = line
+                        self.log(line_stripped + '\n')
+                        last_progress_line = True
                     else:
-                        last_progress_line = None
-                        self.log(line)
+                        if line_stripped:  # 只输出非空行
+                            last_progress_line = False
+                            self.log(line)
                     
                     if process.poll() is not None:
                         break
@@ -1668,16 +1684,24 @@ class FlashToolGUI:
             last_progress_line = None
             if process.stdout:
                 for line in process.stdout:
-                    # 检测进度行（包含%或Erasing/Writing）
-                    if '%' in line or 'Erasing' in line or 'Writing' in line:
+                    # 检测进度行：包含%且不是空白行
+                    line_stripped = line.strip()
+                    is_progress = ('%' in line_stripped and 
+                                 (line_stripped.startswith('Erasing') or 
+                                  line_stripped.startswith('Writing') or 
+                                  '完成' in line_stripped or
+                                  'Complete' in line_stripped.lower()))
+                    
+                    if is_progress:
                         if last_progress_line:
                             # 删除上一行进度
                             self.delete_last_line()
-                        self.log(line.rstrip() + '\n')
-                        last_progress_line = line
+                        self.log(line_stripped + '\n')
+                        last_progress_line = True
                     else:
-                        last_progress_line = None
-                        self.log(line)
+                        if line_stripped:  # 只输出非空行
+                            last_progress_line = False
+                            self.log(line)
                     
                     if process.poll() is not None:
                         break
@@ -1865,12 +1889,15 @@ class FlashToolGUI:
     
     def delete_last_line(self):
         """删除日志的最后一行（用于更新进度条）"""
-        if hasattr(self, 'flash_tab') and hasattr(self.flash_tab.app, 'log_text'):
-            log_text = self.flash_tab.app.log_text
-            log_text.config(state=tk.NORMAL)
-            # 删除最后一行
-            log_text.delete("end-2l", "end-1l")
-            log_text.config(state=tk.DISABLED)
+        try:
+            if hasattr(self, 'app') and hasattr(self.app, 'log_text'):
+                log_text = self.app.log_text
+                log_text.config(state=tk.NORMAL)
+                # 删除最后一行
+                log_text.delete("end-2l", "end-1l")
+                log_text.config(state=tk.DISABLED)
+        except Exception:
+            pass
     
     def log(self, message, tag=None):
         """添加日志（始终输出到烧录功能标签页）"""
