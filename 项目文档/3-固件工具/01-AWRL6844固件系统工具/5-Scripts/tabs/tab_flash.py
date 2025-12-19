@@ -246,7 +246,7 @@ class FlashTab:
             cursor="hand2"
         ).pack(fill=tk.X, expand=True)
         
-        # --- 烧录操作区（整合超时设置）---
+        # --- 烧录操作区 ---
         flash_frame = tk.LabelFrame(
             left_col,
             text="🔥 烧录操作",
@@ -257,28 +257,6 @@ class FlashTab:
             pady=10
         )
         flash_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 超时设置（放在烧录按钮上方）
-        timeout_frame = tk.Frame(flash_frame, bg="#ecf0f1")
-        timeout_frame.pack(fill=tk.X, pady=(0, 8))
-        
-        tk.Label(
-            timeout_frame,
-            text="烧录超时:",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1"
-        ).pack(side=tk.LEFT)
-        
-        timeout_options = ["120秒（标准）", "180秒（推荐）", "300秒（大文件）"]
-        self.app.timeout_combo = ttk.Combobox(
-            timeout_frame,
-            values=timeout_options,
-            state="readonly",
-            width=15,
-            font=("Microsoft YaHei UI", 8)
-        )
-        self.app.timeout_combo.set(timeout_options[1])  # 默认180秒
-        self.app.timeout_combo.pack(side=tk.LEFT, padx=(5, 0))
         
         # 完整烧录按钮
         tk.Button(

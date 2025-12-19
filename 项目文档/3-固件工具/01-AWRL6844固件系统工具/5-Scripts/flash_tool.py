@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.6.1 - 修复烧录功能
+Ti AWRL6844 固件烧录工具 v1.6.2 - 优化烧录功能
 主入口文件 - 单一烧录功能标签页
+
+更新日志 v1.6.2:
+- 删除烧录超时相关功能
+- 更新烧录命令格式：使用 -f1/-of1/-s SFLASH/-c 参数
+- 根据实际测试优化烧录流程
 """
 
 import tkinter as tk
@@ -21,7 +26,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.6.1"
+VERSION = "1.6.2"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1134,7 +1139,10 @@ class FlashToolGUI:
         self.flash_thread.start()
     
     def _flash_firmware_thread(self, sbl_file, app_file, sbl_port, app_port):
-        """烧录线程（完整烧录：分别烧录 SBL 与 App）"""
+        """烧录线程（完整烧录：依次烧录 SBL 与 App）
+        
+        根据实测验证，采用依次烧录策略更稳定可靠
+        """
         try:
             self.log("\n" + "="*60 + "\n")
             self.log("🚀 开始完整烧录流程（SBL + App）\n", "INFO")
@@ -1156,75 +1164,91 @@ class FlashToolGUI:
                 self.log("请点击「选择」按钮选择烧录工具，或确认SDK已正确安装\n", "ERROR")
                 return
             
-            # 步骤1: 烧录SBL（如提供）
+            # 步骤1: 烧录SBL
             self.log("📝 步骤 1/2: 烧录SBL (Bootloader)\n", "INFO")
+            self.log("⚠️  请拔插USB或按RESET按钮，然后等待烧录开始...\n\n", "WARN")
+            
             sbl_offset = self.device_config.get('sbl_offset', 0x2000)
             
-            sbl_image = sbl_file
-            sbl_cmd = [tool_exe, "-p", sbl_port, "-f", sbl_image, "-of", str(sbl_offset)]
+            # 使用正确的命令格式
+            sbl_cmd = [
+                tool_exe, 
+                "-p", sbl_port, 
+                "-f1", sbl_file,      # 使用-f1
+                "-of1", str(sbl_offset),  # 使用-of1
+                "-s", "SFLASH",       # 存储类型
+                "-c"                  # Break信号
+            ]
             
             self.log(f"执行命令: {' '.join(sbl_cmd)}\n")
             
             process = subprocess.Popen(
                 sbl_cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+                stderr=subprocess.STDOUT,
+                text=False,
+                bufsize=0,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
             # 读取输出
             if process.stdout:
-                for line in process.stdout:
-                    self.log(line)
-                    if "Error" in line or "error" in line:
-                        self.log(f"⚠️ {line}", "ERROR")
+                while True:
+                    chunk = process.stdout.read(1)
+                    if not chunk:
+                        break
+                    char = chunk.decode('utf-8', errors='ignore')
+                    self.log(char)
             
             process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
-                if process.stderr:
-                    stderr = process.stderr.read()
-                    if stderr:
-                        self.log(f"错误信息: {stderr}\n", "ERROR")
                 return
             
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
             time.sleep(1)
             
-            # 步骤2: 烧录App（如提供）
+            # 步骤2: 烧录App
             self.log("\n📝 步骤 2/2: 烧录App (应用程序)\n", "INFO")
+            self.log("⚠️  请再次拔插USB或按RESET按钮，然后等待烧录开始...\n\n", "WARN")
+            
             app_offset = self.device_config.get('app_offset', 0x42000)
             
-            app_image = app_file
-            app_cmd = [tool_exe, "-p", app_port, "-f", app_image, "-of", str(app_offset)]
+            # 使用正确的命令格式
+            app_cmd = [
+                tool_exe, 
+                "-p", app_port, 
+                "-f1", app_file,      # 使用-f1
+                "-of1", str(app_offset),  # 使用-of1
+                "-s", "SFLASH",       # 存储类型
+                "-c"                  # Break信号
+            ]
             
             self.log(f"执行命令: {' '.join(app_cmd)}\n")
             
             process = subprocess.Popen(
                 app_cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+                stderr=subprocess.STDOUT,
+                text=False,
+                bufsize=0,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
             # 读取输出
             if process.stdout:
-                for line in process.stdout:
-                    self.log(line)
-                    if "Error" in line or "error" in line:
-                        self.log(f"⚠️ {line}", "ERROR")
+                while True:
+                    chunk = process.stdout.read(1)
+                    if not chunk:
+                        break
+                    char = chunk.decode('utf-8', errors='ignore')
+                    self.log(char)
             
             process.wait()
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
-                if process.stderr:
-                    stderr = process.stderr.read()
-                    if stderr:
-                        self.log(f"错误信息: {stderr}\n", "ERROR")
                 return
             
             self.log("\n✅ App烧录成功！\n", "SUCCESS")
@@ -1290,27 +1314,39 @@ class FlashToolGUI:
             
             sbl_offset = self.device_config.get('sbl_offset', 0x2000)
             
+            # 使用正确的命令格式（实测验证）
             cmd = [
                 tool_exe,
                 "-p",
                 sbl_port,
-                "-f",
+                "-f1",            # 使用-f1而非-f
                 firmware_file,
-                "-of",
-                str(sbl_offset)
+                "-of1",           # 使用-of1而非-of
+                str(sbl_offset),
+                "-s",             # 存储类型
+                "SFLASH",
+                "-c"              # Break信号
             ]
+            
+            self.log(f"执行命令: {' '.join(cmd)}\n")
             
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+                stderr=subprocess.STDOUT,  # 合并stderr到stdout
+                text=False,  # 使用二进制模式保留\r
+                bufsize=0,   # 无缓冲
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
+            # 实时读取并显示输出（保持原始格式）
             if process.stdout:
-                for line in process.stdout:
-                    self.log(line)
+                while True:
+                    chunk = process.stdout.read(1)
+                    if not chunk:
+                        break
+                    char = chunk.decode('utf-8', errors='ignore')
+                    self.log(char)
             
             process.wait()
             
@@ -1375,28 +1411,39 @@ class FlashToolGUI:
             
             app_offset = self.device_config.get('app_offset', 0x42000)
             
+            # 使用正确的命令格式（实测验证）
             cmd = [
                 tool_exe,
                 "-p",
                 app_port,
-                "-f",
+                "-f1",            # 使用-f1而非-f
                 firmware_file,
-                "-of",
-                str(app_offset)
+                "-of1",           # 使用-of1而非-of
+                str(app_offset),
+                "-s",             # 存储类型
+                "SFLASH",
+                "-c"              # Break信号
             ]
             
             self.log(f"执行命令: {' '.join(cmd)}\n")
             
             process = subprocess.Popen(
                 cmd,
-                stderr=subprocess.PIPE,
-                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # 合并stderr到stdout
+                text=False,  # 使用二进制模式保留\r
+                bufsize=0,   # 无缓冲
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
+            # 实时读取并显示输出（保持原始格式）
             if process.stdout:
-                for line in process.stdout:
-                    self.log(line)
+                while True:
+                    chunk = process.stdout.read(1)
+                    if not chunk:
+                        break
+                    char = chunk.decode('utf-8', errors='ignore')
+                    self.log(char)
             
             process.wait()
             
