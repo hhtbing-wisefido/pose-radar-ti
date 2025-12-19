@@ -340,7 +340,7 @@ class FlashTab:
         # 烧录端口（COM3 - User UART）
         self.flash_port_label = tk.Label(
             port_config_frame,
-            text="烧录端口 (User UART):",
+            text="烧录端口 - XDS110 Class Application/User UART:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50"
@@ -371,7 +371,7 @@ class FlashTab:
         # 数据输出端口（COM4 - Auxiliary Data Port）
         self.debug_port_label = tk.Label(
             port_config_frame,
-            text="数据端口 (Aux Data):",
+            text="测试数据端口 - XDS110 Class Auxiliary Data Port:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50"
@@ -424,15 +424,16 @@ class FlashTab:
         
         tk.Button(
             sbl_check_frame,
-            text="🔎 板载SBL固件存在性检测",
+            text="🔎 板载SBL固件存在性检测\n(SOP调整为功能模式非烧录模式并重启)",
             font=("Microsoft YaHei UI", 8),
             command=self.check_sbl,
             bg="#9b59b6",
             fg="white",
             relief=tk.FLAT,
-            padx=6,
-            pady=4,
-            cursor="hand2"
+            padx=8,
+            pady=8,
+            cursor="hand2",
+            justify=tk.CENTER
         ).pack(fill=tk.X, expand=True)
         
         # ============= 右列：日志输出 =============

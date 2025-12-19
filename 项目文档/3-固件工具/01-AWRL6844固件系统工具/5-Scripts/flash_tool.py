@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.7.4 - 优化端口描述显示
+Ti AWRL6844 固件烧录工具 v1.7.5 - 修正SBL检测提示和说明
 主入口文件 - 单一烧录功能标签页
 
-更新日志 v1.7.4:
-- 优化端口描述显示：
-  - 烧录端口增加"烧录端口"前缀描述
-  - 数据端口增加"测试数据端口"前缀描述
-  - 提升界面可读性和功能辨识度
+更新日志 v1.7.5:
+- 修正SBL存在性检测的提示信息
+- 按钮文本增加SOP模式切换说明（换行显示）
+- 增大按钮尺寸避免文字截断
+- 明确指出必须将SOP调整为功能模式[0 1]并重启
+- 根据2025-12-19_SBL烧录后检测不到的原因分析文档优化
 """
 
 import tkinter as tk
@@ -27,7 +28,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.7.4"
+VERSION = "1.7.5"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -322,7 +323,7 @@ def check_sbl_exists(port, baudrate=115200, timeout=3):
         if has_response:
             return True, "✅ 检测到SBL存在（串口有响应）", details_text
         else:
-            return False, "⚠️ 未检测到SBL响应（建议复位设备后重试）", details_text
+            return False, "⚠️ 未检测到SBL响应\n请将SOP开关调整为功能模式[0 1]（非烧录模式[0 0]）并按RESET重启设备后重试", details_text
         
     except serial.SerialException as e:
         return False, f"❌ 串口打开失败: {str(e)}", f"端口: {port}\n错误: {str(e)}"
@@ -505,7 +506,10 @@ class SBLCheckDialog(tk.Toplevel):
         if exists:
             self.log("\n✅ 结论: 板载已有SBL，可以只烧录App更新应用\n")
         else:
-            self.log("\n⚠️ 结论: 建议执行完整烧录（SBL + App）\n")
+            self.log("\n⚠️ 重要提示:\n")
+            self.log("   1. 请将SOP开关调整为功能模式 [S8=OFF, S7=ON]\n")
+            self.log("   2. 按RESET按钮重启设备\n")
+            self.log("   3. 如仍无响应，建议执行完整烧录（SBL + App）\n")
         
         # 启用关闭按钮
         self.close_btn.config(state=tk.NORMAL)
