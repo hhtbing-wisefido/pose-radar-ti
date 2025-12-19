@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v2.1.1 - BUG修复版
+Ti AWRL6844 固件烧录工具 v2.1.2 - 关键修复版
 主入口文件 - 单一烧录功能标签页
+
+更新日志 v2.1.2:
+- 🐛 修复完整烧录App部分使用错误端口（COM4数据端口）的关键BUG
+  - 现已修正：App烧录使用sbl_port（COM3烧录端口）
+  - 原因：所有烧录操作均应使用烧录端口，而非数据端口
+- ❌ 移除百分比显示功能（arprog工具不输出百分比信息）
+  - 保留单行进度条显示（显示[====>   ]进度条）
+  - 删除无效的百分比提取逻辑
 
 更新日志 v2.1.1:
 - 🐛 修复完整烧录SBL部分调用旧Text widget方法的BUG
@@ -43,7 +51,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "2.1.1"
+VERSION = "2.1.2"
 BUILD_DATE = "2025-12-20"
 AUTHOR = "Benson@Wisefido"
 
@@ -1337,15 +1345,8 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line and hasattr(self, 'progress_label'):
-                            # 提取百分比（如果有）- 完整烧录SBL部分
-                            percent_match = re.search(r'(\d+)%', line)
-                            if percent_match:
-                                percent = percent_match.group(1)
-                                display_line = f"[{percent}%] {line}"
-                            else:
-                                display_line = line
-                            # 使用Label显示进度
-                            self.progress_label.config(text=display_line)
+                            # 直接显示进度信息（arprog不输出百分比）
+                            self.progress_label.config(text=line)
                             self.progress_label.update()
                     except:
                         pass
@@ -1418,10 +1419,10 @@ class FlashToolGUI:
             
             app_offset = self.device_config.get('app_offset', 0x42000)
             
-            # 使用正确的命令格式
+            # 使用正确的命令格式（注意：App也使用sbl_port烧录端口COM3）
             app_cmd = [
                 tool_exe, 
-                "-p", app_port, 
+                "-p", sbl_port,  # 修复：使用sbl_port（COM3烧录端口）而非app_port（COM4数据端口）
                 "-f1", app_file,      # 使用-f1
                 "-of1", str(app_offset),  # 使用-of1
                 "-s", "SFLASH",       # 存储类型
@@ -1464,15 +1465,8 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line and hasattr(self, 'progress_label'):
-                            # 提取百分比（如果有）
-                            percent_match = re.search(r'(\d+)%', line)
-                            if percent_match:
-                                percent = percent_match.group(1)
-                                display_line = f"[{percent}%] {line}"
-                            else:
-                                display_line = line
-                            # 使用Label显示进度
-                            self.progress_label.config(text=display_line)
+                            # 直接显示进度信息（arprog不输出百分比）
+                            self.progress_label.config(text=line)
                             self.progress_label.update()
                     except:
                         pass
@@ -1679,14 +1673,8 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line and hasattr(self, 'progress_label'):
-                            # 提取百分比（如果有）- SBL only
-                            percent_match = re.search(r'(\d+)%', line)
-                            if percent_match:
-                                percent = percent_match.group(1)
-                                display_line = f"[{percent}%] {line}"
-                            else:
-                                display_line = line
-                            self.progress_label.config(text=display_line)
+                            # 直接显示进度信息（arprog不输出百分比）- SBL only
+                            self.progress_label.config(text=line)
                             self.progress_label.update()
                     except:
                         pass
@@ -1896,14 +1884,8 @@ class FlashToolGUI:
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
                         if line and hasattr(self, 'progress_label'):
-                            # 提取百分比（如果有）- App only
-                            percent_match = re.search(r'(\d+)%', line)
-                            if percent_match:
-                                percent = percent_match.group(1)
-                                display_line = f"[{percent}%] {line}"
-                            else:
-                                display_line = line
-                            self.progress_label.config(text=display_line)
+                            # 直接显示进度信息（arprog不输出百分比）- App only
+                            self.progress_label.config(text=line)
                             self.progress_label.update()
                     except:
                         pass
