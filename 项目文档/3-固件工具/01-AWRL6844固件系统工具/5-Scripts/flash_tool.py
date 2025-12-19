@@ -1184,21 +1184,24 @@ class FlashToolGUI:
                 sbl_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=False,
-                bufsize=0,
+                text=True,
+                bufsize=1,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
             # 读取输出
             if process.stdout:
-                while True:
-                    chunk = process.stdout.read(1)
-                    if not chunk:
+                for line in process.stdout:
+                    self.log(line)
+                    if process.poll() is not None:
                         break
-                    char = chunk.decode('utf-8', errors='ignore')
-                    self.log(char)
             
-            process.wait()
+            try:
+                process.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                self.log("\n⚠️ SBL烧录超时\n", "ERROR")
+                return
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
@@ -1229,21 +1232,24 @@ class FlashToolGUI:
                 app_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=False,
-                bufsize=0,
+                text=True,
+                bufsize=1,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
             # 读取输出
             if process.stdout:
-                while True:
-                    chunk = process.stdout.read(1)
-                    if not chunk:
+                for line in process.stdout:
+                    self.log(line)
+                    if process.poll() is not None:
                         break
-                    char = chunk.decode('utf-8', errors='ignore')
-                    self.log(char)
             
-            process.wait()
+            try:
+                process.wait(timeout=120)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                self.log("\n⚠️ App烧录超时\n", "ERROR")
+                return
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
@@ -1331,22 +1337,25 @@ class FlashToolGUI:
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,  # 合并stderr到stdout
-                text=False,  # 使用二进制模式保留\r
-                bufsize=0,   # 无缓冲
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            # 实时读取并显示输出（保持原始格式）
+            # 实时读取并显示输出
             if process.stdout:
-                while True:
-                    chunk = process.stdout.read(1)
-                    if not chunk:
+                for line in process.stdout:
+                    self.log(line)
+                    if process.poll() is not None:
                         break
-                    char = chunk.decode('utf-8', errors='ignore')
-                    self.log(char)
             
-            process.wait()
+            try:
+                process.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                self.log("\n⚠️ SBL烧录超时\n", "ERROR")
+                return
             
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
@@ -1428,22 +1437,25 @@ class FlashToolGUI:
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,  # 合并stderr到stdout
-                text=False,  # 使用二进制模式保留\r
-                bufsize=0,   # 无缓冲
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             
-            # 实时读取并显示输出（保持原始格式）
+            # 实时读取并显示输出
             if process.stdout:
-                while True:
-                    chunk = process.stdout.read(1)
-                    if not chunk:
+                for line in process.stdout:
+                    self.log(line)
+                    if process.poll() is not None:
                         break
-                    char = chunk.decode('utf-8', errors='ignore')
-                    self.log(char)
             
-            process.wait()
+            try:
+                process.wait(timeout=120)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                self.log("\n⚠️ App烧录超时\n", "ERROR")
+                return
             
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
