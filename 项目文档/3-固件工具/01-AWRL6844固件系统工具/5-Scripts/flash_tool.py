@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v1.7.7 - 优化界面字体显示
+Ti AWRL6844 固件烧录工具 v1.7.8 - 紧急修复COM口和进度条问题
 主入口文件 - 单一烧录功能标签页
 
-更新日志 v1.7.7:
-- 优化路径显示字体：从Consolas 7号改为Microsoft YaHei UI 8号
-- 提升路径文字可读性和美观度
-- 统一界面字体风格
+更新日志 v1.7.8:
+- 🔴 修复应用固件烧录使用错误端口COM4的问题
+  - flash_app_only方法改用sbl_port（COM3）而非app_port（COM4）
+  - 应用固件烧录必须使用COM3烧录端口
+- 🔴 修复进度条仍然多行显示的问题
+  - update_line_at_mark方法增加update_idletasks强制刷新
+  - 确保进度条单行原地更新
 """
 
 import tkinter as tk
@@ -26,7 +29,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "1.7.7"
+VERSION = "1.7.8"
 BUILD_DATE = "2025-12-19"
 AUTHOR = "Benson@Wisefido"
 
@@ -1617,10 +1620,10 @@ class FlashToolGUI:
             messagebox.showerror("错误", "请先选择有效的应用固件文件！")
             return
         
-        # 获取端口
-        app_port = self.app_port.get()
+        # 获取端口（使用烧录端口COM3，而非数据端口COM4）
+        app_port = self.sbl_port.get()  # 修复：使用sbl_port（COM3）而非app_port（COM4）
         if not app_port:
-            messagebox.showerror("错误", "请先选择App端口！")
+            messagebox.showerror("错误", "请先选择烧录端口！")
             return
         
         # 启动烧录线程
@@ -1665,13 +1668,13 @@ class FlashToolGUI:
                     break
             
             self.log(f"📁 固件文件: {firmware_file}\n")
-            self.log(f"🔌 应用固件端口: {app_port} ({port_description})\n\n")
+            self.log(f"🔌 烧录端口: {app_port} ({port_description})\n\n")
             
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
                 f"请确认烧录端口：\n\n"
-                f"应用固件端口: {app_port}\n"
+                f"烧录端口: {app_port}\n"
                 f"端口说明: {port_description}\n\n"
                 f"端口是否正确？"
             )
@@ -1963,14 +1966,15 @@ class FlashToolGUI:
                 log_text = self.log_text
                 log_text.config(state=tk.NORMAL)
                 
-                # 删除mark位置到该行结束的内容
-                log_text.delete(mark_pos, f"{mark_pos} lineend")
-                # 插入新内容（不包含换行，因为行已存在）
-                log_text.insert(mark_pos, new_text.rstrip('\n'))
+                # 关键修复：删除整行（包括换行符）
+                log_text.delete(mark_pos, f"{mark_pos} lineend+1c")
+                # 插入新内容（保留换行符）
+                log_text.insert(mark_pos, new_text if new_text.endswith('\n') else new_text + '\n')
                 
                 # 自动滚动到底部
                 log_text.see(tk.END)
                 log_text.config(state=tk.DISABLED)
+                log_text.update_idletasks()  # 强制刷新UI
         except Exception as e:
             # 如果更新失败，回退到追加模式
             if hasattr(self, 'log_text'):
