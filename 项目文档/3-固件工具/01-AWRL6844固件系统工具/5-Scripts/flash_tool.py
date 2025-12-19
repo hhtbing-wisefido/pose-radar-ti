@@ -1272,10 +1272,10 @@ class FlashToolGUI:
             self.log("⚠️ 烧录正在进行中...\n", "WARN")
             return
         
-        # 获取固件文件
-        firmware_file = self.firmware_file.get()
+        # 获取SBL固件文件
+        firmware_file = self.sbl_file.get()
         if not firmware_file or not os.path.exists(firmware_file):
-            messagebox.showerror("错误", "请先选择有效的固件文件！")
+            messagebox.showerror("错误", "请先选择有效的SBL固件文件！")
             return
         
         # 获取端口
@@ -1369,10 +1369,10 @@ class FlashToolGUI:
             self.log("⚠️ 烧录正在进行中...\n", "WARN")
             return
         
-        # 获取固件文件
-        firmware_file = self.firmware_file.get()
+        # 获取App固件文件
+        firmware_file = self.app_file.get()
         if not firmware_file or not os.path.exists(firmware_file):
-            messagebox.showerror("错误", "请先选择有效的固件文件！")
+            messagebox.showerror("错误", "请先选择有效的App固件文件！")
             return
         
         # 获取端口
