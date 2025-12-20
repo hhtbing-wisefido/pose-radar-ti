@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件系统工具 v2.4.3.1 - 修复进程检测BUG版
+Ti AWRL6844 固件系统工具 v2.4.3.2 - 命令行后台启动版
 主入口文件 - 多标签页集成系统
+
+更新日志 v2.4.3.2:
+- 🚀 命令行启动立即返回提示符
+  * 使用进程分离技术：首次启动检测旧进程后，自动分离到后台
+  * 保留完整的旧进程检测和弹窗功能
+  * 使用环境变量标记避免无限循环
+  * Windows原生支持：CREATE_NEW_PROCESS_GROUP + DETACHED_PROCESS
+- ✅ 启动命令：`python flash_tool.py`（立即返回，GUI后台运行）
+- 构建日期：2025-12-20
 
 更新日志 v2.4.3.1:
 - 🐛 修复关键BUG：启动时错误关闭自身进程导致闪退
-  * 问题：check_old_process()会错误识别当前进程为"旧进程"
-  * 修复：增加进程创建时间检查，只关闭真正的旧进程（早于当前进程1秒以上）
-  * 修复：排除父进程（避免终止命令行/启动器）
-  * 修复：排除当前进程本身
 - ✅ 现在可以正常使用 `python flash_tool.py` 命令行启动
-- 构建日期：2025-12-20
 
 更新日志 v2.4.3:
 - ➕ 固件管理标签页新增"添加到烧录"功能
@@ -2287,27 +2291,42 @@ def kill_old_processes(processes):
 
 def main():
     """主函数"""
-    # v1.0.1需求1: 检查老进程
-    old_processes = check_old_process()
-    if old_processes:
-        root_temp = tk.Tk()
-        root_temp.withdraw()
-        response = messagebox.askyesno(
-            "检测到旧进程",
-            f"检测到 {len(old_processes)} 个旧的烧录工具进程正在运行。\n\n"
-            "是否关闭旧进程并启动新窗口？\n\n"
-            "点击'是'：关闭旧进程并启动新窗口\n"
-            "点击'否'：取消启动"
-        )
-        root_temp.destroy()
+    # 检查是否已在后台运行（通过环境变量标记）
+    if os.environ.get('FLASH_TOOL_DETACHED') != '1':
+        # 第一次启动：先检查旧进程，然后分离到后台
+        old_processes = check_old_process()
+        if old_processes:
+            root_temp = tk.Tk()
+            root_temp.withdraw()
+            response = messagebox.askyesno(
+                "检测到旧进程",
+                f"检测到 {len(old_processes)} 个旧的烧录工具进程正在运行。\n\n"
+                "是否关闭旧进程并启动新窗口？\n\n"
+                "点击'是'：关闭旧进程并启动新窗口\n"
+                "点击'否'：取消启动"
+            )
+            root_temp.destroy()
+            
+            if response:
+                kill_old_processes(old_processes)
+                time.sleep(0.5)
+            else:
+                sys.exit(0)
         
-        if response:
-            kill_old_processes(old_processes)
-            time.sleep(0.5)  # 等待旧进程完全关闭
-        else:
-            sys.exit(0)
+        # 分离到后台运行
+        import subprocess
+        env = os.environ.copy()
+        env['FLASH_TOOL_DETACHED'] = '1'
+        
+        subprocess.Popen(
+            [sys.executable, __file__],
+            env=env,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+            close_fds=True
+        )
+        sys.exit(0)
     
-    # 启动GUI
+    # 后台进程：直接启动GUI
     root = tk.Tk()
     app = FlashToolGUI(root)
     root.mainloop()
