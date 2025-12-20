@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.0.2
+AWRL6844雷达配置专用GUI工具 v1.0.3
 集成配置文件读写、分析、数据解析等功能
+
+更新日志 v1.0.3:
+- 🎨 配置文件选择区域UI细节优化
+  * "配置文件"改为"当前加载配置文件"，更明确
+  * "选择"按钮改为"选择并立即加载配置"，功能更清晰
+  * 按钮移至绝对路径下方，布局更合理
+- 构建日期：2025-12-20
 
 更新日志 v1.0.2:
 - 🎨 配置文件选择区域UI优化
@@ -66,7 +73,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.0.2 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.0.3 | Wisefido")
         self.root.geometry("1500x950")
         
         # 设置窗口图标
@@ -298,18 +305,16 @@ class RadarConfigTool:
         frame = ttk.LabelFrame(parent, text="📁 配置文件选择", padding=10)
         frame.pack(fill=tk.X, padx=5, pady=5)
         
-        # 配置文件名显示和选择按钮
+        # 当前加载配置文件名显示
         file_label_frame = ttk.Frame(frame)
         file_label_frame.pack(fill=tk.X, pady=(0, 5))
         
-        ttk.Label(file_label_frame, text="配置文件:", 
+        ttk.Label(file_label_frame, text="当前加载配置文件:", 
                  font=('Segoe UI', 10, 'bold')).pack(side=tk.LEFT)
         self.config_filename_label = ttk.Label(file_label_frame, text="未选择", 
                                               foreground=self.COLORS['accent_cyan'],
                                               font=('Segoe UI', 10))
         self.config_filename_label.pack(side=tk.LEFT, padx=5)
-        
-        ttk.Button(file_label_frame, text="选择", command=self._open_config_file).pack(side=tk.LEFT, padx=5)
         
         # 完整路径显示（自适应，无边框）
         path_label = ttk.Label(frame, textvariable=self.current_config_path, 
@@ -317,7 +322,11 @@ class RadarConfigTool:
                               font=('Segoe UI', 9),
                               wraplength=380,  # 自动换行
                               justify=tk.LEFT)
-        path_label.pack(fill=tk.X, pady=(0, 10), anchor=tk.W)
+        path_label.pack(fill=tk.X, pady=(0, 5), anchor=tk.W)
+        
+        # 选择并立即加载配置按钮
+        ttk.Button(frame, text="选择并立即加载配置", 
+                  command=self._open_config_file).pack(fill=tk.X, pady=(0, 10))
         
         # 默认配置下拉框
         ttk.Label(frame, text="默认设置:").pack(anchor=tk.W, pady=(5, 2))
