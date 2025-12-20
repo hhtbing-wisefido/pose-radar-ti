@@ -1,8 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.1.0
+AWRL6844雷达配置专用GUI工具 v1.1.2
 集成配置文件读写、分析、数据解析等功能
+
+更新日志 v1.1.2:
+- 🐛 修复端口下拉框和启动流程问题
+  * 端口下拉框宽度增加到50，完整显示带描述的端口信息
+  * 移除启动时的弹窗确认，自动关闭旧进程，避免阻塞
+  * 优化启动流程，不再需要用户手动确认关闭旧窗口
+- 构建日期：2025-12-20
+
+更新日志 v1.1.1:
+- 🐛 修复端口显示和测试问题
+  * 修复端口测试弹窗显示\\n而非换行的问题
+  * 端口下拉框显示包含端口描述信息
+  * 优化刷新端口日志排版，增加空行分隔
+  * 修复连接端口时从下拉框正确提取端口名称
 
 更新日志 v1.1.0:
 - 🎨 UI布局优化
@@ -84,7 +98,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.1.0 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.1.2 | Wisefido")
         self.root.geometry("1500x950")
         
         # 设置窗口图标
@@ -366,7 +380,7 @@ class RadarConfigTool:
         port_frame.pack(fill=tk.X, pady=2)
         
         ttk.Label(port_frame, text="端口:").pack(side=tk.LEFT)
-        self.port_combo = ttk.Combobox(port_frame, textvariable=self.selected_port, width=10)
+        self.port_combo = ttk.Combobox(port_frame, textvariable=self.selected_port, width=50)
         self.port_combo['values'] = self._get_available_ports()
         self.port_combo.pack(side=tk.LEFT, padx=5)
         
@@ -879,9 +893,10 @@ class RadarConfigTool:
                                             f"{rx_count * tx_count}个虚拟天线"))
     
     def _get_available_ports(self) -> List[str]:
-        """获取可用串口列表"""
+        """获取可用串口列表（包含描述）"""
         ports = serial.tools.list_ports.comports()
-        return [port.device for port in ports]
+        # 返回端口设备名 + 描述
+        return [f"{port.device} - {port.description}" for port in ports]
     
     def _refresh_ports(self):
         """刷新串口列表并显示详细信息"""
@@ -893,43 +908,46 @@ class RadarConfigTool:
                 self.port_combo['values'] = []
                 return
             
-            # 更新下拉框
-            port_names = [port.device for port in ports]
-            self.port_combo['values'] = port_names
+            # 更新下拉框（包含描述）
+            port_items = [f"{port.device} - {port.description}" for port in ports]
+            self.port_combo['values'] = port_items
             
             # 显示详细信息
             self._log("✅ 刷新成功！", 'success')
+            self._log("", 'info')  # 空行
             
             # 识别AWRL6844设备端口
             for port in ports:
-                port_info = f"  🔌 {port.device}"
-                port_desc = f"     - 描述: {port.description}"
-                
                 # 检查VID:PID
                 if port.vid and port.pid:
-                    vid_pid = f"     - VID:PID = {port.vid:04X}:{port.pid:04X}"
+                    vid_pid = f"VID:PID = {port.vid:04X}:{port.pid:04X}"
                     
                     # 识别XDS110设备（AWRL6844的调试器）
                     if port.vid == 0x0451 and port.pid == 0xBEF3:
                         if "Application" in port.description or "User UART" in port.description:
-                            self._log(f"  🔌 找到烧录端口: {port.device}", 'success')
-                            self._log(port_desc, 'info')
-                            self._log(vid_pid, 'info')
+                            self._log(f"🔌 找到烧录端口: {port.device}", 'success')
+                            self._log(f"   描述: {port.description}", 'info')
+                            self._log(f"   {vid_pid}", 'info')
+                            self._log("", 'info')  # 空行
                         elif "Auxiliary" in port.description or "Data Port" in port.description:
-                            self._log(f"  🔌 找到调试端口: {port.device}", 'success')
-                            self._log(port_desc, 'info')
-                            self._log(vid_pid, 'info')
+                            self._log(f"🔌 找到调试端口: {port.device}", 'success')
+                            self._log(f"   描述: {port.description}", 'info')
+                            self._log(f"   {vid_pid}", 'info')
+                            self._log("", 'info')  # 空行
                         else:
-                            self._log(port_info, 'info')
-                            self._log(port_desc, 'info')
-                            self._log(vid_pid, 'info')
+                            self._log(f"🔌 {port.device}", 'info')
+                            self._log(f"   描述: {port.description}", 'info')
+                            self._log(f"   {vid_pid}", 'info')
+                            self._log("", 'info')  # 空行
                     else:
-                        self._log(port_info, 'info')
-                        self._log(port_desc, 'info')
-                        self._log(vid_pid, 'info')
+                        self._log(f"🔌 {port.device}", 'info')
+                        self._log(f"   描述: {port.description}", 'info')
+                        self._log(f"   {vid_pid}", 'info')
+                        self._log("", 'info')  # 空行
                 else:
-                    self._log(port_info, 'info')
-                    self._log(port_desc, 'info')
+                    self._log(f"🔌 {port.device}", 'info')
+                    self._log(f"   描述: {port.description}", 'info')
+                    self._log("", 'info')  # 空行
             
         except Exception as e:
             self._log(f"❌ 刷新端口失败: {e}", 'error')
@@ -999,12 +1017,12 @@ class RadarConfigTool:
             self._log("=" * 60, 'info')
             
             # 弹出结果窗口
-            result_text = "端口测试结果汇总\\n\\n"
+            result_text = "端口测试结果汇总\n\n"
             for port, port_type, result in test_results:
                 status = "✅ 连接正常" if result else "❌ 连接失败"
-                result_text += f"{port} ({port_type}): {status}\\n"
+                result_text += f"{port} ({port_type}): {status}\n"
             
-            result_text += f"\\n总计: {success_count} 个成功, {fail_count} 个失败"
+            result_text += f"\n总计: {success_count} 个成功, {fail_count} 个失败"
             
             messagebox.showinfo("端口测试结果", result_text)
             
@@ -1029,7 +1047,9 @@ class RadarConfigTool:
     def _connect_port(self):
         """连接串口"""
         try:
-            port = self.selected_port.get()
+            port_selection = self.selected_port.get()
+            # 从选择中提取端口名称（COM3 - 描述 -> COM3）
+            port = port_selection.split(' - ')[0] if ' - ' in port_selection else port_selection
             baud = self.baudrate.get()
             
             self.serial_port = serial.Serial(port, baud, timeout=1)
@@ -1699,49 +1719,22 @@ def main():
     existing_processes = check_existing_process()
     
     if existing_processes:
-        # 创建临时窗口询问用户
-        temp_root = tk.Tk()
-        temp_root.withdraw()  # 隐藏主窗口
+        print(f"⚠️ 检测到 {len(existing_processes)} 个旧窗口，自动关闭中...")
         
-        process_info = "\n".join([f"• PID: {p['pid']}" for p in existing_processes])
-        
-        msg = f"""⚠️ 检测到已有 {len(existing_processes)} 个雷达配置工具进程正在运行：
-
-{process_info}
-
-是否关闭旧进程并启动新窗口？
-
-• 点击"是"：关闭旧进程，启动新窗口
-• 点击"否"：取消启动，保留旧窗口"""
-        
-        result = messagebox.askyesno(
-            "进程检测",
-            msg,
-            icon='warning',
-            parent=temp_root
-        )
-        
-        temp_root.destroy()
-        
-        if result:
-            # 用户选择关闭旧进程
-            success_count = 0
-            for proc in existing_processes:
-                if kill_process(proc['pid']):
-                    success_count += 1
-                    print(f"✅ 已关闭进程 PID: {proc['pid']}")
-                else:
-                    print(f"❌ 无法关闭进程 PID: {proc['pid']}")
-            
-            if success_count > 0:
-                time.sleep(0.5)  # 等待进程完全退出
-                print(f"✅ 已关闭 {success_count} 个旧进程")
+        # 后台自动关闭旧进程，不弹窗询问
+        success_count = 0
+        for proc in existing_processes:
+            if kill_process(proc['pid']):
+                success_count += 1
+                print(f"✅ 已关闭进程 PID: {proc['pid']}")
             else:
-                print("⚠️ 未能关闭任何旧进程，但继续启动新窗口")
+                print(f"❌ 无法关闭进程 PID: {proc['pid']}")
+        
+        if success_count > 0:
+            time.sleep(0.5)  # 等待进程完全退出
+            print(f"✅ 已自动关闭 {success_count} 个旧进程")
         else:
-            # 用户选择取消
-            print("❌ 用户取消启动，保留旧窗口")
-            sys.exit(0)
+            print("⚠️ 未能关闭任何旧进程，但继续启动新窗口")
     
     # 创建主窗口
     root = tk.Tk()
