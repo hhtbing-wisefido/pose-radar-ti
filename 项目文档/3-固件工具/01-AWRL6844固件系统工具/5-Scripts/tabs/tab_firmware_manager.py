@@ -627,6 +627,14 @@ class FirmwareManagerTab:
             menu.add_command(label="📋 复制文件名", command=lambda: self.copy_filename(tree))
             menu.add_command(label="📂 复制完整路径", command=lambda: self.copy_path(tree))
             
+            # 判断当前树是哪个类型，添加相应的"添加到烧录"选项
+            if tree == self.app_tree:
+                menu.add_separator()
+                menu.add_command(label="➕ 添加到烧录", command=lambda: self.add_to_flash(tree, 'app'))
+            elif tree == self.sbl_tree:
+                menu.add_separator()
+                menu.add_command(label="➕ 添加到烧录", command=lambda: self.add_to_flash(tree, 'sbl'))
+            
             # 显示菜单
             menu.post(event.x_root, event.y_root)
     
@@ -674,6 +682,58 @@ class FirmwareManagerTab:
         self.parent.update()
         
         messagebox.showinfo("提示", f"已复制完整路径")
+    
+    def add_to_flash(self, tree, firmware_type):
+        """添加固件到烧录标签页
+        
+        Args:
+            tree: Treeview对象
+            firmware_type: 固件类型（'app'=应用固件, 'sbl'=SBL固件）
+        """
+        selection = tree.selection()
+        if not selection:
+            return
+        
+        # 从 tags 中获取完整路径
+        item = selection[0]
+        tags = tree.item(item)['tags']
+        path = tags[0] if tags else ""
+        
+        if not path:
+            messagebox.showwarning("警告", "无法获取路径信息")
+            return
+        
+        # 验证文件存在
+        if not os.path.exists(path):
+            messagebox.showerror("错误", f"文件不存在: {path}")
+            return
+        
+        # 根据类型设置到主应用的对应变量
+        if firmware_type == 'app':
+            # 设置应用固件
+            self.main_app.app_file.set(path)
+            self.main_app.log(f"✅ 已添加应用固件到烧录: {os.path.basename(path)}\n", "SUCCESS")
+            
+            # 更新界面状态
+            if hasattr(self.main_app, 'app_status_label'):
+                self.main_app.app_status_label.config(text="✅ 已选择", fg="green")
+            if hasattr(self.main_app, 'app_path_label'):
+                self.main_app.app_path_label.config(text=path)
+            
+            messagebox.showinfo("成功", f"已添加应用固件到烧录\n{os.path.basename(path)}")
+            
+        elif firmware_type == 'sbl':
+            # 设置SBL固件
+            self.main_app.sbl_file.set(path)
+            self.main_app.log(f"✅ 已添加SBL固件到烧录: {os.path.basename(path)}\n", "SUCCESS")
+            
+            # 更新界面状态
+            if hasattr(self.main_app, 'sbl_status_label'):
+                self.main_app.sbl_status_label.config(text="✅ 已选择", fg="green")
+            if hasattr(self.main_app, 'sbl_path_label'):
+                self.main_app.sbl_path_label.config(text=path)
+            
+            messagebox.showinfo("成功", f"已添加SBL固件到烧录\n{os.path.basename(path)}")
     
     def add_directory_to_list(self):
         """添加扫描目录到列表"""
