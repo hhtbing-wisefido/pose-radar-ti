@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件系统工具 v2.4.1 - 联动筛选增强版
+Ti AWRL6844 固件系统工具 v2.4.2 - 联动筛选修复版
 主入口文件 - 多标签页集成系统
+
+更新日志 v2.4.2:
+- 🐛 修复雷达配置筛选变量名错误
+- 🐛 修复属性引用错误（sbl_files→sbl_firmwares, max_range→range_m）
+- ✅ 联动筛选功能完全可用
 
 更新日志 v2.4.1:
 - 🔗 应用固件筛选增强：
@@ -96,7 +101,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "2.4.1"
+VERSION = "2.4.2"
 BUILD_DATE = "2025-12-20"
 AUTHOR = "Benson@Wisefido"
 
