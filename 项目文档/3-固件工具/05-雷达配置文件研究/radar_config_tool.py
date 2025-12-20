@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.2.1
+AWRL6844雷达配置专用GUI工具 v1.3.0
 集成配置文件读写、分析、数据解析等功能
 
-更新日志 v1.2.1:
-- 🚀 添加分离启动模式
-  * 使用 `python radar_config_tool.py --detach` 启动后命令行立即退出
-  * GUI在独立进程运行，不阻塞命令行
-  * 完美解决命令行等待问题
+更新日志 v1.3.0:
+- 🚀 默认分离启动，无需参数
+  * 直接运行 python radar_config_tool.py 命令行立即退出
+  * 自动创建独立子进程运行GUI
+  * 彻底解决命令行等待问题
+- 🔔 旧进程检测弹窗提醒
+  * 检测到旧窗口时弹窗询问是否关闭
+  * 用户可选择关闭旧窗口或取消启动
+  * 避免多个窗口同时运行造成混乱
 - 构建日期：2025-12-20
 
 更新日志 v1.2.0:
@@ -108,7 +112,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.2.1 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.3.0 | Wisefido")
         self.root.geometry("1500x950")
         
         # 设置窗口图标
@@ -1755,21 +1759,39 @@ def kill_process(pid):
 
 def main():
     """主函数"""
-    print("="*60)
-    print("🚀 启动 AWRL6844 雷达配置工具...")
-    print("="*60)
-    
     # 检查是否已有实例在运行
     existing_processes = check_existing_process()
     
     if existing_processes:
-        print(f"\n⚠️  检测到 {len(existing_processes)} 个旧窗口正在运行")
-        print("📋 旧窗口列表:")
-        for i, proc in enumerate(existing_processes, 1):
-            print(f"   {i}. PID: {proc['pid']}")
-        print("\n🔄 正在自动关闭旧窗口...")
+        # 创建临时窗口显示提示
+        temp_root = tk.Tk()
+        temp_root.withdraw()
         
-        # 后台自动关闭旧进程，不弹窗询问
+        msg = f"""⚠️ 检测到 {len(existing_processes)} 个旧窗口正在运行
+
+是否关闭旧窗口并启动新窗口？
+
+点击"是"：关闭旧窗口，启动新窗口
+点击"否"：取消启动，保留旧窗口"""
+        
+        result = messagebox.askyesno(
+            "检测到旧窗口",
+            msg,
+            icon='warning',
+            parent=temp_root
+        )
+        
+        temp_root.destroy()
+        
+        if not result:
+            # 用户选择不关闭
+            print("❌ 用户取消启动")
+            sys.exit(0)
+        
+        # 关闭旧进程
+        print(f"\n⚠️  检测到 {len(existing_processes)} 个旧窗口")
+        print("🔄 正在关闭旧窗口...")
+        
         success_count = 0
         for proc in existing_processes:
             if kill_process(proc['pid']):
@@ -1779,15 +1801,10 @@ def main():
                 print(f"   ❌ 无法关闭进程 PID: {proc['pid']}")
         
         if success_count > 0:
-            time.sleep(0.5)  # 等待进程完全退出
+            time.sleep(0.5)
             print(f"\n✅ 成功关闭 {success_count}/{len(existing_processes)} 个旧进程")
         else:
-            print("\n⚠️  未能关闭任何旧进程，但继续启动新窗口")
-    else:
-        print("\n✅ 未检测到旧窗口，直接启动")
-    
-    print("\n🎨 正在初始化GUI界面...")
-    print("="*60 + "\n")
+            print("\n⚠️  未能关闭任何旧进程，但继续启动")
     
     # 创建主窗口
     root = tk.Tk()
@@ -1804,26 +1821,27 @@ def main():
 
 
 if __name__ == '__main__':
-    # 检查是否带 --detach 参数
-    if '--detach' in sys.argv:
-        # 分离模式：启动独立进程后立即退出
+    # 检查是否是子进程标记
+    if '--child-process' not in sys.argv:
+        # 父进程：启动子进程后立即退出
         script_path = os.path.abspath(__file__)
         python_exe = sys.executable
         
-        # 创建独立进程，不等待
-        # Windows下使用DETACHED_PROCESS让进程完全独立
+        print("🚀 启动 AWRL6844 雷达配置工具...")
+        
+        # 创建独立的子进程
         DETACHED_PROCESS = 0x00000008
         subprocess.Popen(
-            [python_exe, script_path],
+            [python_exe, script_path, '--child-process'],
             creationflags=DETACHED_PROCESS,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
         
-        print("✅ 雷达配置工具已在独立进程启动！")
-        print("💡 命令行已退出，GUI继续运行")
+        print("✅ 雷达配置工具已启动！")
+        print("💡 命令行已完成，GUI在后台运行")
         sys.exit(0)
     else:
-        # 正常模式：运行GUI
+        # 子进程：运行GUI
         main()
