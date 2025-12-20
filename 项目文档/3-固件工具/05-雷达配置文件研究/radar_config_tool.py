@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.3.2
+AWRL6844雷达配置专用GUI工具 v1.3.3
 集成配置文件读写、分析、数据解析等功能
 
-更新日志 v1.3.2:
-- 🐛 修复旧进程检测和关闭的关键BUG
-  * 将旧进程检测和关闭逻辑移到父进程执行
-  * 父进程弹窗、关闭旧进程后再启动子进程
-  * 彻底解决点"是"后旧窗口不关闭的问题
-  * 确保新窗口正常弹出显示
+更新日志 v1.3.3:
+- 🐛 修复配置分析功能显示问题
+  * 分析完成后自动切换到"配置分析"标签页
+  * 日志中显示分析结果摘要（通道、性能参数、帧率）
+  * 详细结果显示在配置分析树形控件中
+  * 提供完整的分析反馈，不再只显示"完成"
 - 构建日期：2025-12-20
 
 更新日志 v1.2.0:
@@ -109,7 +109,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.3.2 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.3.3 | Wisefido")
         self.root.geometry("1500x950")
         
         # 窗口置顶显示
@@ -852,6 +852,8 @@ class RadarConfigTool:
                 self._log("⚠️ 请先选择有效的配置文件", 'warning')
                 return
             
+            self._log("🔍 开始分析配置文件...", 'info')
+            
             # 解析配置
             config = self.calculator.parse_config_file(config_path)
             if not config:
@@ -864,7 +866,40 @@ class RadarConfigTool:
             # 显示结果
             self._display_analysis_results(config, performance)
             
-            self._log("✅ 配置分析完成", 'success')
+            # 切换到配置分析标签页
+            self.notebook.select(1)  # 索引1是配置分析标签页
+            
+            # 在日志中显示分析摘要
+            self._log("", 'info')
+            self._log("=" * 50, 'info')
+            self._log("📊 配置分析结果摘要", 'success')
+            self._log("=" * 50, 'info')
+            
+            # 通道信息
+            rx_count = self.calculator.count_enabled_channels(config.get('rxChannelEn', 0))
+            tx_count = self.calculator.count_enabled_channels(config.get('txChannelEn', 0))
+            self._log(f"📡 通道: RX={rx_count}个, TX={tx_count}个, 虚拟天线={rx_count*tx_count}个", 'info')
+            
+            # 性能参数
+            if 'range_resolution' in performance:
+                self._log(f"📏 距离分辨率: {performance['range_resolution']:.4f} m", 'info')
+            if 'max_range' in performance:
+                self._log(f"📐 最大检测距离: {performance['max_range']:.2f} m", 'info')
+            if 'velocity_resolution' in performance:
+                self._log(f"🚀 速度分辨率: {performance['velocity_resolution']:.4f} m/s", 'info')
+            if 'max_velocity' in performance:
+                self._log(f"⚡ 最大检测速度: {performance['max_velocity']:.2f} m/s", 'info')
+            if 'angle_resolution' in performance:
+                self._log(f"🎯 角度分辨率: {performance['angle_resolution']:.2f}°", 'info')
+            
+            # Frame信息
+            if 'framePeriodicity' in config:
+                frame_rate = 1000 / config.get('framePeriodicity', 1000)
+                self._log(f"🎬 帧率: {frame_rate:.2f} FPS", 'info')
+            
+            self._log("=" * 50, 'info')
+            self._log("✅ 配置分析完成！详细结果请查看【配置分析】标签页", 'success')
+            self._log("", 'info')
             
         except Exception as e:
             self._log(f"❌ 配置分析失败: {e}", 'error')
