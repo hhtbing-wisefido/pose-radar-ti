@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.3.1
+AWRL6844雷达配置专用GUI工具 v1.3.2
 集成配置文件读写、分析、数据解析等功能
 
-更新日志 v1.3.1:
-- 🐛 修复旧进程关闭失败问题
-  * 修复进程检测逻辑，正确识别--child-process子进程
-  * 增强kill_process，先terminate再kill确保进程关闭
-  * 修复点"是"后旧窗口没关闭的BUG
-- 🎯 窗口显示优化
-  * 启动后自动置顶0.5秒，确保窗口在最前端
-  * 自动获取焦点，提升用户体验
-  * 0.5秒后取消置顶，避免遮挡其他窗口
+更新日志 v1.3.2:
+- 🐛 修复旧进程检测和关闭的关键BUG
+  * 将旧进程检测和关闭逻辑移到父进程执行
+  * 父进程弹窗、关闭旧进程后再启动子进程
+  * 彻底解决点"是"后旧窗口不关闭的问题
+  * 确保新窗口正常弹出显示
 - 构建日期：2025-12-20
 
 更新日志 v1.2.0:
@@ -112,7 +109,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.3.1 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.3.2 | Wisefido")
         self.root.geometry("1500x950")
         
         # 窗口置顶显示
@@ -1777,54 +1774,7 @@ def kill_process(pid):
 
 
 def main():
-    """主函数"""
-    # 检查是否已有实例在运行
-    existing_processes = check_existing_process()
-    
-    if existing_processes:
-        # 创建临时窗口显示提示
-        temp_root = tk.Tk()
-        temp_root.withdraw()
-        
-        msg = f"""⚠️ 检测到 {len(existing_processes)} 个旧窗口正在运行
-
-是否关闭旧窗口并启动新窗口？
-
-点击"是"：关闭旧窗口，启动新窗口
-点击"否"：取消启动，保留旧窗口"""
-        
-        result = messagebox.askyesno(
-            "检测到旧窗口",
-            msg,
-            icon='warning',
-            parent=temp_root
-        )
-        
-        temp_root.destroy()
-        
-        if not result:
-            # 用户选择不关闭
-            print("❌ 用户取消启动")
-            sys.exit(0)
-        
-        # 关闭旧进程
-        print(f"\n⚠️  检测到 {len(existing_processes)} 个旧窗口")
-        print("🔄 正在关闭旧窗口...")
-        
-        success_count = 0
-        for proc in existing_processes:
-            if kill_process(proc['pid']):
-                success_count += 1
-                print(f"   ✅ 已关闭进程 PID: {proc['pid']}")
-            else:
-                print(f"   ❌ 无法关闭进程 PID: {proc['pid']}")
-        
-        if success_count > 0:
-            time.sleep(0.5)
-            print(f"\n✅ 成功关闭 {success_count}/{len(existing_processes)} 个旧进程")
-        else:
-            print("\n⚠️  未能关闭任何旧进程，但继续启动")
-    
+    """主函数 - 仅在子进程中运行GUI"""
     # 创建主窗口
     root = tk.Tk()
     
@@ -1842,13 +1792,60 @@ def main():
 if __name__ == '__main__':
     # 检查是否是子进程标记
     if '--child-process' not in sys.argv:
-        # 父进程：启动子进程后立即退出
+        # ====== 父进程：检测旧进程、处理关闭、启动子进程 ======
+        print("🚀 启动 AWRL6844 雷达配置工具...")
+        
+        # 检查旧进程
+        existing_processes = check_existing_process()
+        
+        if existing_processes:
+            # 创建临时窗口显示提示
+            temp_root = tk.Tk()
+            temp_root.withdraw()
+            
+            msg = f"""⚠️ 检测到 {len(existing_processes)} 个旧窗口正在运行
+
+是否关闭旧窗口并启动新窗口？
+
+点击"是"：关闭旧窗口，启动新窗口
+点击"否"：取消启动，保留旧窗口"""
+            
+            result = messagebox.askyesno(
+                "检测到旧窗口",
+                msg,
+                icon='warning',
+                parent=temp_root
+            )
+            
+            temp_root.destroy()
+            
+            if not result:
+                # 用户选择不关闭
+                print("❌ 用户取消启动")
+                sys.exit(0)
+            
+            # 关闭旧进程
+            print(f"\n⚠️  检测到 {len(existing_processes)} 个旧窗口")
+            print("🔄 正在关闭旧窗口...")
+            
+            success_count = 0
+            for proc in existing_processes:
+                if kill_process(proc['pid']):
+                    success_count += 1
+                    print(f"   ✅ 已关闭进程 PID: {proc['pid']}")
+                else:
+                    print(f"   ❌ 无法关闭进程 PID: {proc['pid']}")
+            
+            if success_count > 0:
+                time.sleep(0.5)
+                print(f"\n✅ 成功关闭 {success_count}/{len(existing_processes)} 个旧进程")
+            else:
+                print("\n⚠️  未能关闭任何旧进程，但继续启动")
+        
+        # 启动新的子进程
         script_path = os.path.abspath(__file__)
         python_exe = sys.executable
         
-        print("🚀 启动 AWRL6844 雷达配置工具...")
-        
-        # 创建独立的子进程
         DETACHED_PROCESS = 0x00000008
         subprocess.Popen(
             [python_exe, script_path, '--child-process'],
@@ -1858,9 +1855,9 @@ if __name__ == '__main__':
             stderr=subprocess.DEVNULL
         )
         
-        print("✅ 雷达配置工具已启动！")
+        print("\n✅ 雷达配置工具已启动！")
         print("💡 命令行已完成，GUI在后台运行")
         sys.exit(0)
     else:
-        # 子进程：运行GUI
+        # ====== 子进程：仅运行GUI ======
         main()
