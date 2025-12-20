@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.2.0
+AWRL6844雷达配置专用GUI工具 v1.2.1
 集成配置文件读写、分析、数据解析等功能
+
+更新日志 v1.2.1:
+- 🚀 添加分离启动模式
+  * 使用 `python radar_config_tool.py --detach` 启动后命令行立即退出
+  * GUI在独立进程运行，不阻塞命令行
+  * 完美解决命令行等待问题
+- 构建日期：2025-12-20
 
 更新日志 v1.2.0:
 - 🎨 UI布局重大优化
@@ -13,7 +20,6 @@ AWRL6844雷达配置专用GUI工具 v1.2.0
   * 增强旧进程检测提示信息，显示详细列表
   * 启动流程信息更清晰，带边框分隔
   * 关闭进程后显示成功数量统计
-- 构建日期：2025-12-20
 
 更新日志 v1.1.2:
 - 🐛 修复端口下拉框和启动流程问题
@@ -70,6 +76,7 @@ import time
 import re
 import os
 import sys
+import subprocess
 import psutil
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -101,7 +108,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.2.0 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.2.1 | Wisefido")
         self.root.geometry("1500x950")
         
         # 设置窗口图标
@@ -1797,4 +1804,26 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # 检查是否带 --detach 参数
+    if '--detach' in sys.argv:
+        # 分离模式：启动独立进程后立即退出
+        script_path = os.path.abspath(__file__)
+        python_exe = sys.executable
+        
+        # 创建独立进程，不等待
+        # Windows下使用DETACHED_PROCESS让进程完全独立
+        DETACHED_PROCESS = 0x00000008
+        subprocess.Popen(
+            [python_exe, script_path],
+            creationflags=DETACHED_PROCESS,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        
+        print("✅ 雷达配置工具已在独立进程启动！")
+        print("💡 命令行已退出，GUI继续运行")
+        sys.exit(0)
+    else:
+        # 正常模式：运行GUI
+        main()
