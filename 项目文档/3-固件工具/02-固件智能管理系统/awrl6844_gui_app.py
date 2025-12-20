@@ -390,7 +390,13 @@ class AWRL6844GUI(QMainWindow):
         self.match_sbl_table = QTableWidget()
         self.match_sbl_table.setColumnCount(4)
         self.match_sbl_table.setHorizontalHeaderLabels(["文件名", "变体", "匹配度", "路径"])
-        self.match_sbl_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        # 设置自适应列宽
+        header = self.match_sbl_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        self.match_sbl_table.setMinimumHeight(180)  # 增加最小高度，确保5个项目可见
         result_layout.addWidget(self.match_sbl_table)
         
         # 配置文件推荐
@@ -399,7 +405,13 @@ class AWRL6844GUI(QMainWindow):
         self.match_cfg_table = QTableWidget()
         self.match_cfg_table.setColumnCount(5)
         self.match_cfg_table.setHorizontalHeaderLabels(["文件名", "应用", "参数", "匹配度", "路径"])
-        self.match_cfg_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        # 设置自适应列宽
+        header = self.match_cfg_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         result_layout.addWidget(self.match_cfg_table)
         
         result_group.setLayout(result_layout)

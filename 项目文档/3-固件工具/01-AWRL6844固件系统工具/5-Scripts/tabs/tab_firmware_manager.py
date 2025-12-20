@@ -476,12 +476,44 @@ class FirmwareManagerTab:
         self.notebook.add(frame, text="🎯 智能匹配")
         
         # 说明
+        # 顶部操作栏：说明文字 + 一键添加按钮（同行）
+        top_frame = ttk.Frame(frame)
+        top_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        # 左侧说明文字
         info = ttk.Label(
-            frame,
+            top_frame,
             text="选择一个应用固件，系统将自动推荐匹配的SBL固件和雷达配置文件",
             font=('Arial', 10, 'bold')
         )
-        info.pack(pady=10)
+        info.pack(side=tk.LEFT, padx=(0, 20))
+        
+        # 右侧一键添加按钮
+        add_btn = tk.Button(
+            top_frame,
+            text="⚡ 一键添加到烧录功能",
+            font=("Microsoft YaHei UI", 10, "bold"),
+            command=self.add_to_basic_flash,
+            bg="#27ae60",
+            fg="white",
+            activebackground="#229954",
+            activeforeground="white",
+            relief=tk.RAISED,
+            bd=3,
+            padx=15,
+            pady=8,
+            cursor="hand2"
+        )
+        add_btn.pack(side=tk.RIGHT)
+        
+        # 按钮下方提示
+        tip_label = ttk.Label(
+            frame,
+            text="↑ 点击按钮将选中固件自动添加到「烧录功能」标签页",
+            foreground="#e74c3c",
+            font=("Microsoft YaHei UI", 9, "bold")
+        )
+        tip_label.pack(padx=10, pady=(0, 5))
         
         # 固件选择
         select_frame = ttk.LabelFrame(frame, text="选择应用固件", padding=10)
@@ -535,52 +567,33 @@ class FirmwareManagerTab:
         self.match_sort_column = 'filename'
         self.match_sort_reverse = False
         
-        # 一键添加按钮
-        action_frame = ttk.Frame(frame)
-        action_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
-        
-        # 创建突出的按钮
-        add_btn = tk.Button(
-            action_frame,
-            text="⚡ 一键添加到烧录功能",
-            font=("Microsoft YaHei UI", 10, "bold"),
-            command=self.add_to_basic_flash,
-            bg="#27ae60",  # 绿色背景
-            fg="white",
-            activebackground="#229954",
-            activeforeground="white",
-            relief=tk.RAISED,
-            bd=3,
-            padx=20,
-            pady=10,
-            cursor="hand2"
-        )
-        add_btn.pack(pady=5)
-        
-        ttk.Label(
-            action_frame,
-            text="↑ 点击上方按钮，将选中固件自动添加到「烧录功能」标签页",
-            foreground="#e74c3c",
-            font=("Microsoft YaHei UI", 9, "bold")
-        ).pack(pady=2)
-        
         # SBL匹配结果
         sbl_frame = ttk.LabelFrame(frame, text="推荐SBL固件 (Top 5)", padding=10)
         sbl_frame.pack(fill=tk.X, padx=10, pady=5)
         
+        # 添加滚动条
+        sbl_scroll = ttk.Scrollbar(sbl_frame)
+        sbl_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
         self.match_sbl_tree = ttk.Treeview(
             sbl_frame,
-            columns=('filename', 'variant', 'score'),
+            columns=('filename', 'variant', 'score', 'path'),
             show='headings',
-            height=3
+            height=5,
+            yscrollcommand=sbl_scroll.set
         )
+        sbl_scroll.config(command=self.match_sbl_tree.yview)
+        
         self.match_sbl_tree.heading('filename', text='文件名')
         self.match_sbl_tree.heading('variant', text='变体')
         self.match_sbl_tree.heading('score', text='匹配度')
+        self.match_sbl_tree.heading('path', text='文件路径')
         
-        self.match_sbl_tree.column('filename', width=400)
-        self.match_sbl_tree.column('variant', width=100)
-        self.match_sbl_tree.column('score', width=100)
+        # 设置列宽和自适应
+        self.match_sbl_tree.column('filename', width=250, minwidth=150, stretch=True)
+        self.match_sbl_tree.column('variant', width=80, minwidth=60, stretch=True)
+        self.match_sbl_tree.column('score', width=80, minwidth=60, stretch=True)
+        self.match_sbl_tree.column('path', width=400, minwidth=200, stretch=True)
         
         self.match_sbl_tree.pack(fill=tk.BOTH, expand=True)
         self.match_sbl_tree.bind('<Button-3>', lambda e: self.show_copy_menu(e, self.match_sbl_tree))
@@ -594,7 +607,7 @@ class FirmwareManagerTab:
         
         self.match_cfg_tree = ttk.Treeview(
             cfg_frame,
-            columns=('filename', 'application', 'params', 'score'),
+            columns=('filename', 'application', 'params', 'score', 'path'),
             show='headings',
             yscrollcommand=cfg_scroll.set
         )
@@ -604,11 +617,14 @@ class FirmwareManagerTab:
         self.match_cfg_tree.heading('application', text='应用场景')
         self.match_cfg_tree.heading('params', text='参数')
         self.match_cfg_tree.heading('score', text='匹配度')
+        self.match_cfg_tree.heading('path', text='文件路径')
         
-        self.match_cfg_tree.column('filename', width=300)
-        self.match_cfg_tree.column('application', width=150)
-        self.match_cfg_tree.column('params', width=200)
-        self.match_cfg_tree.column('score', width=100)
+        # 设置列宽和自适应
+        self.match_cfg_tree.column('filename', width=200, minwidth=150, stretch=True)
+        self.match_cfg_tree.column('application', width=120, minwidth=80, stretch=True)
+        self.match_cfg_tree.column('params', width=150, minwidth=100, stretch=True)
+        self.match_cfg_tree.column('score', width=80, minwidth=60, stretch=True)
+        self.match_cfg_tree.column('path', width=350, minwidth=200, stretch=True)
         
         self.match_cfg_tree.pack(fill=tk.BOTH, expand=True)
         self.match_cfg_tree.bind('<Button-3>', lambda e: self.show_copy_menu(e, self.match_cfg_tree))
@@ -1322,7 +1338,8 @@ class FirmwareManagerTab:
             self.match_sbl_tree.insert('', 'end', values=(
                 sbl.filename,
                 sbl.variant,
-                f"{score:.0f}%"
+                f"{score:.0f}%",
+                sbl.path
             ), tags=tuple(tag_list))
         
         # 匹配配置
@@ -1344,7 +1361,8 @@ class FirmwareManagerTab:
                 cfg.filename,
                 cfg.application,
                 " | ".join(params),
-                f"{score:.0f}%"
+                f"{score:.0f}%",
+                cfg.path
             ), tags=tuple(tag_list))
         
         # 配置高亮样式
