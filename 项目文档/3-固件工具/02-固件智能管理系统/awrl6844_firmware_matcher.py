@@ -585,36 +585,88 @@ class AWRL6844FirmwareMatcher:
         return matches
     
     def match_configs_for_firmware(self, firmware: FirmwareInfo) -> List[Tuple[ConfigInfo, float]]:
-        """为应用固件匹配雷达配置文件"""
+        """为应用固件匹配雷达配置文件（改进算法v2）
+        
+        评分体系（总分最高可达200+）：
+        - 同Demo目录：100分（最高优先级）
+        - 同SDK关联目录：80分
+        - 配置文件名语义匹配：60分
+        - 应用场景文本匹配：20分
+        - 芯片型号匹配：20分
+        - 检测距离合理性：15分
+        - 功耗模式匹配：5分
+        """
         matches = []
         
         for config in self.config_files:
             score = 0.0
             
-            # 基于应用场景匹配
+            # ========== 1. 目录树关系匹配（最高优先级）==========
+            # 检查是否在同一Demo目录下
+            if self._is_same_demo_directory(firmware.path, config.path):
+                score += 100.0  # 最高优先级
+            
+            # 检查是否在同一SDK下的关联目录
+            if self._is_related_in_sdk(firmware.path, config.path):
+                score += 80.0
+            
+            # ========== 2. 配置文件名语义匹配 ==========
+            config_semantics = self._parse_config_filename(config.filename)
+            
+            # InCabin Demo特殊处理
+            if 'incabin' in firmware.path.lower():
+                if 'cpd' in config.filename.lower():  # Child Presence Detection
+                    score += 60.0
+                elif 'sbr' in config.filename.lower():  # Seat Belt Reminder
+                    score += 60.0
+                elif 'intrusion' in config.filename.lower():  # Intrusion Detection
+                    score += 60.0
+            
+            # 通用场景语义匹配
+            if 'scene' in config_semantics:
+                scene = config_semantics['scene']
+                fw_lower = firmware.path.lower() + firmware.subcategory.lower()
+                if 'child_presence' in scene and 'cpd' in fw_lower:
+                    score += 50.0
+                elif 'intrusion' in scene and 'intrusion' in fw_lower:
+                    score += 50.0
+                elif 'vital' in scene and 'vital' in fw_lower:
+                    score += 50.0
+                elif 'gesture' in scene and 'gesture' in fw_lower:
+                    score += 50.0
+            
+            # ========== 3. 应用场景文本匹配（降低权重）==========
             if firmware.subcategory and config.application:
-                if firmware.subcategory in config.application or config.application in firmware.subcategory:
-                    score += 40.0
-            
-            # 6844专用配置优先
-            if '6844' in config.filename.lower():
-                score += 30.0
-            elif '68xx' in config.filename.lower() or '6843' in config.filename.lower():
-                score += 20.0
-            
-            # 检测距离合理性
-            if config.range_m > 0:
-                if config.range_m <= 10:  # 车内/室内应用
-                    if '车内' in firmware.subcategory or 'InCabin' in firmware.path:
-                        score += 20.0
-                elif config.range_m <= 50:  # 中距离
+                if firmware.subcategory in config.application:
+                    score += 20.0  # 从40降到20
+                elif config.application in firmware.subcategory:
                     score += 15.0
-                else:  # 长距离
-                    score += 10.0
             
-            # 功耗模式匹配
-            if 'low_power' in firmware.path.lower() and config.power_mode == '低功耗':
-                score += 10.0
+            # ========== 4. 芯片型号匹配 ==========
+            if '6844' in config.filename.lower():
+                score += 20.0  # 6844专用
+            elif '68xx' in config.filename.lower():
+                score += 15.0  # 68xx系列通用
+            elif '6843' in config.filename.lower():
+                score += 10.0  # 6843可能兼容
+            
+            # ========== 5. 检测距离合理性 ==========
+            if config.range_m > 0:
+                if config.range_m <= 10 and self._is_short_range_app(firmware):
+                    score += 15.0  # 短距离匹配
+                elif 10 < config.range_m <= 50:
+                    score += 10.0  # 中距离
+                elif config.range_m > 50:
+                    score += 5.0   # 长距离
+            
+            # ========== 6. 功耗模式匹配 ==========
+            if 'power' in config_semantics:
+                if config_semantics['power'] == 'low_power' and 'low_power' in firmware.path.lower():
+                    score += 10.0
+                elif '_lp' in config.filename.lower() and '_lp' in firmware.path.lower():
+                    score += 10.0
+            elif config.power_mode == '低功耗' and 'low_power' in firmware.path.lower():
+                score += 5.0
             
             matches.append((config, score))
         
@@ -622,14 +674,156 @@ class AWRL6844FirmwareMatcher:
         matches.sort(key=lambda x: x[1], reverse=True)
         return matches
     
+    def _extract_sdk_root(self, path: str) -> str:
+        """提取SDK根目录名称
+        
+        示例：
+        C:\\ti\\radar_toolbox_3_30_00_06\\... → radar_toolbox_3_30_00_06
+        C:\\ti\\MMWAVE_L_SDK_06_01_00_01\\... → MMWAVE_L_SDK_06_01_00_01
+        """
+        path_parts = path.replace('\\', '/').split('/')
+        
+        for part in path_parts:
+            part_lower = part.lower()
+            if 'radar_toolbox' in part_lower:
+                return part
+            if 'mmwave_l_sdk' in part_lower:
+                return part
+            if 'radar_academy' in part_lower:
+                return part
+                
+        return ""
+    
     def _is_same_sdk(self, path1: str, path2: str) -> bool:
         """判断两个文件是否在同一SDK中"""
-        sdk_names = ['MMWAVE_L_SDK', 'radar_toolbox', 'radar_academy']
+        sdk1 = self._extract_sdk_root(path1)
+        sdk2 = self._extract_sdk_root(path2)
         
-        for sdk in sdk_names:
-            if sdk in path1 and sdk in path2:
-                return True
+        if sdk1 and sdk2 and sdk1 == sdk2:
+            return True
         return False
+    
+    def _is_same_demo_directory(self, fw_path: str, cfg_path: str) -> bool:
+        """判断固件和配置是否在同一Demo目录下
+        
+        示例：
+        固件：C:\\ti\\radar_toolbox_3_30_00_06\\source\\ti\\examples\\
+             Automotive_InCabin_Security_and_Safety\\AWRL6844_InCabin_Demos\\
+             prebuilt_binaries\\demo_in_cabin_sensing_6844_system.release.appimage
+        配置：C:\\ti\\radar_toolbox_3_30_00_06\\tools\\visualizers\\
+             AWRL6844_Incabin_GUI\\src\\chirpConfigs6844\\cpd.cfg
+        
+        判断依据：
+        1. 路径中都包含"InCabin"或"incabin"
+        2. 都在同一radar_toolbox版本下
+        3. 配置在visualizers/GUI工具目录下
+        """
+        fw_lower = fw_path.lower()
+        cfg_lower = cfg_path.lower()
+        
+        # 检查是否在同一SDK
+        if not self._is_same_sdk(fw_path, cfg_path):
+            return False
+        
+        # InCabin Demo特殊规则
+        if 'incabin' in fw_lower:
+            if 'incabin_gui' in cfg_lower or 'awrl6844_incabin' in cfg_lower:
+                return True
+        
+        # 可以继续添加其他Demo的规则
+        # TODO: 添加其他Demo的目录关联规则
+        
+        return False
+    
+    def _is_related_in_sdk(self, fw_path: str, cfg_path: str) -> bool:
+        """判断固件和配置是否在同一SDK的关联目录
+        
+        关联规则：
+        - examples目录下的固件 → tools/visualizers下的配置
+        - examples目录下的固件 → tools/mmwave_data_recorder下的配置
+        """
+        fw_lower = fw_path.lower()
+        cfg_lower = cfg_path.lower()
+        
+        # 同一SDK
+        if not self._is_same_sdk(fw_path, cfg_path):
+            return False
+        
+        # 固件在examples，配置在tools
+        if 'examples' in fw_lower and 'tools' in cfg_lower:
+            return True
+            
+        return False
+    
+    def _parse_config_filename(self, filename: str) -> Dict[str, str]:
+        """解析配置文件名的语义
+        
+        示例：
+        cpd.cfg → {'scene': 'child_presence_detection', 'power': 'normal'}
+        intrusion_detection_LP.cfg → {'scene': 'intrusion', 'power': 'low_power'}
+        xWRL6844_4T4R_tdm.cfg → {'antenna': '4T4R', 'mode': 'tdm', 'chip': '6844'}
+        """
+        semantics = {}
+        filename_lower = filename.lower()
+        
+        # 应用场景识别
+        scene_keywords = {
+            'cpd': 'child_presence_detection',
+            'sbr': 'seat_belt_reminder',
+            'intrusion': 'intrusion_detection',
+            'vital': 'vital_signs',
+            'gesture': 'gesture_recognition',
+            'occupancy': 'occupancy_detection'
+        }
+        
+        for keyword, scene in scene_keywords.items():
+            if keyword in filename_lower:
+                semantics['scene'] = scene
+                break
+        
+        # 功耗模式识别
+        if '_lp' in filename_lower or 'low_power' in filename_lower:
+            semantics['power'] = 'low_power'
+        else:
+            semantics['power'] = 'normal'
+        
+        # 天线配置识别
+        if '4t4r' in filename_lower:
+            semantics['antenna'] = '4T4R'
+        elif '2t4r' in filename_lower:
+            semantics['antenna'] = '2T4R'
+        
+        # TDM/BPM模式
+        if 'tdm' in filename_lower:
+            semantics['mode'] = 'tdm'
+        elif 'bpm' in filename_lower:
+            semantics['mode'] = 'bpm'
+        
+        # 芯片型号
+        if '6844' in filename_lower:
+            semantics['chip'] = '6844'
+        elif '6843' in filename_lower:
+            semantics['chip'] = '6843'
+        
+        return semantics
+    
+    def _is_short_range_app(self, firmware: FirmwareInfo) -> bool:
+        """判断是否为短距离应用（≤10m）
+        
+        短距离应用关键词：
+        - InCabin（车内）
+        - Indoor（室内）
+        - Gesture（手势）
+        - Vital Signs（生命体征）
+        """
+        short_range_keywords = [
+            'incabin', 'indoor', 'gesture', 'vital', 
+            'occupancy', '车内', '室内', '手势'
+        ]
+        
+        fw_text = (firmware.path + firmware.subcategory).lower()
+        
+        return any(keyword in fw_text for keyword in short_range_keywords)
     
     def get_statistics(self) -> Dict:
         """获取扫描统计信息"""
