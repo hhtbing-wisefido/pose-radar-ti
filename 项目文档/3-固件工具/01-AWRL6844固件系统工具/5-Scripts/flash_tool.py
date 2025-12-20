@@ -1611,6 +1611,20 @@ class FlashToolGUI:
             self.log(f"\n❌ 烧录过程出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
         finally:
+            # 清理进程资源
+            if hasattr(self, 'flash_process') and self.flash_process:
+                try:
+                    if self.flash_process.poll() is None:  # 进程还在运行
+                        self.flash_process.kill()
+                    # 关闭管道
+                    if self.flash_process.stdout:
+                        self.flash_process.stdout.close()
+                    if self.flash_process.stderr:
+                        self.flash_process.stderr.close()
+                except:
+                    pass
+                self.flash_process = None
+            
             self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
     
@@ -1819,6 +1833,20 @@ class FlashToolGUI:
             self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
         finally:
+            # 清理进程资源
+            if hasattr(self, 'flash_process') and self.flash_process:
+                try:
+                    if self.flash_process.poll() is None:  # 进程还在运行
+                        self.flash_process.kill()
+                    # 关闭管道
+                    if self.flash_process.stdout:
+                        self.flash_process.stdout.close()
+                    if self.flash_process.stderr:
+                        self.flash_process.stderr.close()
+                except:
+                    pass
+                self.flash_process = None
+            
             self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
     
@@ -2029,6 +2057,20 @@ class FlashToolGUI:
             self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
         finally:
+            # 清理进程资源
+            if hasattr(self, 'flash_process') and self.flash_process:
+                try:
+                    if self.flash_process.poll() is None:  # 进程还在运行
+                        self.flash_process.kill()
+                    # 关闭管道
+                    if self.flash_process.stdout:
+                        self.flash_process.stdout.close()
+                    if self.flash_process.stderr:
+                        self.flash_process.stderr.close()
+                except:
+                    pass
+                self.flash_process = None
+            
             self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
     
