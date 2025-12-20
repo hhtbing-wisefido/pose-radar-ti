@@ -565,7 +565,7 @@ class FirmwareManagerTab:
         ).pack(pady=2)
         
         # SBL匹配结果
-        sbl_frame = ttk.LabelFrame(frame, text="推荐SBL固件 (Top 3)", padding=10)
+        sbl_frame = ttk.LabelFrame(frame, text="推荐SBL固件 (Top 5)", padding=10)
         sbl_frame.pack(fill=tk.X, padx=10, pady=5)
         
         self.match_sbl_tree = ttk.Treeview(
@@ -1314,7 +1314,7 @@ class FirmwareManagerTab:
         
         # 匹配SBL
         sbl_matches = self.matcher.match_sbl_for_firmware(fw)
-        for i, (sbl, score) in enumerate(sbl_matches[:3]):
+        for i, (sbl, score) in enumerate(sbl_matches[:5]):
             tag_list = [sbl.path]
             if i == 0:  # 高亮最佳匹配
                 tag_list.append('best')

@@ -385,7 +385,7 @@ class AWRL6844GUI(QMainWindow):
         result_layout = QVBoxLayout()
         
         # SBL推荐
-        sbl_label = QLabel("<b>推荐SBL固件 (Top 3):</b>")
+        sbl_label = QLabel("<b>推荐SBL固件 (Top 5):</b>")
         result_layout.addWidget(sbl_label)
         self.match_sbl_table = QTableWidget()
         self.match_sbl_table.setColumnCount(4)
@@ -818,8 +818,8 @@ class AWRL6844GUI(QMainWindow):
         """显示匹配结果"""
         # 匹配SBL
         sbl_matches = self.matcher.match_sbl_for_firmware(fw)
-        self.match_sbl_table.setRowCount(min(3, len(sbl_matches)))
-        for i, (sbl, score) in enumerate(sbl_matches[:3]):
+        self.match_sbl_table.setRowCount(min(5, len(sbl_matches)))
+        for i, (sbl, score) in enumerate(sbl_matches[:5]):
             self.match_sbl_table.setItem(i, 0, QTableWidgetItem(sbl.filename))
             self.match_sbl_table.setItem(i, 1, QTableWidgetItem(sbl.variant))
             self.match_sbl_table.setItem(i, 2, QTableWidgetItem(f"{score:.0f}%"))

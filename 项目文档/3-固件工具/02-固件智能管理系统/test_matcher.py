@@ -91,14 +91,14 @@ def test_matcher():
             
             sbl_matches = matcher.match_sbl_for_firmware(test_fw)
             if sbl_matches:
-                print(f"\n  推荐SBL (Top 3):")
-                for i, (sbl, score) in enumerate(sbl_matches[:3], 1):
+                print(f"\n  推荐SBL (Top 5):")
+                for i, (sbl, score) in enumerate(sbl_matches[:5], 1):
                     print(f"    {i}. {sbl.filename} - 匹配度: {score:.0f}%")
             
             cfg_matches = matcher.match_configs_for_firmware(test_fw)
             if cfg_matches:
-                print(f"\n  推荐配置 (Top 3):")
-                for i, (cfg, score) in enumerate(cfg_matches[:3], 1):
+                print(f"\n  推荐配置 (Top 5):")
+                for i, (cfg, score) in enumerate(cfg_matches[:5], 1):
                     print(f"    {i}. {cfg.filename} - 匹配度: {score:.0f}%")
         
         print("\n")

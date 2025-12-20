@@ -558,29 +558,74 @@ class AWRL6844FirmwareMatcher:
         return " | ".join(parts) if parts else "雷达参数配置"
     
     def match_sbl_for_firmware(self, firmware: FirmwareInfo) -> List[Tuple[SBLInfo, float]]:
-        """为应用固件匹配SBL"""
+        """为应用固件匹配SBL固件（改进版v2.2 - 强化SDK路径判断）
+        
+        评分体系（按重要性排序）：
+        
+        【核心判断】：
+        1. 同一SDK路径：50分（最高优先级，确保版本兼容）
+        2. SDK路径特征：
+           - ti-arm-clang路径：40分（官方SDK，生产环境）
+           - prebuilt_binaries路径：-80分（示例工具箱，不适合生产）
+        
+        【辅助判断】：
+        3. 文件格式检测：
+           - Multi-Image格式：30分（可烧录，但只是表象）
+           - Single-Image格式：-100分（不可烧录）
+        4. 硬件平台匹配（xwrL684x-evm）：20分
+        5. SBL版本类型：
+           - 标准版：20分
+           - 轻量版：10分
+        
+        总分范围：[-180, 160]
+        - 理想情况：同SDK + ti-arm-clang + Multi-Image + 平台匹配 + 标准版 = 160分
+        - 最差情况：不同SDK + prebuilt + Single-Image = -180分
+        """
         matches = []
         
         for sbl in self.sbl_firmwares:
             score = 0.0
             
-            # 检查是否在同一SDK
+            # ========== 1. SDK版本匹配（最高优先级）==========
+            # 确保SBL和应用固件来自同一SDK，避免版本不兼容
             if self._is_same_sdk(firmware.path, sbl.path):
                 score += 50.0
             
-            # 标准版SBL优先
-            if sbl.variant == "标准版":
-                score += 30.0
-            elif sbl.variant == "轻量版":
+            # ========== 2. SDK路径特征检测（根本判断）==========
+            # 路径特征反映了SDK的定位和用途
+            
+            # ti-arm-clang路径：官方开发SDK，适合生产环境
+            if 'ti-arm-clang' in sbl.path.lower():
+                score += 40.0  # 高分，推荐使用
+            
+            # prebuilt_binaries路径：预编译示例，不适合生产
+            if 'prebuilt_binaries' in sbl.path.lower():
+                score -= 80.0  # 严重惩罚，强烈不推荐
+            
+            # ========== 3. 文件格式检测（表象验证）==========
+            # 格式检测只是验证SDK路径判断的正确性
+            image_format = self._check_appimage_format(sbl.path)
+            
+            if image_format == "Multi-Image":
+                score += 30.0  # ✅ 可烧录格式
+            elif image_format == "Single-Image":
+                score -= 100.0  # ❌ 不可烧录，严重惩罚
+            
+            # ========== 4. 硬件平台匹配 ==========
+            # 确认是xwrL684x平台的SBL
+            if 'xwrl684x' in sbl.path.lower():
                 score += 20.0
             
-            # 检查硬件平台
-            if 'xwrL684x' in sbl.path.lower():
+            # ========== 5. SBL版本类型 ==========
+            # 标准版SBL功能更完整，优先推荐
+            if sbl.variant == "标准版":
                 score += 20.0
+            elif sbl.variant == "轻量版":
+                score += 10.0
             
             matches.append((sbl, score))
         
-        # 按评分排序
+        # 按评分排序，返回最佳匹配
         matches.sort(key=lambda x: x[1], reverse=True)
         return matches
     
@@ -702,6 +747,56 @@ class AWRL6844FirmwareMatcher:
         if sdk1 and sdk2 and sdk1 == sdk2:
             return True
         return False
+    
+    def _check_appimage_format(self, filepath: str) -> str:
+        """检测appimage文件格式（Multi-Image vs Single-Image）
+        
+        ⚠️ 重要说明：
+        文件格式检测只是**辅助验证手段**，真正的根本判断是SDK路径特征。
+        
+        - Multi-Image格式：通常来自MMWAVE_L_SDK（ti-arm-clang路径）
+        - Single-Image格式：通常来自RADAR_TOOLBOX（prebuilt_binaries路径）
+        
+        格式判断依据（读取MSTR+4字节）：
+        - Multi-Image：MSTR+4 = 文件大小-16（可烧录Flash）
+        - Single-Image：MSTR+4 = 0x00000001（RAM加载，不可烧录）
+        
+        返回：
+        - "Multi-Image": 可以烧录到Flash
+        - "Single-Image": 只能RAM加载，烧录会0秒完成
+        - "Unknown": 文件格式错误或无法识别
+        
+        参考：
+        - SBL烧录0秒问题分析.md - SDK路径与兼容性章节
+        - 问题根源在于SDK定位差异，不仅仅是文件格式
+        """
+        try:
+            import struct
+            import os
+            
+            with open(filepath, 'rb') as f:
+                # 读取Magic（前4字节）
+                magic = f.read(4)
+                if magic != b'MSTR':
+                    return "Unknown"
+                
+                # 读取MSTR+4字节的值
+                mstr_value = struct.unpack('<I', f.read(4))[0]
+                file_size = os.path.getsize(filepath)
+                
+                # 判断格式
+                if mstr_value == 0x00000001:
+                    # Single-Image格式：固定值1
+                    return "Single-Image"
+                elif abs(mstr_value - (file_size - 16)) < 100:
+                    # Multi-Image格式：接近文件大小-16
+                    return "Multi-Image"
+                else:
+                    return "Unknown"
+                    
+        except Exception as e:
+            # 静默失败，返回Unknown
+            return "Unknown"
     
     def _is_same_demo_directory(self, fw_path: str, cfg_path: str) -> bool:
         """判断固件和配置是否在同一Demo目录下
