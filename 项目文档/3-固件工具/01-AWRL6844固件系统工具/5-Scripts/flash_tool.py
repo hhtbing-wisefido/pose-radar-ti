@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件系统工具 v2.4.3.2 - 命令行后台启动版
+Ti AWRL6844 固件系统工具 v2.4.4 - subprocess配置回退版
 主入口文件 - 多标签页集成系统
 
-更新日志 v2.4.3.2:
-- 🚀 命令行启动立即返回提示符
-  * 使用进程分离技术：首次启动检测旧进程后，自动分离到后台
-  * 保留完整的旧进程检测和弹窗功能
+更新日志 v2.4.4:
+- 🔄 回退subprocess配置到bufsize=0
+  * 解决v2.4.2修改导致的烧录1秒完成问题
+  * bufsize=1在二进制模式下不是行缓冲，是字节缓冲
+  * 恢复bufsize=0无缓冲模式，确保实时输出
+  * 保留v2.4.3的进程清理逻辑
   * 使用环境变量标记避免无限循环
   * Windows原生支持：CREATE_NEW_PROCESS_GROUP + DETACHED_PROCESS
 - ✅ 启动命令：`python flash_tool.py`（立即返回，GUI后台运行）
@@ -1401,8 +1403,7 @@ class FlashToolGUI:
                 sbl_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                bufsize=1,  # 行缓冲
-                universal_newlines=False,  # 二进制模式
+                bufsize=0,  # 无缓冲，实时输出
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             self.flash_process = process  # 保存进程引用
@@ -1522,8 +1523,7 @@ class FlashToolGUI:
                 app_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                bufsize=1,  # 行缓冲
-                universal_newlines=False,  # 二进制模式
+                bufsize=0,  # 无缓冲，实时输出
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             self.flash_process = process  # 更新进程引用
@@ -1752,8 +1752,7 @@ class FlashToolGUI:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                bufsize=1,  # 行缓冲
-                universal_newlines=False,  # 二进制模式
+                bufsize=0,  # 无缓冲，实时输出
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             
@@ -1978,8 +1977,7 @@ class FlashToolGUI:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                bufsize=1,  # 行缓冲
-                universal_newlines=False,  # 二进制模式
+                bufsize=0,  # 无缓冲，实时输出
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             
