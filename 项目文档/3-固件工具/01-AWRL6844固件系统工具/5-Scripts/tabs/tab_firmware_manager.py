@@ -858,10 +858,10 @@ class FirmwareManagerTab:
         self.fw_path['values'] = ["全部"] + sorted(common_paths)[:10]  # 限制前10个常用目录
         
         # SBL固件筛选器
-        variants = set(sbl.variant for sbl in self.matcher.sbl_files if sbl.variant)
+        variants = set(sbl.variant for sbl in self.matcher.sbl_firmwares if sbl.variant)
         self.sbl_variant['values'] = ["全部"] + sorted(variants)
         
-        flash_addrs = set(sbl.flash_address for sbl in self.matcher.sbl_files if sbl.flash_address)
+        flash_addrs = set(sbl.flash_address for sbl in self.matcher.sbl_firmwares if sbl.flash_address)
         self.sbl_flash['values'] = ["全部"] + sorted(flash_addrs)
         
         # 配置文件筛选器
@@ -873,7 +873,7 @@ class FirmwareManagerTab:
         self.cfg_channels['values'] = ["全部"] + sorted(channels)
         
         # 检测距离筛选器
-        ranges = set(f"{cfg.max_range}m" for cfg in self.matcher.config_files if cfg.max_range > 0)
+        ranges = set(f"{cfg.range_m}m" for cfg in self.matcher.config_files if cfg.range_m > 0)
         self.cfg_range['values'] = ["全部"] + sorted(ranges, key=lambda x: float(x.rstrip('m')))
     
     def _format_size(self, size_bytes):
@@ -928,16 +928,16 @@ class FirmwareManagerTab:
         self.filter_firmwares()
     
     def on_sbl_filter_change(self):
-        """SBL固件筛选器级联更新"""
+        """筛选器级联更新"""
         variant = self.sbl_variant.get()
         
         # 根据变体更新Flash地址选项
         if variant != "全部":
-            flash_addrs = set(sbl.flash_address for sbl in self.matcher.sbl_files 
+            flash_addrs = set(sbl.flash_address for sbl in self.matcher.sbl_firmwares 
                             if sbl.variant == variant and sbl.flash_address)
             self.sbl_flash['values'] = ["全部"] + sorted(flash_addrs)
         else:
-            flash_addrs = set(sbl.flash_address for sbl in self.matcher.sbl_files if sbl.flash_address)
+            flash_addrs = set(sbl.flash_address for sbl in self.matcher.sbl_firmwares if sbl.flash_address)
             self.sbl_flash['values'] = ["全部"] + sorted(flash_addrs)
         
         # 执行筛选
@@ -971,7 +971,7 @@ class FirmwareManagerTab:
         self.cfg_channels['values'] = ["全部"] + sorted(channels)
         
         # 更新检测距离选项（基于应用、模式、通道）
-        ranges = set(f"{cfg.max_range}m" for cfg in filtered_cfgs if cfg.max_range > 0)
+        ranges = set(f"{cfg.range_m}m" for cfg in filtered_cfgs if cfg.range_m > 0)
         self.cfg_range['values'] = ["全部"] + sorted(ranges, key=lambda x: float(x.rstrip('m')))
         
         # 执行筛选
@@ -1032,7 +1032,7 @@ class FirmwareManagerTab:
         
         self.sbl_tree.delete(*self.sbl_tree.get_children())
         
-        for sbl in self.matcher.sbl_files:
+        for sbl in self.matcher.sbl_firmwares:
             if variant_filter != "全部" and sbl.variant != variant_filter:
                 continue
             if flash_filter != "全部" and sbl.flash_address != flash_filter:
@@ -1080,13 +1080,13 @@ class FirmwareManagerTab:
             
             # 检测距离筛选
             if range_filter != "全部":
-                range_str = f"{cfg.max_range}m" if cfg.max_range > 0 else "N/A"
+                range_str = f"{cfg.range_m}m" if cfg.range_m > 0 else "N/A"
                 if range_filter != range_str:
                     continue
             
             # 扩展搜索：支持文件名/路径/应用场景/通道数/检测距离/模式
             if keyword:
-                range_display = f"{cfg.max_range}m" if cfg.max_range > 0 else "N/A"
+                range_display = f"{cfg.range_m}m" if cfg.range_m > 0 else "N/A"
                 search_fields = [
                     cfg.filename.lower(),
                     cfg.path.lower(),
@@ -1098,12 +1098,12 @@ class FirmwareManagerTab:
                 if not any(keyword in field for field in search_fields):
                     continue
             
-            range_display = f"{cfg.max_range}m" if cfg.max_range > 0 else "N/A"
+            range_display = f"{cfg.range_m}m" if cfg.range_m > 0 else "N/A"
             self.cfg_tree.insert('', 'end', values=(
                 cfg.filename,
                 cfg.application,
-                channels,
-                cfg.range_m if cfg.range_m > 0 else "N/A",
+                channels_str,
+                range_display,
                 cfg.mode
             ), tags=(cfg.path,))
     
