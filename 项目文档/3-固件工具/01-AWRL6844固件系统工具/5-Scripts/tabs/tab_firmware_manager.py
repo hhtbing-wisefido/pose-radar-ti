@@ -628,10 +628,12 @@ class FirmwareManagerTab:
             menu.add_command(label="📂 复制完整路径", command=lambda: self.copy_path(tree))
             
             # 判断当前树是哪个类型，添加相应的"添加到烧录"选项
-            if tree == self.fw_tree:
+            if tree == self.fw_tree or tree == self.match_fw_list:
+                # 应用固件（固件管理标签页或智能匹配标签页）
                 menu.add_separator()
                 menu.add_command(label="➕ 添加到烧录", command=lambda: self.add_to_flash(tree, 'app'))
-            elif tree == self.sbl_tree:
+            elif tree == self.sbl_tree or tree == self.match_sbl_tree:
+                # SBL固件（SBL管理标签页或智能匹配推荐）
                 menu.add_separator()
                 menu.add_command(label="➕ 添加到烧录", command=lambda: self.add_to_flash(tree, 'sbl'))
             
