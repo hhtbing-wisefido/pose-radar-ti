@@ -190,42 +190,61 @@ class FirmwareManagerTab:
         filter_frame = ttk.LabelFrame(frame, text="筛选条件", padding=5)
         filter_frame.pack(fill=tk.X, padx=5, pady=5)
         
-        # 第一行：类别、处理器、文件大小
+        # 第一行：类别、子类别、处理器、版本
         filter_row1 = ttk.Frame(filter_frame)
         filter_row1.pack(fill=tk.X, pady=2)
         
         ttk.Label(filter_row1, text="类别:").pack(side=tk.LEFT, padx=5)
         self.fw_category = ttk.Combobox(filter_row1, values=["全部"], width=15, state='readonly')
         self.fw_category.current(0)
-        self.fw_category.bind('<<ComboboxSelected>>', lambda e: self.filter_firmwares())
+        self.fw_category.bind('<<ComboboxSelected>>', lambda e: self.on_fw_filter_change())
         self.fw_category.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(filter_row1, text="子类别:").pack(side=tk.LEFT, padx=5)
+        self.fw_subcategory = ttk.Combobox(filter_row1, values=["全部"], width=18, state='readonly')
+        self.fw_subcategory.current(0)
+        self.fw_subcategory.bind('<<ComboboxSelected>>', lambda e: self.on_fw_filter_change())
+        self.fw_subcategory.pack(side=tk.LEFT, padx=5)
         
         ttk.Label(filter_row1, text="处理器:").pack(side=tk.LEFT, padx=5)
         self.fw_processor = ttk.Combobox(filter_row1, values=["全部"], width=20, state='readonly')
         self.fw_processor.current(0)
-        self.fw_processor.bind('<<ComboboxSelected>>', lambda e: self.filter_firmwares())
+        self.fw_processor.bind('<<ComboboxSelected>>', lambda e: self.on_fw_filter_change())
         self.fw_processor.pack(side=tk.LEFT, padx=5)
         
-        ttk.Label(filter_row1, text="文件大小:").pack(side=tk.LEFT, padx=5)
-        self.fw_size = ttk.Combobox(filter_row1, values=["全部"], width=15, state='readonly')
+        ttk.Label(filter_row1, text="版本:").pack(side=tk.LEFT, padx=5)
+        self.fw_version = ttk.Combobox(filter_row1, values=["全部"], width=12, state='readonly')
+        self.fw_version.current(0)
+        self.fw_version.bind('<<ComboboxSelected>>', lambda e: self.filter_firmwares())
+        self.fw_version.pack(side=tk.LEFT, padx=5)
+        
+        # 第二行：文件大小、文件路径
+        filter_row2 = ttk.Frame(filter_frame)
+        filter_row2.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(filter_row2, text="文件大小:").pack(side=tk.LEFT, padx=5)
+        self.fw_size = ttk.Combobox(filter_row2, values=["全部"], width=15, state='readonly')
         self.fw_size.current(0)
         self.fw_size.bind('<<ComboboxSelected>>', lambda e: self.filter_firmwares())
         self.fw_size.pack(side=tk.LEFT, padx=5)
         
-        # 第二行：文件路径和搜索框
-        filter_row2 = ttk.Frame(filter_frame)
-        filter_row2.pack(fill=tk.X, pady=2)
-        
         ttk.Label(filter_row2, text="文件路径:").pack(side=tk.LEFT, padx=5)
-        self.fw_path = ttk.Combobox(filter_row2, values=["全部"], width=40, state='readonly')
+        self.fw_path = ttk.Combobox(filter_row2, values=["全部"], width=50, state='readonly')
         self.fw_path.current(0)
         self.fw_path.bind('<<ComboboxSelected>>', lambda e: self.filter_firmwares())
-        self.fw_path.pack(side=tk.LEFT, padx=5)
+        self.fw_path.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         
-        ttk.Label(filter_row2, text="🔍 搜索:").pack(side=tk.LEFT, padx=5)
-        self.fw_search = ttk.Entry(filter_row2, width=40)
+        # 第三行：搜索框
+        filter_row3 = ttk.Frame(filter_frame)
+        filter_row3.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(filter_row3, text="🔍 搜索:").pack(side=tk.LEFT, padx=5)
+        self.fw_search = ttk.Entry(filter_row3, width=80)
         self.fw_search.bind('<KeyRelease>', lambda e: self.filter_firmwares())
         self.fw_search.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
+        ttk.Label(filter_row3, text="(支持搜索: 文件名/路径/类别/子类别/处理器/版本)", 
+                 font=('Arial', 8), foreground='gray').pack(side=tk.LEFT, padx=5)
         
         # 使用PanedWindow实现可调整大小的布局
         paned = ttk.PanedWindow(frame, orient=tk.VERTICAL)
@@ -297,7 +316,7 @@ class FirmwareManagerTab:
         ttk.Label(filter_row1, text="变体类型:").pack(side=tk.LEFT, padx=5)
         self.sbl_variant = ttk.Combobox(filter_row1, values=["全部"], width=20, state='readonly')
         self.sbl_variant.current(0)
-        self.sbl_variant.bind('<<ComboboxSelected>>', lambda e: self.filter_sbls())
+        self.sbl_variant.bind('<<ComboboxSelected>>', lambda e: self.on_sbl_filter_change())
         self.sbl_variant.pack(side=tk.LEFT, padx=5)
         
         ttk.Label(filter_row1, text="Flash地址:").pack(side=tk.LEFT, padx=5)
@@ -311,9 +330,12 @@ class FirmwareManagerTab:
         filter_row2.pack(fill=tk.X, pady=2)
         
         ttk.Label(filter_row2, text="🔍 搜索:").pack(side=tk.LEFT, padx=5)
-        self.sbl_search = ttk.Entry(filter_row2, width=50)
+        self.sbl_search = ttk.Entry(filter_row2, width=60)
         self.sbl_search.bind('<KeyRelease>', lambda e: self.filter_sbls())
         self.sbl_search.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
+        ttk.Label(filter_row2, text="(支持搜索: 文件名/路径/变体/说明)", 
+                 font=('Arial', 8), foreground='gray').pack(side=tk.LEFT, padx=5)
         
         # 使用PanedWindow实现可调整大小的布局
         paned = ttk.PanedWindow(frame, orient=tk.VERTICAL)
@@ -373,19 +395,19 @@ class FirmwareManagerTab:
         ttk.Label(filter_row1, text="应用场景:").pack(side=tk.LEFT, padx=5)
         self.cfg_app = ttk.Combobox(filter_row1, values=["全部"], width=15, state='readonly')
         self.cfg_app.current(0)
-        self.cfg_app.bind('<<ComboboxSelected>>', lambda e: self.filter_configs())
+        self.cfg_app.bind('<<ComboboxSelected>>', lambda e: self.on_cfg_filter_change())
         self.cfg_app.pack(side=tk.LEFT, padx=5)
         
         ttk.Label(filter_row1, text="模式:").pack(side=tk.LEFT, padx=5)
         self.cfg_mode = ttk.Combobox(filter_row1, values=["全部", "2D", "3D", "TDM"], width=12, state='readonly')
         self.cfg_mode.current(0)
-        self.cfg_mode.bind('<<ComboboxSelected>>', lambda e: self.filter_configs())
+        self.cfg_mode.bind('<<ComboboxSelected>>', lambda e: self.on_cfg_filter_change())
         self.cfg_mode.pack(side=tk.LEFT, padx=5)
         
         ttk.Label(filter_row1, text="通道数:").pack(side=tk.LEFT, padx=5)
         self.cfg_channels = ttk.Combobox(filter_row1, values=["全部"], width=12, state='readonly')
         self.cfg_channels.current(0)
-        self.cfg_channels.bind('<<ComboboxSelected>>', lambda e: self.filter_configs())
+        self.cfg_channels.bind('<<ComboboxSelected>>', lambda e: self.on_cfg_filter_change())
         self.cfg_channels.pack(side=tk.LEFT, padx=5)
         
         ttk.Label(filter_row1, text="检测距离:").pack(side=tk.LEFT, padx=5)
@@ -399,9 +421,12 @@ class FirmwareManagerTab:
         filter_row2.pack(fill=tk.X, pady=2)
         
         ttk.Label(filter_row2, text="🔍 搜索:").pack(side=tk.LEFT, padx=5)
-        self.cfg_search = ttk.Entry(filter_row2, width=60)
+        self.cfg_search = ttk.Entry(filter_row2, width=70)
         self.cfg_search.bind('<KeyRelease>', lambda e: self.filter_configs())
         self.cfg_search.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
+        ttk.Label(filter_row2, text="(支持搜索: 文件名/路径/应用场景/通道数/检测距离/模式)", 
+                 font=('Arial', 8), foreground='gray').pack(side=tk.LEFT, padx=5)
         
         # 使用PanedWindow实现可调整大小的布局
         paned = ttk.PanedWindow(frame, orient=tk.VERTICAL)
@@ -813,8 +838,14 @@ class FirmwareManagerTab:
         categories = set(fw.category for fw in self.matcher.application_firmwares if fw.category)
         self.fw_category['values'] = ["全部"] + sorted(categories)
         
+        subcategories = set(fw.subcategory for fw in self.matcher.application_firmwares if fw.subcategory)
+        self.fw_subcategory['values'] = ["全部"] + sorted(subcategories)
+        
         processors = set(fw.processor for fw in self.matcher.application_firmwares if fw.processor)
         self.fw_processor['values'] = ["全部"] + sorted(processors)
+        
+        versions = set(fw.version for fw in self.matcher.application_firmwares if fw.version)
+        self.fw_version['values'] = ["全部"] + sorted(versions, reverse=True)
         
         # 文件大小范围（按KB/MB分组）
         size_ranges = set(self._format_size(fw.size) for fw in self.matcher.application_firmwares if fw.size > 0)
@@ -854,10 +885,104 @@ class FirmwareManagerTab:
         else:
             return f"{size_bytes // (1024 * 1024)}MB"
     
+    def on_fw_filter_change(self):
+        """应用固件筛选器级联更新"""
+        # 获取当前筛选条件
+        category = self.fw_category.get()
+        subcategory = self.fw_subcategory.get()
+        processor = self.fw_processor.get()
+        
+        # 根据当前筛选更新可用选项
+        filtered_fws = [fw for fw in self.matcher.application_firmwares]
+        
+        # 按类别筛选
+        if category != "全部":
+            filtered_fws = [fw for fw in filtered_fws if fw.category == category]
+        
+        # 按子类别筛选
+        if subcategory != "全部":
+            filtered_fws = [fw for fw in filtered_fws if fw.subcategory == subcategory]
+        
+        # 按处理器筛选
+        if processor != "全部":
+            filtered_fws = [fw for fw in filtered_fws if fw.processor == processor]
+        
+        # 更新子类别选项（基于类别）
+        if category != "全部":
+            subcats = set(fw.subcategory for fw in self.matcher.application_firmwares 
+                         if fw.category == category and fw.subcategory)
+            self.fw_subcategory['values'] = ["全部"] + sorted(subcats)
+        else:
+            subcats = set(fw.subcategory for fw in self.matcher.application_firmwares if fw.subcategory)
+            self.fw_subcategory['values'] = ["全部"] + sorted(subcats)
+        
+        # 更新处理器选项（基于类别和子类别）
+        procs = set(fw.processor for fw in filtered_fws if fw.processor)
+        self.fw_processor['values'] = ["全部"] + sorted(procs)
+        
+        # 更新版本选项（基于类别、子类别、处理器）
+        vers = set(fw.version for fw in filtered_fws if fw.version)
+        self.fw_version['values'] = ["全部"] + sorted(vers, reverse=True)
+        
+        # 执行筛选
+        self.filter_firmwares()
+    
+    def on_sbl_filter_change(self):
+        """SBL固件筛选器级联更新"""
+        variant = self.sbl_variant.get()
+        
+        # 根据变体更新Flash地址选项
+        if variant != "全部":
+            flash_addrs = set(sbl.flash_address for sbl in self.matcher.sbl_files 
+                            if sbl.variant == variant and sbl.flash_address)
+            self.sbl_flash['values'] = ["全部"] + sorted(flash_addrs)
+        else:
+            flash_addrs = set(sbl.flash_address for sbl in self.matcher.sbl_files if sbl.flash_address)
+            self.sbl_flash['values'] = ["全部"] + sorted(flash_addrs)
+        
+        # 执行筛选
+        self.filter_sbls()
+    
+    def on_cfg_filter_change(self):
+        """雷达配置筛选器级联更新"""
+        app = self.cfg_app.get()
+        mode = self.cfg_mode.get()
+        channels_filter = self.cfg_channels.get()
+        
+        # 根据当前筛选更新可用选项
+        filtered_cfgs = [cfg for cfg in self.matcher.config_files]
+        
+        # 按应用场景筛选
+        if app != "全部":
+            filtered_cfgs = [cfg for cfg in filtered_cfgs if cfg.application == app]
+        
+        # 按模式筛选
+        if mode != "全部":
+            filtered_cfgs = [cfg for cfg in filtered_cfgs if mode in cfg.mode]
+        
+        # 按通道数筛选
+        if channels_filter != "全部":
+            filtered_cfgs = [cfg for cfg in filtered_cfgs 
+                           if f"{cfg.tx_channels}TX/{cfg.rx_channels}RX" == channels_filter]
+        
+        # 更新通道数选项（基于应用和模式）
+        channels = set(f"{cfg.tx_channels}TX/{cfg.rx_channels}RX" 
+                      for cfg in filtered_cfgs if cfg.tx_channels > 0)
+        self.cfg_channels['values'] = ["全部"] + sorted(channels)
+        
+        # 更新检测距离选项（基于应用、模式、通道）
+        ranges = set(f"{cfg.max_range}m" for cfg in filtered_cfgs if cfg.max_range > 0)
+        self.cfg_range['values'] = ["全部"] + sorted(ranges, key=lambda x: float(x.rstrip('m')))
+        
+        # 执行筛选
+        self.filter_configs()
+    
     def filter_firmwares(self):
         """筛选应用固件"""
         category = self.fw_category.get()
+        subcategory = self.fw_subcategory.get()
         processor = self.fw_processor.get()
+        version = self.fw_version.get()
         size_filter = self.fw_size.get()
         path_filter = self.fw_path.get()
         keyword = self.fw_search.get().lower()
@@ -867,14 +992,29 @@ class FirmwareManagerTab:
         for fw in self.matcher.application_firmwares:
             if category != "全部" and fw.category != category:
                 continue
+            if subcategory != "全部" and fw.subcategory != subcategory:
+                continue
             if processor != "全部" and fw.processor != processor:
+                continue
+            if version != "全部" and fw.version != version:
                 continue
             if size_filter != "全部" and size_filter not in self._format_size(fw.size):
                 continue
             if path_filter != "全部" and path_filter not in fw.path:
                 continue
-            if keyword and keyword not in fw.filename.lower() and keyword not in fw.path.lower():
-                continue
+            
+            # 扩展搜索：支持文件名/路径/类别/子类别/处理器/版本
+            if keyword:
+                search_fields = [
+                    fw.filename.lower(),
+                    fw.path.lower(),
+                    fw.category.lower() if fw.category else "",
+                    fw.subcategory.lower() if fw.subcategory else "",
+                    fw.processor.lower() if fw.processor else "",
+                    fw.version.lower() if fw.version else ""
+                ]
+                if not any(keyword in field for field in search_fields):
+                    continue
             
             self.fw_tree.insert('', 'end', values=(
                 fw.filename,
@@ -897,8 +1037,17 @@ class FirmwareManagerTab:
                 continue
             if flash_filter != "全部" and sbl.flash_address != flash_filter:
                 continue
-            if keyword and keyword not in sbl.filename.lower() and keyword not in sbl.path.lower():
-                continue
+            
+            # 扩展搜索：支持文件名/路径/变体/说明
+            if keyword:
+                search_fields = [
+                    sbl.filename.lower(),
+                    sbl.path.lower(),
+                    sbl.variant.lower() if sbl.variant else "",
+                    sbl.description.lower() if sbl.description else ""
+                ]
+                if not any(keyword in field for field in search_fields):
+                    continue
             
             self.sbl_tree.insert('', 'end', values=(
                 sbl.filename,
@@ -935,8 +1084,19 @@ class FirmwareManagerTab:
                 if range_filter != range_str:
                     continue
             
-            if keyword and keyword not in cfg.filename.lower() and keyword not in cfg.path.lower():
-                continue
+            # 扩展搜索：支持文件名/路径/应用场景/通道数/检测距离/模式
+            if keyword:
+                range_display = f"{cfg.max_range}m" if cfg.max_range > 0 else "N/A"
+                search_fields = [
+                    cfg.filename.lower(),
+                    cfg.path.lower(),
+                    cfg.application.lower() if cfg.application else "",
+                    channels_str.lower(),
+                    range_display.lower(),
+                    cfg.mode.lower() if cfg.mode else ""
+                ]
+                if not any(keyword in field for field in search_fields):
+                    continue
             
             range_display = f"{cfg.max_range}m" if cfg.max_range > 0 else "N/A"
             self.cfg_tree.insert('', 'end', values=(
