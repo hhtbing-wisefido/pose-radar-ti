@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件系统工具 v2.4.3 - 右键添加到烧录版
+Ti AWRL6844 固件系统工具 v2.4.3.1 - 修复进程检测BUG版
 主入口文件 - 多标签页集成系统
+
+更新日志 v2.4.3.1:
+- 🐛 修复关键BUG：启动时错误关闭自身进程导致闪退
+  * 问题：check_old_process()会错误识别当前进程为"旧进程"
+  * 修复：增加进程创建时间检查，只关闭真正的旧进程（早于当前进程1秒以上）
+  * 修复：排除父进程（避免终止命令行/启动器）
+  * 修复：排除当前进程本身
+- ✅ 现在可以正常使用 `python flash_tool.py` 命令行启动
+- 构建日期：2025-12-20
 
 更新日志 v2.4.3:
 - ➕ 固件管理标签页新增"添加到烧录"功能
@@ -2215,19 +2224,51 @@ class FlashToolGUI:
 # ============================================================
 
 def check_old_process():
-    """检查是否有老进程在运行（v1.0.1需求1）"""
+    """检查是否有老进程在运行（v1.0.1需求1）
+    
+    改进版本：只查找真正的旧进程，排除：
+    1. 当前进程（current_pid）
+    2. 当前进程的父进程（避免终止启动器）
+    3. 创建时间晚于或接近当前进程的进程（避免误杀同时启动的进程）
+    """
     current_pid = os.getpid()
     script_name = os.path.basename(__file__)
     
+    # 获取当前进程信息
+    try:
+        current_proc = psutil.Process(current_pid)
+        current_create_time = current_proc.create_time()
+        parent_pid = current_proc.ppid()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return []
+    
     old_processes = []
-    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']):
         try:
+            # 跳过当前进程
             if proc.pid == current_pid:
                 continue
+            
+            # 跳过父进程（避免终止启动器/命令行）
+            if proc.pid == parent_pid:
+                continue
+            
             cmdline = proc.info.get('cmdline', [])
-            if cmdline and script_name in ' '.join(cmdline):
+            if not cmdline:
+                continue
+                
+            # 检查是否是flash_tool.py进程
+            cmdline_str = ' '.join(cmdline)
+            if script_name not in cmdline_str:
+                continue
+            
+            # 只添加创建时间早于当前进程的旧进程
+            # 增加1秒容差，避免误杀几乎同时启动的进程
+            proc_create_time = proc.info.get('create_time', 0)
+            if proc_create_time < (current_create_time - 1.0):
                 old_processes.append(proc)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                
+        except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
             pass
     
     return old_processes
