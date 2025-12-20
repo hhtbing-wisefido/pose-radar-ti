@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.0.1
+AWRL6844雷达配置专用GUI工具 v1.0.2
 集成配置文件读写、分析、数据解析等功能
+
+更新日志 v1.0.2:
+- 🎨 配置文件选择区域UI优化
+  * "浏览"改为"选择"，移到文件名后面
+  * 绝对路径改用Label显示，无边框，自适应完全显示
+  * "加载选中配置"改为"加载默认配置"
+  * 移除"最近使用"功能
+- 构建日期：2025-12-20
 
 更新日志 v1.0.1:
 - 🎨 配置文件选择区域优化
@@ -58,7 +66,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.0.1 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.0.2 | Wisefido")
         self.root.geometry("1500x950")
         
         # 设置窗口图标
@@ -290,7 +298,7 @@ class RadarConfigTool:
         frame = ttk.LabelFrame(parent, text="📁 配置文件选择", padding=10)
         frame.pack(fill=tk.X, padx=5, pady=5)
         
-        # 配置文件名显示
+        # 配置文件名显示和选择按钮
         file_label_frame = ttk.Frame(frame)
         file_label_frame.pack(fill=tk.X, pady=(0, 5))
         
@@ -301,14 +309,15 @@ class RadarConfigTool:
                                               font=('Segoe UI', 10))
         self.config_filename_label.pack(side=tk.LEFT, padx=5)
         
-        # 完整路径显示
-        path_frame = ttk.Frame(frame)
-        path_frame.pack(fill=tk.X, pady=5)
+        ttk.Button(file_label_frame, text="选择", command=self._open_config_file).pack(side=tk.LEFT, padx=5)
         
-        path_entry = ttk.Entry(path_frame, textvariable=self.current_config_path, state='readonly')
-        path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
-        
-        ttk.Button(path_frame, text="浏览...", command=self._open_config_file).pack(side=tk.LEFT)
+        # 完整路径显示（自适应，无边框）
+        path_label = ttk.Label(frame, textvariable=self.current_config_path, 
+                              foreground=self.COLORS['text_secondary'],
+                              font=('Segoe UI', 9),
+                              wraplength=380,  # 自动换行
+                              justify=tk.LEFT)
+        path_label.pack(fill=tk.X, pady=(0, 10), anchor=tk.W)
         
         # 默认配置下拉框
         ttk.Label(frame, text="默认设置:").pack(anchor=tk.W, pady=(5, 2))
@@ -323,14 +332,9 @@ class RadarConfigTool:
         default_combo.pack(fill=tk.X, pady=2)
         default_combo.bind('<<ComboboxSelected>>', self._on_default_config_selected)
         
-        # 快速选择按钮
-        quick_frame = ttk.Frame(frame)
-        quick_frame.pack(fill=tk.X, pady=5)
-        
-        ttk.Button(quick_frame, text="加载选中配置", 
-                  command=self._load_selected_default).pack(side=tk.LEFT, padx=2)
-        ttk.Button(quick_frame, text="最近使用", 
-                  command=self._show_recent_configs).pack(side=tk.LEFT, padx=2)
+        # 加载默认配置按钮
+        ttk.Button(frame, text="加载默认配置", 
+                  command=self._load_selected_default).pack(fill=tk.X, pady=(5, 0))
     
     def _create_port_settings(self, parent):
         """串口设置区域"""
