@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.3.0
+AWRL6844雷达配置专用GUI工具 v1.3.1
 集成配置文件读写、分析、数据解析等功能
 
-更新日志 v1.3.0:
-- 🚀 默认分离启动，无需参数
-  * 直接运行 python radar_config_tool.py 命令行立即退出
-  * 自动创建独立子进程运行GUI
-  * 彻底解决命令行等待问题
-- 🔔 旧进程检测弹窗提醒
-  * 检测到旧窗口时弹窗询问是否关闭
-  * 用户可选择关闭旧窗口或取消启动
-  * 避免多个窗口同时运行造成混乱
+更新日志 v1.3.1:
+- 🐛 修复旧进程关闭失败问题
+  * 修复进程检测逻辑，正确识别--child-process子进程
+  * 增强kill_process，先terminate再kill确保进程关闭
+  * 修复点"是"后旧窗口没关闭的BUG
+- 🎯 窗口显示优化
+  * 启动后自动置顶0.5秒，确保窗口在最前端
+  * 自动获取焦点，提升用户体验
+  * 0.5秒后取消置顶，避免遮挡其他窗口
 - 构建日期：2025-12-20
 
 更新日志 v1.2.0:
@@ -112,8 +112,15 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.3.0 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.3.1 | Wisefido")
         self.root.geometry("1500x950")
+        
+        # 窗口置顶显示
+        self.root.attributes('-topmost', True)
+        self.root.lift()
+        self.root.focus_force()
+        # 0.5秒后取消置顶，避免一直遮挡其他窗口
+        self.root.after(500, lambda: self.root.attributes('-topmost', False))
         
         # 设置窗口图标
         try:
@@ -1710,7 +1717,7 @@ def check_existing_process():
     existing_processes = []
     
     try:
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']):
             try:
                 # 检查是否是Python进程
                 if proc.info['name'] and 'python' in proc.info['name'].lower():
@@ -1719,10 +1726,13 @@ def check_existing_process():
                         # 检查命令行参数中是否包含radar_config_tool.py
                         cmdline_str = ' '.join(cmdline)
                         if script_name in cmdline_str and proc.info['pid'] != current_pid:
-                            existing_processes.append({
-                                'pid': proc.info['pid'],
-                                'cmdline': cmdline_str
-                            })
+                            # 排除父进程（没有--child-process参数的）
+                            if '--child-process' in cmdline_str:
+                                existing_processes.append({
+                                    'pid': proc.info['pid'],
+                                    'cmdline': cmdline_str,
+                                    'create_time': proc.info['create_time']
+                                })
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
     except Exception as e:
@@ -1743,17 +1753,26 @@ def kill_process(pid):
     """
     try:
         proc = psutil.Process(pid)
-        proc.terminate()  # 优雅终止
-        proc.wait(timeout=3)  # 等待最多3秒
-        return True
-    except psutil.TimeoutExpired:
+        
+        # 先尝试优雅终止
+        proc.terminate()
         try:
-            proc.kill()  # 强制终止
+            proc.wait(timeout=2)  # 等待2秒
             return True
-        except:
-            return False
+        except psutil.TimeoutExpired:
+            pass
+        
+        # 如果还在运行，强制kill
+        if proc.is_running():
+            proc.kill()
+            proc.wait(timeout=2)
+        
+        return True
+    except psutil.NoSuchProcess:
+        # 进程已不存在
+        return True
     except Exception as e:
-        print(f"终止进程失败: {e}")
+        print(f"❌ 终止进程 {pid} 失败: {e}")
         return False
 
 
