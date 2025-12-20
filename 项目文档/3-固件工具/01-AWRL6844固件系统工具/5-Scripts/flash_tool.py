@@ -1,8 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件烧录工具 v2.3.0 - 烧录标签页增强版
-主入口文件 - 单一烧录功能标签页
+Ti AWRL6844 固件系统工具 v2.4.0 - 固件管理筛选增强版
+主入口文件 - 多标签页集成系统
+
+更新日志 v2.4.0:
+- 🎨 应用名称更新："固件烧录工具" → "固件系统工具"
+- 📋 固件管理标签页UI优化：
+  * 应用固件/SBL固件/雷达配置：搜索框独立一行
+  * 应用固件：新增文件大小、文件路径筛选
+  * SBL固件：新增变体类型、Flash地址筛选
+  * 雷达配置：新增TX/RX通道数、检测距离筛选
+- 🔍 筛选条件智能化：根据文件参数动态填充可选项
+- 构建日期：2025-12-20
+
+更新日志 v2.3.1:
+- 🐛 修复固件管理-智能匹配-推荐雷达配置右键复制完整路径的BUG
+  * 问题：配置文件未将路径信息添加到tags中，导致右键复制无法获取路径
+  * 修复：插入配置匹配结果时，正确添加cfg.path到tags列表
+  * 影响范围：推荐雷达配置(Top 8)的右键菜单功能
+  * 构建日期：2025-12-20
 
 更新日志 v2.3.0:
 - 📡 烧录标签页新增雷达配置区域
@@ -63,7 +80,7 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "2.3.0"
+VERSION = "2.4.0"
 BUILD_DATE = "2025-12-20"
 AUTHOR = "Benson@Wisefido"
 
@@ -649,8 +666,19 @@ class FlashToolGUI:
     
     def __init__(self, root):
         self.root = root
-        self.root.title(f"Ti AWRL6844 固件烧录工具 v{VERSION}")
+        self.root.title(f"Ti AWRL6844 固件系统工具 v{VERSION}")
         self.root.geometry("1000x700")
+        
+        # 加载高端专业图标 🎨
+        try:
+            icon_path = Path(__file__).parent / "flash_tool_icon.ico"
+            if icon_path.exists():
+                self.root.iconbitmap(str(icon_path))
+                print(f"✅ 高端图标已加载: {icon_path.name}")
+            else:
+                print(f"⚠️ 图标文件未找到: {icon_path}")
+        except Exception as e:
+            print(f"⚠️ 图标加载失败: {e}")
         
         # 强制窗口置顶并获得焦点
         self.root.lift()
@@ -743,7 +771,7 @@ class FlashToolGUI:
         
         ttk.Label(
             title_frame,
-            text=f"Ti AWRL6844 固件烧录工具 v{VERSION}",
+            text=f"Ti AWRL6844 固件系统工具 v{VERSION}",
             font=('Arial', 14, 'bold')
         ).pack(side=tk.LEFT)
         
