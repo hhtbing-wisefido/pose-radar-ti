@@ -1401,8 +1401,9 @@ class FlashToolGUI:
                 sbl_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                bufsize=0,
-                creationflags=subprocess.CREATE_NO_WINDOW
+                bufsize=1,  # 行缓冲
+                universal_newlines=False,  # 二进制模式
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             self.flash_process = process  # 保存进程引用
             
@@ -1521,8 +1522,9 @@ class FlashToolGUI:
                 app_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                bufsize=0,
-                creationflags=subprocess.CREATE_NO_WINDOW
+                bufsize=1,  # 行缓冲
+                universal_newlines=False,  # 二进制模式
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             self.flash_process = process  # 更新进程引用
             
@@ -1736,8 +1738,9 @@ class FlashToolGUI:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                bufsize=0,
-                creationflags=subprocess.CREATE_NO_WINDOW
+                bufsize=1,  # 行缓冲
+                universal_newlines=False,  # 二进制模式
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             
             # 实时读取并显示输出（使用Label显示进度）
@@ -1947,8 +1950,9 @@ class FlashToolGUI:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                bufsize=0,
-                creationflags=subprocess.CREATE_NO_WINDOW
+                bufsize=1,  # 行缓冲
+                universal_newlines=False,  # 二进制模式
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             
             # 实时读取并显示输出（使用Label显示进度）
