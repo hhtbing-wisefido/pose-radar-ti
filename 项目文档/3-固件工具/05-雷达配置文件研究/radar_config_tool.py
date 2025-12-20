@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.1.2
+AWRL6844雷达配置专用GUI工具 v1.2.0
 集成配置文件读写、分析、数据解析等功能
+
+更新日志 v1.2.0:
+- 🎨 UI布局重大优化
+  * 左侧面板添加滚动条支持，完整显示所有控制区域
+  * 操作控制区域不再被截断，支持鼠标滚轮滚动
+  * 优化Canvas布局，自适应窗口宽度
+- 📢 启动提示优化
+  * 增强旧进程检测提示信息，显示详细列表
+  * 启动流程信息更清晰，带边框分隔
+  * 关闭进程后显示成功数量统计
+- 构建日期：2025-12-20
 
 更新日志 v1.1.2:
 - 🐛 修复端口下拉框和启动流程问题
   * 端口下拉框宽度增加到50，完整显示带描述的端口信息
   * 移除启动时的弹窗确认，自动关闭旧进程，避免阻塞
   * 优化启动流程，不再需要用户手动确认关闭旧窗口
-- 构建日期：2025-12-20
-
-更新日志 v1.1.1:
-- 🐛 修复端口显示和测试问题
-  * 修复端口测试弹窗显示\\n而非换行的问题
-  * 端口下拉框显示包含端口描述信息
-  * 优化刷新端口日志排版，增加空行分隔
-  * 修复连接端口时从下拉框正确提取端口名称
 
 更新日志 v1.1.0:
 - 🎨 UI布局优化
@@ -98,7 +101,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.1.2 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.2.0 | Wisefido")
         self.root.geometry("1500x950")
         
         # 设置窗口图标
@@ -309,9 +312,39 @@ class RadarConfigTool:
         main_paned = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # 左侧面板
-        left_frame = ttk.Frame(main_paned)
-        main_paned.add(left_frame, weight=1)
+        # 左侧面板 - 添加滚动条支持
+        left_container = ttk.Frame(main_paned)
+        main_paned.add(left_container, weight=1)
+        
+        # 创建Canvas和Scrollbar
+        canvas = tk.Canvas(left_container, bg=self.COLORS['bg_medium'], highlightthickness=0)
+        scrollbar = ttk.Scrollbar(left_container, orient="vertical", command=canvas.yview)
+        left_frame = ttk.Frame(canvas)
+        
+        # 配置Canvas
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # 布局
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # 将left_frame放入Canvas
+        canvas_frame = canvas.create_window((0, 0), window=left_frame, anchor="nw")
+        
+        # 更新滚动区域
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            # 同时调整canvas窗口宽度以匹配canvas宽度
+            canvas.itemconfig(canvas_frame, width=event.width)
+        
+        left_frame.bind("<Configure>", on_frame_configure)
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig(canvas_frame, width=e.width))
+        
+        # 鼠标滚轮支持
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
         
         # 右侧面板
         right_frame = ttk.Frame(main_paned)
@@ -1715,26 +1748,39 @@ def kill_process(pid):
 
 def main():
     """主函数"""
+    print("="*60)
+    print("🚀 启动 AWRL6844 雷达配置工具...")
+    print("="*60)
+    
     # 检查是否已有实例在运行
     existing_processes = check_existing_process()
     
     if existing_processes:
-        print(f"⚠️ 检测到 {len(existing_processes)} 个旧窗口，自动关闭中...")
+        print(f"\n⚠️  检测到 {len(existing_processes)} 个旧窗口正在运行")
+        print("📋 旧窗口列表:")
+        for i, proc in enumerate(existing_processes, 1):
+            print(f"   {i}. PID: {proc['pid']}")
+        print("\n🔄 正在自动关闭旧窗口...")
         
         # 后台自动关闭旧进程，不弹窗询问
         success_count = 0
         for proc in existing_processes:
             if kill_process(proc['pid']):
                 success_count += 1
-                print(f"✅ 已关闭进程 PID: {proc['pid']}")
+                print(f"   ✅ 已关闭进程 PID: {proc['pid']}")
             else:
-                print(f"❌ 无法关闭进程 PID: {proc['pid']}")
+                print(f"   ❌ 无法关闭进程 PID: {proc['pid']}")
         
         if success_count > 0:
             time.sleep(0.5)  # 等待进程完全退出
-            print(f"✅ 已自动关闭 {success_count} 个旧进程")
+            print(f"\n✅ 成功关闭 {success_count}/{len(existing_processes)} 个旧进程")
         else:
-            print("⚠️ 未能关闭任何旧进程，但继续启动新窗口")
+            print("\n⚠️  未能关闭任何旧进程，但继续启动新窗口")
+    else:
+        print("\n✅ 未检测到旧窗口，直接启动")
+    
+    print("\n🎨 正在初始化GUI界面...")
+    print("="*60 + "\n")
     
     # 创建主窗口
     root = tk.Tk()
