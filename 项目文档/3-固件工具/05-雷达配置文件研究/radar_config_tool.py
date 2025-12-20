@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AWRL6844雷达配置专用GUI工具 v1.0.3
+AWRL6844雷达配置专用GUI工具 v1.1.0
 集成配置文件读写、分析、数据解析等功能
+
+更新日志 v1.1.0:
+- 🎨 UI布局优化
+  * 日志标签页移至首位，作为默认显示页面
+  * 串口设置区域布局调整：刷新和测试按钮移至连接按钮上方
+- 🔍 串口功能增强
+  * 刷新功能显示详细端口信息（描述、VID:PID）
+  * 自动识别AWRL6844烧录端口和调试端口
+  * 新增端口测试功能，逐个测试所有端口连接状态
+  * 测试结果弹窗显示并同步记录到日志
+- 构建日期：2025-12-20
 
 更新日志 v1.0.3:
 - 🎨 配置文件选择区域UI细节优化
@@ -73,7 +84,7 @@ class RadarConfigTool:
     
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ AWRL6844 雷达配置工具 v1.0.3 | Wisefido")
+        self.root.title("⚡ AWRL6844 雷达配置工具 v1.1.0 | Wisefido")
         self.root.geometry("1500x950")
         
         # 设置窗口图标
@@ -355,11 +366,9 @@ class RadarConfigTool:
         port_frame.pack(fill=tk.X, pady=2)
         
         ttk.Label(port_frame, text="端口:").pack(side=tk.LEFT)
-        port_combo = ttk.Combobox(port_frame, textvariable=self.selected_port, width=10)
-        port_combo['values'] = self._get_available_ports()
-        port_combo.pack(side=tk.LEFT, padx=5)
-        
-        ttk.Button(port_frame, text="刷新", command=self._refresh_ports).pack(side=tk.LEFT)
+        self.port_combo = ttk.Combobox(port_frame, textvariable=self.selected_port, width=10)
+        self.port_combo['values'] = self._get_available_ports()
+        self.port_combo.pack(side=tk.LEFT, padx=5)
         
         # 波特率
         baud_frame = ttk.Frame(frame)
@@ -374,6 +383,13 @@ class RadarConfigTool:
                                      foreground=self.COLORS['accent_red'],
                                      font=('Segoe UI', 10, 'bold'))
         self.port_status.pack(anchor=tk.W, pady=5)
+        
+        # 刷新和测试按钮
+        refresh_frame = ttk.Frame(frame)
+        refresh_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        ttk.Button(refresh_frame, text="🔄 刷新", command=self._refresh_ports).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        ttk.Button(refresh_frame, text="🧪 测试", command=self._test_ports).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
         
         # 连接/断开按钮
         btn_frame = ttk.Frame(frame)
@@ -443,17 +459,17 @@ class RadarConfigTool:
         self.notebook = ttk.Notebook(parent)
         self.notebook.pack(fill=tk.BOTH, expand=True)
         
-        # 标签页1: 配置文件内容
+        # 标签页1: 日志输出（默认显示）
+        self._create_log_tab()
+        
+        # 标签页2: 配置文件内容
         self._create_config_content_tab()
         
-        # 标签页2: 性能分析
+        # 标签页3: 性能分析
         self._create_analysis_tab()
         
-        # 标签页3: 数据接收
+        # 标签页4: 数据接收
         self._create_data_tab()
-        
-        # 标签页4: 日志输出
-        self._create_log_tab()
         
         # 标签页5: SDK扫描
         self._create_scanner_tab()
@@ -868,9 +884,147 @@ class RadarConfigTool:
         return [port.device for port in ports]
     
     def _refresh_ports(self):
-        """刷新串口列表"""
-        # TODO: 更新端口下拉框
-        self._log("🔄 串口列表已刷新", 'info')
+        """刷新串口列表并显示详细信息"""
+        try:
+            ports = list(serial.tools.list_ports.comports())
+            
+            if not ports:
+                self._log("⚠️ 未找到可用串口", 'warning')
+                self.port_combo['values'] = []
+                return
+            
+            # 更新下拉框
+            port_names = [port.device for port in ports]
+            self.port_combo['values'] = port_names
+            
+            # 显示详细信息
+            self._log("✅ 刷新成功！", 'success')
+            
+            # 识别AWRL6844设备端口
+            for port in ports:
+                port_info = f"  🔌 {port.device}"
+                port_desc = f"     - 描述: {port.description}"
+                
+                # 检查VID:PID
+                if port.vid and port.pid:
+                    vid_pid = f"     - VID:PID = {port.vid:04X}:{port.pid:04X}"
+                    
+                    # 识别XDS110设备（AWRL6844的调试器）
+                    if port.vid == 0x0451 and port.pid == 0xBEF3:
+                        if "Application" in port.description or "User UART" in port.description:
+                            self._log(f"  🔌 找到烧录端口: {port.device}", 'success')
+                            self._log(port_desc, 'info')
+                            self._log(vid_pid, 'info')
+                        elif "Auxiliary" in port.description or "Data Port" in port.description:
+                            self._log(f"  🔌 找到调试端口: {port.device}", 'success')
+                            self._log(port_desc, 'info')
+                            self._log(vid_pid, 'info')
+                        else:
+                            self._log(port_info, 'info')
+                            self._log(port_desc, 'info')
+                            self._log(vid_pid, 'info')
+                    else:
+                        self._log(port_info, 'info')
+                        self._log(port_desc, 'info')
+                        self._log(vid_pid, 'info')
+                else:
+                    self._log(port_info, 'info')
+                    self._log(port_desc, 'info')
+            
+        except Exception as e:
+            self._log(f"❌ 刷新端口失败: {e}", 'error')
+    
+    def _test_ports(self):
+        """测试所有端口连接"""
+        try:
+            ports = list(serial.tools.list_ports.comports())
+            
+            if not ports:
+                messagebox.showwarning("警告", "未找到可用串口")
+                return
+            
+            # 识别AWRL6844端口
+            sbl_port = None
+            data_port = None
+            
+            for port in ports:
+                if port.vid == 0x0451 and port.pid == 0xBEF3:
+                    if "Application" in port.description or "User UART" in port.description:
+                        sbl_port = port.device
+                    elif "Auxiliary" in port.description or "Data Port" in port.description:
+                        data_port = port.device
+            
+            # 开始测试
+            self._log("=" * 60, 'info')
+            self._log("🔍 开始测试所有端口...", 'info')
+            self._log("", 'info')
+            
+            test_results = []
+            
+            # 测试烧录端口
+            if sbl_port:
+                self._log(f"📌 测试烧录端口: {sbl_port}", 'info')
+                result = self._test_single_port(sbl_port, 115200)
+                test_results.append((sbl_port, "烧录端口", result))
+            
+            # 测试数据输出端口
+            if data_port:
+                self._log(f"📌 测试数据输出端口: {data_port}", 'info')
+                result = self._test_single_port(data_port, 115200)
+                test_results.append((data_port, "数据输出端口", result))
+            
+            # 测试其他端口
+            for port in ports:
+                if port.device not in [sbl_port, data_port]:
+                    self._log(f"📌 测试端口: {port.device}", 'info')
+                    result = self._test_single_port(port.device, 115200)
+                    test_results.append((port.device, "其他端口", result))
+            
+            # 显示汇总
+            self._log("", 'info')
+            self._log("=" * 60, 'info')
+            self._log("📊 端口测试结果汇总:", 'info')
+            
+            success_count = 0
+            fail_count = 0
+            
+            for port, port_type, result in test_results:
+                if result:
+                    self._log(f"  ✅ {port} ({port_type}): 连接正常", 'success')
+                    success_count += 1
+                else:
+                    self._log(f"  ❌ {port} ({port_type}): 连接失败", 'error')
+                    fail_count += 1
+            
+            self._log("=" * 60, 'info')
+            
+            # 弹出结果窗口
+            result_text = "端口测试结果汇总\\n\\n"
+            for port, port_type, result in test_results:
+                status = "✅ 连接正常" if result else "❌ 连接失败"
+                result_text += f"{port} ({port_type}): {status}\\n"
+            
+            result_text += f"\\n总计: {success_count} 个成功, {fail_count} 个失败"
+            
+            messagebox.showinfo("端口测试结果", result_text)
+            
+        except Exception as e:
+            self._log(f"❌ 端口测试失败: {e}", 'error')
+            messagebox.showerror("错误", f"端口测试失败:\\n{e}")
+    
+    def _test_single_port(self, port: str, baudrate: int) -> bool:
+        """测试单个端口"""
+        try:
+            test_serial = serial.Serial(port, baudrate, timeout=0.5)
+            time.sleep(0.1)  # 短暂延迟
+            test_serial.close()
+            self._log(f"✅ 端口 {port} 连接正常！", 'success')
+            self._log("", 'info')
+            return True
+        except Exception as e:
+            self._log(f"❌ 端口 {port} 连接失败: {e}", 'error')
+            self._log("", 'info')
+            return False
     
     def _connect_port(self):
         """连接串口"""
