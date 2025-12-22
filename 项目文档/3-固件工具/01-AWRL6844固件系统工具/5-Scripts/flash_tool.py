@@ -264,7 +264,7 @@ def analyze_appimage_structure(file_path):
     ⚠️ 重要说明：
     - .appimage文件内部的Meta Header记录的是【文件内相对偏移】
     - Flash烧录偏移是烧录参数，不是固件文件属性，应由用户在烧录时配置
-    - 本函数只返回固件文件本身的信息（大小、类型、Magic等）
+    - 本函数返回固件文件本身的信息和Meta Header中的镜像描述符
     
     AppImage文件结构：
     - Meta Header (512字节): 包含Magic、版本、各核镜像信息
@@ -274,7 +274,7 @@ def analyze_appimage_structure(file_path):
         file_path: 固件文件路径
     
     Returns:
-        dict: 包含文件结构信息（不包含Flash偏移量）
+        dict: 包含文件结构信息和镜像描述符（不包含Flash偏移量）
     """
     try:
         with open(file_path, 'rb') as f:
@@ -292,9 +292,77 @@ def analyze_appimage_structure(file_path):
             # Offset 0x04: 版本信息 (4字节)
             version = struct.unpack('<I', meta_header[4:8])[0]
             
+            # Offset 0x08: 镜像数量信息
+            num_images_raw = struct.unpack('<I', meta_header[8:12])[0]
+            num_images = (num_images_raw >> 16, num_images_raw & 0xFFFF)
+            
             # 获取文件总大小
             f.seek(0, 2)
             total_size = f.tell()
+            
+            # 解析镜像描述符
+            # TI格式: [CRC32] [加载地址] [镜像大小] [文件内偏移]
+            images = []
+            
+            # 镜像1 (R5F) - 0x40
+            img1_start = 0x40
+            img1_crc = struct.unpack('<I', meta_header[img1_start:img1_start+4])[0]
+            img1_addr = struct.unpack('<I', meta_header[img1_start+4:img1_start+8])[0]
+            img1_size = struct.unpack('<I', meta_header[img1_start+8:img1_start+12])[0]
+            img1_offset = struct.unpack('<I', meta_header[img1_start+12:img1_start+16])[0]
+            
+            # 验证镜像1数据合理性
+            if img1_size > 0 and img1_offset + img1_size <= total_size:
+                images.append({
+                    'name': 'R5F Core',
+                    'checksum': f'0x{img1_crc:08X}',
+                    'file_offset': img1_offset,
+                    'size': img1_size,
+                    'load_addr': f'0x{img1_addr:08X}'
+                })
+            
+            # 镜像2 (DSP) - 0x50
+            img2_start = 0x50
+            img2_crc = struct.unpack('<I', meta_header[img2_start:img2_start+4])[0]
+            img2_addr = struct.unpack('<I', meta_header[img2_start+4:img2_start+8])[0]
+            img2_size = struct.unpack('<I', meta_header[img2_start+8:img2_start+12])[0]
+            img2_offset = struct.unpack('<I', meta_header[img2_start+12:img2_start+16])[0]
+            
+            # 验证镜像2数据合理性（文件内偏移+大小不超过文件总大小）
+            if img2_size > 0 and img2_offset > 0 and img2_offset + img2_size <= total_size:
+                images.append({
+                    'name': 'C66x DSP Core',
+                    'checksum': f'0x{img2_crc:08X}',
+                    'file_offset': img2_offset,
+                    'size': img2_size,
+                    'load_addr': f'0x{img2_addr:08X}'
+                })
+            
+            # 镜像3 (BSS/Data) - 0x60 - 通常是BSS段，可能不占用文件空间
+            img3_start = 0x60
+            img3_crc = struct.unpack('<I', meta_header[img3_start:img3_start+4])[0]
+            img3_addr = struct.unpack('<I', meta_header[img3_start+4:img3_start+8])[0]
+            img3_size = struct.unpack('<I', meta_header[img3_start+8:img3_start+12])[0]
+            img3_offset = struct.unpack('<I', meta_header[img3_start+12:img3_start+16])[0]
+            
+            # BSS段：只在有效偏移且在文件范围内时才添加
+            if img3_size > 0 and img3_offset > 0 and img3_offset + img3_size <= total_size:
+                images.append({
+                    'name': 'BSS/Data Section',
+                    'checksum': f'0x{img3_crc:08X}',
+                    'file_offset': img3_offset,
+                    'size': img3_size,
+                    'load_addr': f'0x{img3_addr:08X}'
+                })
+            elif img3_size > 0 and (img3_offset == 0 or img3_offset + img3_size > total_size):
+                # BSS段在RAM中，不占用Flash空间
+                images.append({
+                    'name': 'BSS Section (RAM Only)',
+                    'checksum': f'0x{img3_crc:08X}',
+                    'file_offset': 'N/A (RAM)',
+                    'size': img3_size,
+                    'load_addr': f'0x{img3_addr:08X}'
+                })
             
             # 判断文件类型（根据大小和文件名）
             filename = os.path.basename(file_path).lower()
@@ -307,7 +375,9 @@ def analyze_appimage_structure(file_path):
                     'has_meta_header': magic == 0x5254534D,
                     'magic_number': hex(magic),
                     'version': version,
+                    'num_images': num_images,
                     'file_size': total_size,
+                    'images': images,
                     'has_sbl_header': True,
                     'has_app_header': False,
                     'file_type': 'SBL'
@@ -319,7 +389,9 @@ def analyze_appimage_structure(file_path):
                     'has_meta_header': magic == 0x5254534D,
                     'magic_number': hex(magic),
                     'version': version,
+                    'num_images': num_images,
                     'file_size': total_size,
+                    'images': images,
                     'has_sbl_header': False,
                     'has_app_header': True,
                     'file_type': 'APP'
@@ -2183,14 +2255,32 @@ class FlashToolGUI:
                 
                 info = analyze_appimage_structure(sbl_file)
                 if info:
-                    self.log("=" * 50 + "\n")
+                    self.log("=" * 70 + "\n")
                     self.log(f"📊 SBL固件结构分析结果\n", "SUCCESS")
-                    self.log("=" * 50 + "\n")
+                    self.log("=" * 70 + "\n")
                     self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
                     self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
+                    self.log(f"版本信息: 0x{info.get('version', 0):08X}\n")
                     self.log(f"文件类型: {info.get('file_type', 'Unknown')}\n")
-                    self.log(f"\n💡 提示: Flash烧录偏移量需要在烧录时配置\n")
-                    self.log("=" * 50 + "\n")
+                    
+                    # 显示镜像数量
+                    if 'num_images' in info:
+                        self.log(f"镜像数量标识: {info['num_images'][0]} / {info['num_images'][1]}\n")
+                    
+                    # 显示各个核心镜像的详细信息
+                    if 'images' in info and info['images']:
+                        self.log(f"\n📦 核心镜像详情 (文件内偏移):\n")
+                        self.log("-" * 70 + "\n")
+                        for idx, img in enumerate(info['images'], 1):
+                            self.log(f"\n  [{idx}] {img['name']}:\n")
+                            self.log(f"      Checksum:      {img['checksum']}\n")
+                            self.log(f"      文件内偏移:    0x{img['file_offset']:08X} ({img['file_offset']} 字节)\n")
+                            self.log(f"      镜像大小:      0x{img['size']:08X} ({img['size']} 字节 / {img['size']/1024:.2f} KB)\n")
+                            self.log(f"      加载地址:      {img['load_addr']}\n")
+                    
+                    self.log("\n" + "-" * 70 + "\n")
+                    self.log(f"💡 提示: Flash烧录偏移量需要在烧录时配置\n")
+                    self.log("=" * 70 + "\n")
                 else:
                     self.log("❌ SBL分析失败：无法解析固件文件结构\n", "ERROR")
         
@@ -2204,14 +2294,36 @@ class FlashToolGUI:
                 
                 info = analyze_appimage_structure(app_file)
                 if info:
-                    self.log("=" * 50 + "\n")
+                    self.log("=" * 70 + "\n")
                     self.log(f"📊 App固件结构分析结果\n", "SUCCESS")
-                    self.log("=" * 50 + "\n")
+                    self.log("=" * 70 + "\n")
                     self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
                     self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
+                    self.log(f"版本信息: 0x{info.get('version', 0):08X}\n")
                     self.log(f"文件类型: {info.get('file_type', 'Unknown')}\n")
-                    self.log(f"\n💡 提示: Flash烧录偏移量需要在烧录时配置\n")
-                    self.log("=" * 50 + "\n")
+                    
+                    # 显示镜像数量
+                    if 'num_images' in info:
+                        self.log(f"镜像数量标识: {info['num_images'][0]} / {info['num_images'][1]}\n")
+                    
+                    # 显示各个核心镜像的详细信息
+                    if 'images' in info and info['images']:
+                        self.log(f"\n📦 核心镜像详情 (文件内偏移):\n")
+                        self.log("-" * 70 + "\n")
+                        for idx, img in enumerate(info['images'], 1):
+                            self.log(f"\n  [{idx}] {img['name']}:\n")
+                            self.log(f"      Checksum:      {img['checksum']}\n")
+                            # 处理文件偏移（可能是数字或字符串）
+                            if isinstance(img['file_offset'], str):
+                                self.log(f"      文件内偏移:    {img['file_offset']}\n")
+                            else:
+                                self.log(f"      文件内偏移:    0x{img['file_offset']:08X} ({img['file_offset']} 字节)\n")
+                            self.log(f"      镜像大小:      0x{img['size']:08X} ({img['size']} 字节 / {img['size']/1024:.2f} KB)\n")
+                            self.log(f"      加载地址:      {img['load_addr']}\n")
+                    
+                    self.log("\n" + "-" * 70 + "\n")
+                    self.log(f"💡 提示: Flash烧录偏移量需要在烧录时配置\n")
+                    self.log("=" * 70 + "\n")
                 else:
                     self.log("❌ App分析失败：无法解析固件文件结构\n", "ERROR")
     
