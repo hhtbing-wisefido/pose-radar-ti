@@ -267,7 +267,7 @@ class FlashTab:
         enable_offset_frame = tk.Frame(offset_frame, bg="#ecf0f1")
         enable_offset_frame.pack(fill=tk.X, pady=(0, 10))
         
-        self.app.offset_enabled_var = tk.BooleanVar(value=True)  # 默认启用
+        self.app.offset_enabled_var = tk.BooleanVar(value=False)  # 默认禁用
         
         tk.Checkbutton(
             enable_offset_frame,
@@ -420,6 +420,9 @@ class FlashTab:
         )
         self.app.app_offset_entry.pack(side=tk.LEFT, padx=(5, 0))
         self.app.app_offset_entry.insert(0, "0x")
+        
+        # 初始化偏移量控件状态（默认禁用，所以设为灰色）
+        self.toggle_offset_controls()
         
         # --- 烧录操作区 ---
         flash_frame = tk.LabelFrame(
