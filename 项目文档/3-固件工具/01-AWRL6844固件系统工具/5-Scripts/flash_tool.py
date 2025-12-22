@@ -257,14 +257,14 @@ def check_firmware_compatibility(file_path, device='AWRL6844'):
     
     return is_compatible, reason_text, details_text
 
-def analyze_appimage_structure(file_path, device_config=None):
+def analyze_appimage_structure(file_path):
     """
-    分析appimage文件结构（修正版）
+    分析appimage文件结构
     
     ⚠️ 重要说明：
     - .appimage文件内部的Meta Header记录的是【文件内相对偏移】
-    - Flash烧录偏移从设备配置中读取（由SDK/sbl.h定义）
-    - 本函数返回【Flash烧录偏移】，而非文件内偏移
+    - Flash烧录偏移是烧录参数，不是固件文件属性，应由用户在烧录时配置
+    - 本函数只返回固件文件本身的信息（大小、类型、Magic等）
     
     AppImage文件结构：
     - Meta Header (512字节): 包含Magic、版本、各核镜像信息
@@ -272,10 +272,9 @@ def analyze_appimage_structure(file_path, device_config=None):
     
     Args:
         file_path: 固件文件路径
-        device_config: 设备配置字典（包含sbl_offset和app_offset）
     
     Returns:
-        dict: 包含文件结构信息和Flash烧录偏移
+        dict: 包含文件结构信息（不包含Flash偏移量）
     """
     try:
         with open(file_path, 'rb') as f:
@@ -301,15 +300,6 @@ def analyze_appimage_structure(file_path, device_config=None):
             filename = os.path.basename(file_path).lower()
             is_sbl = 'sbl' in filename or total_size < 200*1024
             
-            # 从设备配置中读取Flash烧录偏移，如果没有提供则使用默认值
-            if device_config:
-                FLASH_SBL_OFFSET = device_config.get('sbl_offset', 0x2000)
-                FLASH_APP_OFFSET = device_config.get('app_offset', 0x42000)
-            else:
-                # 使用AWRL6844的默认配置
-                FLASH_SBL_OFFSET = DEVICE_CONFIGS['AWRL6844']['sbl_offset']
-                FLASH_APP_OFFSET = DEVICE_CONFIGS['AWRL6844']['app_offset']
-            
             if is_sbl:
                 # SBL固件
                 info = {
@@ -317,10 +307,7 @@ def analyze_appimage_structure(file_path, device_config=None):
                     'has_meta_header': magic == 0x5254534D,
                     'magic_number': hex(magic),
                     'version': version,
-                    'sbl_offset': FLASH_SBL_OFFSET,  # Flash烧录偏移
-                    'sbl_size': total_size,          # 整个文件就是SBL
-                    'app_offset': 0,
-                    'app_size': 0,
+                    'file_size': total_size,
                     'has_sbl_header': True,
                     'has_app_header': False,
                     'file_type': 'SBL'
@@ -332,10 +319,7 @@ def analyze_appimage_structure(file_path, device_config=None):
                     'has_meta_header': magic == 0x5254534D,
                     'magic_number': hex(magic),
                     'version': version,
-                    'sbl_offset': 0,
-                    'sbl_size': 0,
-                    'app_offset': FLASH_APP_OFFSET,  # Flash烧录偏移
-                    'app_size': total_size,          # 整个文件就是App
+                    'file_size': total_size,
                     'has_sbl_header': False,
                     'has_app_header': True,
                     'file_type': 'APP'
@@ -882,6 +866,40 @@ class FlashToolGUI:
             self.basic_tab.update_port_list(sbl_ports, app_ports)
         
         return sbl_ports, app_ports
+    
+    def get_sbl_offset(self):
+        """获取SBL Flash偏移量"""
+        if not hasattr(self, 'sbl_offset_var'):
+            return 0x2000  # 默认值
+        
+        offset_val = self.sbl_offset_var.get()
+        if offset_val == "custom":
+            # 从输入框获取
+            custom_val = self.sbl_offset_entry.get().strip()
+            try:
+                return int(custom_val, 16) if custom_val.startswith('0x') else int(custom_val)
+            except ValueError:
+                self.log(f"⚠️ 无效的SBL偏移量: {custom_val}，使用默认值 0x2000\\n", "WARN")
+                return 0x2000
+        else:
+            return int(offset_val, 16)
+    
+    def get_app_offset(self):
+        """获取App Flash偏移量"""
+        if not hasattr(self, 'app_offset_var'):
+            return 0x42000  # 默认值
+        
+        offset_val = self.app_offset_var.get()
+        if offset_val == "custom":
+            # 从输入框获取
+            custom_val = self.app_offset_entry.get().strip()
+            try:
+                return int(custom_val, 16) if custom_val.startswith('0x') else int(custom_val)
+            except ValueError:
+                self.log(f"⚠️ 无效的App偏移量: {custom_val}，使用默认值 0x42000\\n", "WARN")
+                return 0x42000
+        else:
+            return int(offset_val, 16)
 
     def open_serial_monitor(self, port, baudrate=115200):
         """打开串口监视（输出到日志区）"""
@@ -1388,14 +1406,15 @@ class FlashToolGUI:
             
             sbl_flash_start = time.time()  # SBL烧录操作计时器
             
-            sbl_offset = self.device_config.get('sbl_offset', 0x2000)
+            sbl_offset = self.get_sbl_offset()  # 从用户选择获取
+            self.log(f"📍 使用SBL Flash偏移量: 0x{sbl_offset:X} ({sbl_offset} 字节)\n")
             
             # 使用正确的命令格式
             sbl_cmd = [
                 tool_exe, 
                 "-p", sbl_port, 
                 "-f1", sbl_file,      # 使用-f1
-                "-of1", str(sbl_offset),  # 使用-of1
+                "-of1", str(sbl_offset),  # 使用用户选择的偏移量
                 "-s", "SFLASH",       # 存储类型
                 "-c"                  # Break信号
             ]
@@ -1508,7 +1527,8 @@ class FlashToolGUI:
             
             app_flash_start = time.time()  # App烧录操作计时器
             
-            app_offset = self.device_config.get('app_offset', 0x42000)
+            app_offset = self.get_app_offset()  # 从用户选择获取
+            self.log(f"📍 使用App Flash偏移量: 0x{app_offset:X} ({app_offset} 字节)\n")
             
             # 使用正确的命令格式（注意：App也使用sbl_port烧录端口COM3）
             app_cmd = [
@@ -1738,7 +1758,8 @@ class FlashToolGUI:
             
             flash_start_time = time.time()  # 烧录操作计时器（进度条时间）
             
-            sbl_offset = self.device_config.get('sbl_offset', 0x2000)
+            sbl_offset = self.get_sbl_offset()  # 从用户选择获取
+            self.log(f"📍 使用SBL Flash偏移量: 0x{sbl_offset:X} ({sbl_offset} 字节)\n")
             
             # 使用正确的命令格式（实测验证）
             cmd = [
@@ -1963,7 +1984,8 @@ class FlashToolGUI:
             
             flash_start_time = time.time()  # 烧录操作计时器（进度条时间）
             
-            app_offset = self.device_config.get('app_offset', 0x42000)
+            app_offset = self.get_app_offset()  # 从用户选择获取
+            self.log(f"📍 使用App Flash偏移量: 0x{app_offset:X} ({app_offset} 字节)\n")
             
             # 使用正确的命令格式（实测验证）
             cmd = [
@@ -2159,7 +2181,7 @@ class FlashToolGUI:
                 self.log(f"\n🔍 分析SBL固件: {os.path.basename(sbl_file)}\n", "INFO")
                 self.log(f"完整路径: {sbl_file}\n\n")
                 
-                info = analyze_appimage_structure(sbl_file, self.device_config)
+                info = analyze_appimage_structure(sbl_file)
                 if info:
                     self.log("=" * 50 + "\n")
                     self.log(f"📊 SBL固件结构分析结果\n", "SUCCESS")
@@ -2167,10 +2189,7 @@ class FlashToolGUI:
                     self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
                     self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
                     self.log(f"文件类型: {info.get('file_type', 'Unknown')}\n")
-                    self.log(f"\n📍 Flash烧录信息:\n")
-                    self.log(f"  - Flash偏移: 0x{info['sbl_offset']:X} ({info['sbl_offset']} 字节)\n")
-                    self.log(f"  - 固件大小: {info['sbl_size']:,} 字节 ({info['sbl_size']/1024:.2f} KB)\n")
-                    self.log(f"  - 预留空间: 256 KB (0x40000)\n")
+                    self.log(f"\n💡 提示: Flash烧录偏移量需要在烧录时配置\n")
                     self.log("=" * 50 + "\n")
                 else:
                     self.log("❌ SBL分析失败：无法解析固件文件结构\n", "ERROR")
@@ -2183,7 +2202,7 @@ class FlashToolGUI:
                 self.log(f"\n🔍 分析App固件: {os.path.basename(app_file)}\n", "INFO")
                 self.log(f"完整路径: {app_file}\n\n")
                 
-                info = analyze_appimage_structure(app_file, self.device_config)
+                info = analyze_appimage_structure(app_file)
                 if info:
                     self.log("=" * 50 + "\n")
                     self.log(f"📊 App固件结构分析结果\n", "SUCCESS")
@@ -2191,10 +2210,7 @@ class FlashToolGUI:
                     self.log(f"文件大小: {info['total_size']:,} 字节 ({info['total_size']/1024:.2f} KB)\n")
                     self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
                     self.log(f"文件类型: {info.get('file_type', 'Unknown')}\n")
-                    self.log(f"\n📍 Flash烧录信息:\n")
-                    self.log(f"  - Flash偏移: 0x{info['app_offset']:X} ({info['app_offset']} 字节)\n")
-                    self.log(f"  - 固件大小: {info['app_size']:,} 字节 ({info['app_size']/1024:.2f} KB)\n")
-                    self.log(f"  - 最大空间: 1784 KB\n")
+                    self.log(f"\n💡 提示: Flash烧录偏移量需要在烧录时配置\n")
                     self.log("=" * 50 + "\n")
                 else:
                     self.log("❌ App分析失败：无法解析固件文件结构\n", "ERROR")

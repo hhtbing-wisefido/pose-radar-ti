@@ -251,6 +251,140 @@ class FlashTab:
             cursor="hand2"
         ).pack(fill=tk.X, expand=True)
         
+        # --- Flash偏移量配置区 ---
+        offset_frame = tk.LabelFrame(
+            left_col,
+            text="📍 Flash偏移量配置",
+            font=("Microsoft YaHei UI", 10, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            padx=10,
+            pady=10
+        )
+        offset_frame.pack(fill=tk.X, pady=(10, 10))
+        
+        # SBL Flash偏移
+        sbl_offset_container = tk.Frame(offset_frame, bg="#ecf0f1")
+        sbl_offset_container.pack(fill=tk.X, pady=(0, 8))
+        
+        tk.Label(
+            sbl_offset_container,
+            text="SBL偏移:",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            bg="#ecf0f1",
+            width=10,
+            anchor="w"
+        ).pack(side=tk.LEFT)
+        
+        # SBL偏移选择变量
+        self.app.sbl_offset_var = tk.StringVar(value="0x2000")
+        
+        # 预设选项
+        sbl_preset_frame = tk.Frame(sbl_offset_container, bg="#ecf0f1")
+        sbl_preset_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        tk.Radiobutton(
+            sbl_preset_frame,
+            text="0x0000 (0字节)",
+            variable=self.app.sbl_offset_var,
+            value="0x0000",
+            font=("Consolas", 8),
+            bg="#ecf0f1",
+            activebackground="#ecf0f1"
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        
+        tk.Radiobutton(
+            sbl_preset_frame,
+            text="0x2000 (8192字节)",
+            variable=self.app.sbl_offset_var,
+            value="0x2000",
+            font=("Consolas", 8),
+            bg="#ecf0f1",
+            activebackground="#ecf0f1"
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        
+        tk.Radiobutton(
+            sbl_preset_frame,
+            text="自定义",
+            variable=self.app.sbl_offset_var,
+            value="custom",
+            font=("Consolas", 8),
+            bg="#ecf0f1",
+            activebackground="#ecf0f1",
+            command=lambda: self.app.sbl_offset_entry.focus()
+        ).pack(side=tk.LEFT)
+        
+        # 自定义输入框
+        self.app.sbl_offset_entry = tk.Entry(
+            sbl_preset_frame,
+            font=("Consolas", 8),
+            width=12,
+            state="normal"
+        )
+        self.app.sbl_offset_entry.pack(side=tk.LEFT, padx=(5, 0))
+        self.app.sbl_offset_entry.insert(0, "0x")
+        
+        # App Flash偏移
+        app_offset_container = tk.Frame(offset_frame, bg="#ecf0f1")
+        app_offset_container.pack(fill=tk.X)
+        
+        tk.Label(
+            app_offset_container,
+            text="App偏移:",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            bg="#ecf0f1",
+            width=10,
+            anchor="w"
+        ).pack(side=tk.LEFT)
+        
+        # App偏移选择变量
+        self.app.app_offset_var = tk.StringVar(value="0x42000")
+        
+        # 预设选项
+        app_preset_frame = tk.Frame(app_offset_container, bg="#ecf0f1")
+        app_preset_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        tk.Radiobutton(
+            app_preset_frame,
+            text="0x0000 (0字节)",
+            variable=self.app.app_offset_var,
+            value="0x0000",
+            font=("Consolas", 8),
+            bg="#ecf0f1",
+            activebackground="#ecf0f1"
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        
+        tk.Radiobutton(
+            app_preset_frame,
+            text="0x42000 (270336字节)",
+            variable=self.app.app_offset_var,
+            value="0x42000",
+            font=("Consolas", 8),
+            bg="#ecf0f1",
+            activebackground="#ecf0f1"
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        
+        tk.Radiobutton(
+            app_preset_frame,
+            text="自定义",
+            variable=self.app.app_offset_var,
+            value="custom",
+            font=("Consolas", 8),
+            bg="#ecf0f1",
+            activebackground="#ecf0f1",
+            command=lambda: self.app.app_offset_entry.focus()
+        ).pack(side=tk.LEFT)
+        
+        # 自定义输入框
+        self.app.app_offset_entry = tk.Entry(
+            app_preset_frame,
+            font=("Consolas", 8),
+            width=12,
+            state="normal"
+        )
+        self.app.app_offset_entry.pack(side=tk.LEFT, padx=(5, 0))
+        self.app.app_offset_entry.insert(0, "0x")
+        
         # --- 烧录操作区 ---
         flash_frame = tk.LabelFrame(
             left_col,
