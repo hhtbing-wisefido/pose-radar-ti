@@ -263,18 +263,47 @@ class FlashTab:
         )
         offset_frame.pack(fill=tk.X, pady=(10, 10))
         
+        # 启用/禁用开关
+        enable_offset_frame = tk.Frame(offset_frame, bg="#ecf0f1")
+        enable_offset_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        self.app.offset_enabled_var = tk.BooleanVar(value=True)  # 默认启用
+        
+        tk.Checkbutton(
+            enable_offset_frame,
+            text="🔘 启用Flash偏移量参数",
+            variable=self.app.offset_enabled_var,
+            font=("Microsoft YaHei UI", 9, "bold"),
+            bg="#ecf0f1",
+            activebackground="#ecf0f1",
+            fg="#2c3e50",
+            selectcolor="#27ae60",
+            command=self.toggle_offset_controls
+        ).pack(side=tk.LEFT)
+        
+        # 提示信息
+        self.offset_hint_label = tk.Label(
+            enable_offset_frame,
+            text="（启用时烧录命令包含偏移参数）",
+            font=("Microsoft YaHei UI", 8),
+            bg="#ecf0f1",
+            fg="#7f8c8d"
+        )
+        self.offset_hint_label.pack(side=tk.LEFT, padx=(5, 0))
+        
         # SBL Flash偏移
         sbl_offset_container = tk.Frame(offset_frame, bg="#ecf0f1")
         sbl_offset_container.pack(fill=tk.X, pady=(0, 8))
         
-        tk.Label(
+        self.sbl_offset_label = tk.Label(
             sbl_offset_container,
             text="SBL偏移:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
             width=10,
             anchor="w"
-        ).pack(side=tk.LEFT)
+        )
+        self.sbl_offset_label.pack(side=tk.LEFT)
         
         # SBL偏移选择变量
         self.app.sbl_offset_var = tk.StringVar(value="0x2000")
@@ -283,7 +312,7 @@ class FlashTab:
         sbl_preset_frame = tk.Frame(sbl_offset_container, bg="#ecf0f1")
         sbl_preset_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        tk.Radiobutton(
+        self.sbl_radio_0 = tk.Radiobutton(
             sbl_preset_frame,
             text="0x0000 (0字节)",
             variable=self.app.sbl_offset_var,
@@ -291,9 +320,10 @@ class FlashTab:
             font=("Consolas", 8),
             bg="#ecf0f1",
             activebackground="#ecf0f1"
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.sbl_radio_0.pack(side=tk.LEFT, padx=(0, 8))
         
-        tk.Radiobutton(
+        self.sbl_radio_2000 = tk.Radiobutton(
             sbl_preset_frame,
             text="0x2000 (8192字节)",
             variable=self.app.sbl_offset_var,
@@ -301,9 +331,10 @@ class FlashTab:
             font=("Consolas", 8),
             bg="#ecf0f1",
             activebackground="#ecf0f1"
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.sbl_radio_2000.pack(side=tk.LEFT, padx=(0, 8))
         
-        tk.Radiobutton(
+        self.sbl_radio_custom = tk.Radiobutton(
             sbl_preset_frame,
             text="自定义",
             variable=self.app.sbl_offset_var,
@@ -312,7 +343,8 @@ class FlashTab:
             bg="#ecf0f1",
             activebackground="#ecf0f1",
             command=lambda: self.app.sbl_offset_entry.focus()
-        ).pack(side=tk.LEFT)
+        )
+        self.sbl_radio_custom.pack(side=tk.LEFT)
         
         # 自定义输入框
         self.app.sbl_offset_entry = tk.Entry(
@@ -328,14 +360,15 @@ class FlashTab:
         app_offset_container = tk.Frame(offset_frame, bg="#ecf0f1")
         app_offset_container.pack(fill=tk.X)
         
-        tk.Label(
+        self.app_offset_label = tk.Label(
             app_offset_container,
             text="App偏移:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
             width=10,
             anchor="w"
-        ).pack(side=tk.LEFT)
+        )
+        self.app_offset_label.pack(side=tk.LEFT)
         
         # App偏移选择变量
         self.app.app_offset_var = tk.StringVar(value="0x42000")
@@ -344,7 +377,7 @@ class FlashTab:
         app_preset_frame = tk.Frame(app_offset_container, bg="#ecf0f1")
         app_preset_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        tk.Radiobutton(
+        self.app_radio_0 = tk.Radiobutton(
             app_preset_frame,
             text="0x0000 (0字节)",
             variable=self.app.app_offset_var,
@@ -352,9 +385,10 @@ class FlashTab:
             font=("Consolas", 8),
             bg="#ecf0f1",
             activebackground="#ecf0f1"
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.app_radio_0.pack(side=tk.LEFT, padx=(0, 8))
         
-        tk.Radiobutton(
+        self.app_radio_42000 = tk.Radiobutton(
             app_preset_frame,
             text="0x42000 (270336字节)",
             variable=self.app.app_offset_var,
@@ -362,9 +396,10 @@ class FlashTab:
             font=("Consolas", 8),
             bg="#ecf0f1",
             activebackground="#ecf0f1"
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.app_radio_42000.pack(side=tk.LEFT, padx=(0, 8))
         
-        tk.Radiobutton(
+        self.app_radio_custom = tk.Radiobutton(
             app_preset_frame,
             text="自定义",
             variable=self.app.app_offset_var,
@@ -373,7 +408,8 @@ class FlashTab:
             bg="#ecf0f1",
             activebackground="#ecf0f1",
             command=lambda: self.app.app_offset_entry.focus()
-        ).pack(side=tk.LEFT)
+        )
+        self.app_radio_custom.pack(side=tk.LEFT)
         
         # 自定义输入框
         self.app.app_offset_entry = tk.Entry(
@@ -892,6 +928,39 @@ class FlashTab:
                     f"[INFO] 已选择烧录工具: {selected_name}\n      路径: {tool_path}\n",
                     "info"
                 )
+    
+    def toggle_offset_controls(self):
+        """切换Flash偏移量控件的启用/禁用状态"""
+        enabled = self.app.offset_enabled_var.get()
+        
+        state = "normal" if enabled else "disabled"
+        fg_color = "#2c3e50" if enabled else "#95a5a6"
+        
+        # 控制SBL偏移量控件
+        self.sbl_offset_label.config(fg=fg_color)
+        self.sbl_radio_0.config(state=state)
+        self.sbl_radio_2000.config(state=state)
+        self.sbl_radio_custom.config(state=state)
+        self.app.sbl_offset_entry.config(state=state)
+        
+        # 控制App偏移量控件
+        self.app_offset_label.config(fg=fg_color)
+        self.app_radio_0.config(state=state)
+        self.app_radio_42000.config(state=state)
+        self.app_radio_custom.config(state=state)
+        self.app.app_offset_entry.config(state=state)
+        
+        # 更新提示信息
+        if enabled:
+            self.offset_hint_label.config(
+                text="（启用时烧录命令包含偏移参数）",
+                fg="#7f8c8d"
+            )
+        else:
+            self.offset_hint_label.config(
+                text="（禁用时烧录命令无偏移参数）",
+                fg="#e74c3c"
+            )
                 self.app.log_text.see(tk.END)
     
     def _adjust_sash_position(self):

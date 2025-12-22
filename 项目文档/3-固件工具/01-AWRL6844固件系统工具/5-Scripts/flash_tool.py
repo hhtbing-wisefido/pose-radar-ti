@@ -1478,18 +1478,27 @@ class FlashToolGUI:
             
             sbl_flash_start = time.time()  # SBL烧录操作计时器
             
-            sbl_offset = self.get_sbl_offset()  # 从用户选择获取
-            self.log(f"📍 使用SBL Flash偏移量: 0x{sbl_offset:X} ({sbl_offset} 字节)\n")
+            # 检查是否启用偏移量
+            offset_enabled = self.offset_enabled_var.get() if hasattr(self, 'offset_enabled_var') else True
             
-            # 使用正确的命令格式
+            # 构建烧录命令
             sbl_cmd = [
                 tool_exe, 
                 "-p", sbl_port, 
-                "-f1", sbl_file,      # 使用-f1
-                "-of1", str(sbl_offset),  # 使用用户选择的偏移量
+                "-f1", sbl_file      # 使用-f1
+            ]
+            
+            if offset_enabled:
+                sbl_offset = self.get_sbl_offset()  # 从用户选择获取
+                self.log(f"📍 使用SBL Flash偏移量: 0x{sbl_offset:X} ({sbl_offset} 字节)\n")
+                sbl_cmd.extend(["-of1", str(sbl_offset)])  # 添加偏移参数
+            else:
+                self.log(f"📍 Flash偏移量已禁用，使用工具默认偏移\n")
+            
+            sbl_cmd.extend([
                 "-s", "SFLASH",       # 存储类型
                 "-c"                  # Break信号
-            ]
+            ])
             
             self.log(f"执行命令: {' '.join(sbl_cmd)}\n")
             
@@ -1599,18 +1608,27 @@ class FlashToolGUI:
             
             app_flash_start = time.time()  # App烧录操作计时器
             
-            app_offset = self.get_app_offset()  # 从用户选择获取
-            self.log(f"📍 使用App Flash偏移量: 0x{app_offset:X} ({app_offset} 字节)\n")
+            # 检查是否启用偏移量
+            offset_enabled = self.offset_enabled_var.get() if hasattr(self, 'offset_enabled_var') else True
             
-            # 使用正确的命令格式（注意：App也使用sbl_port烧录端口COM3）
+            # 构建烧录命令（注意：App也使用sbl_port烧录端口COM3）
             app_cmd = [
                 tool_exe, 
                 "-p", sbl_port,  # 修复：使用sbl_port（COM3烧录端口）而非app_port（COM4数据端口）
-                "-f1", app_file,      # 使用-f1
-                "-of1", str(app_offset),  # 使用-of1
+                "-f1", app_file      # 使用-f1
+            ]
+            
+            if offset_enabled:
+                app_offset = self.get_app_offset()  # 从用户选择获取
+                self.log(f"📍 使用App Flash偏移量: 0x{app_offset:X} ({app_offset} 字节)\n")
+                app_cmd.extend(["-of1", str(app_offset)])  # 添加偏移参数
+            else:
+                self.log(f"📍 Flash偏移量已禁用，使用工具默认偏移\n")
+            
+            app_cmd.extend([
                 "-s", "SFLASH",       # 存储类型
                 "-c"                  # Break信号
-            ]
+            ])
             
             self.log(f"执行命令: {' '.join(app_cmd)}\n")
             
@@ -1830,22 +1848,30 @@ class FlashToolGUI:
             
             flash_start_time = time.time()  # 烧录操作计时器（进度条时间）
             
-            sbl_offset = self.get_sbl_offset()  # 从用户选择获取
-            self.log(f"📍 使用SBL Flash偏移量: 0x{sbl_offset:X} ({sbl_offset} 字节)\n")
+            # 检查是否启用偏移量
+            offset_enabled = self.offset_enabled_var.get() if hasattr(self, 'offset_enabled_var') else True
             
-            # 使用正确的命令格式（实测验证）
+            # 构建烧录命令
             cmd = [
                 tool_exe,
                 "-p",
                 sbl_port,
                 "-f1",            # 使用-f1而非-f
-                firmware_file,
-                "-of1",           # 使用-of1而非-of
-                str(sbl_offset),
+                firmware_file
+            ]
+            
+            if offset_enabled:
+                sbl_offset = self.get_sbl_offset()  # 从用户选择获取
+                self.log(f"📍 使用SBL Flash偏移量: 0x{sbl_offset:X} ({sbl_offset} 字节)\n")
+                cmd.extend(["-of1", str(sbl_offset)])  # 添加偏移参数
+            else:
+                self.log(f"📍 Flash偏移量已禁用，使用工具默认偏移\n")
+            
+            cmd.extend([
                 "-s",             # 存储类型
                 "SFLASH",
                 "-c"              # Break信号
-            ]
+            ])
             
             self.log(f"执行命令: {' '.join(cmd)}\n")
             
@@ -2056,22 +2082,30 @@ class FlashToolGUI:
             
             flash_start_time = time.time()  # 烧录操作计时器（进度条时间）
             
-            app_offset = self.get_app_offset()  # 从用户选择获取
-            self.log(f"📍 使用App Flash偏移量: 0x{app_offset:X} ({app_offset} 字节)\n")
+            # 检查是否启用偏移量
+            offset_enabled = self.offset_enabled_var.get() if hasattr(self, 'offset_enabled_var') else True
             
-            # 使用正确的命令格式（实测验证）
+            # 构建烧录命令
             cmd = [
                 tool_exe,
                 "-p",
                 app_port,
                 "-f1",            # 使用-f1而非-f
-                firmware_file,
-                "-of1",           # 使用-of1而非-of
-                str(app_offset),
+                firmware_file
+            ]
+            
+            if offset_enabled:
+                app_offset = self.get_app_offset()  # 从用户选择获取
+                self.log(f"📍 使用App Flash偏移量: 0x{app_offset:X} ({app_offset} 字节)\n")
+                cmd.extend(["-of1", str(app_offset)])  # 添加偏移参数
+            else:
+                self.log(f"📍 Flash偏移量已禁用，使用工具默认偏移\n")
+            
+            cmd.extend([
                 "-s",             # 存储类型
                 "SFLASH",
                 "-c"              # Break信号
-            ]
+            ])
             
             self.log(f"执行命令: {' '.join(cmd)}\n")
             
