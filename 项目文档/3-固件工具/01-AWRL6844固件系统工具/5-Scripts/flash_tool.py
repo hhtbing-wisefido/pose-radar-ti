@@ -257,18 +257,22 @@ def check_firmware_compatibility(file_path, device='AWRL6844'):
     
     return is_compatible, reason_text, details_text
 
-def analyze_appimage_structure(file_path):
+def analyze_appimage_structure(file_path, device_config=None):
     """
     分析appimage文件结构（修正版）
     
     ⚠️ 重要说明：
     - .appimage文件内部的Meta Header记录的是【文件内相对偏移】
-    - Flash烧录偏移是固定的：SBL=0x2000, App=0x42000（由SDK/sbl.h定义）
+    - Flash烧录偏移从设备配置中读取（由SDK/sbl.h定义）
     - 本函数返回【Flash烧录偏移】，而非文件内偏移
     
     AppImage文件结构：
     - Meta Header (512字节): 包含Magic、版本、各核镜像信息
     - 实际镜像数据: R5F + DSP + RF固件
+    
+    Args:
+        file_path: 固件文件路径
+        device_config: 设备配置字典（包含sbl_offset和app_offset）
     
     Returns:
         dict: 包含文件结构信息和Flash烧录偏移
@@ -297,10 +301,14 @@ def analyze_appimage_structure(file_path):
             filename = os.path.basename(file_path).lower()
             is_sbl = 'sbl' in filename or total_size < 200*1024
             
-            # ⚠️ 关键修正：返回Flash烧录偏移，而非文件内偏移
-            # 这些值来自官方SDK的sbl.h定义
-            FLASH_SBL_OFFSET = 0x2000    # M_META_SBL_OFFSET
-            FLASH_APP_OFFSET = 0x42000   # M_META_IMAGE_OFFSET
+            # 从设备配置中读取Flash烧录偏移，如果没有提供则使用默认值
+            if device_config:
+                FLASH_SBL_OFFSET = device_config.get('sbl_offset', 0x2000)
+                FLASH_APP_OFFSET = device_config.get('app_offset', 0x42000)
+            else:
+                # 使用AWRL6844的默认配置
+                FLASH_SBL_OFFSET = DEVICE_CONFIGS['AWRL6844']['sbl_offset']
+                FLASH_APP_OFFSET = DEVICE_CONFIGS['AWRL6844']['app_offset']
             
             if is_sbl:
                 # SBL固件
@@ -2151,7 +2159,7 @@ class FlashToolGUI:
                 self.log(f"\n🔍 分析SBL固件: {os.path.basename(sbl_file)}\n", "INFO")
                 self.log(f"完整路径: {sbl_file}\n\n")
                 
-                info = analyze_appimage_structure(sbl_file)
+                info = analyze_appimage_structure(sbl_file, self.device_config)
                 if info:
                     self.log("=" * 50 + "\n")
                     self.log(f"📊 SBL固件结构分析结果\n", "SUCCESS")
@@ -2175,7 +2183,7 @@ class FlashToolGUI:
                 self.log(f"\n🔍 分析App固件: {os.path.basename(app_file)}\n", "INFO")
                 self.log(f"完整路径: {app_file}\n\n")
                 
-                info = analyze_appimage_structure(app_file)
+                info = analyze_appimage_structure(app_file, self.device_config)
                 if info:
                     self.log("=" * 50 + "\n")
                     self.log(f"📊 App固件结构分析结果\n", "SUCCESS")
