@@ -606,28 +606,6 @@ class FlashTab:
             justify=tk.CENTER
         ).pack(fill=tk.X, expand=True)
         
-        # --- 雷达配置 ---
-        radar_config_frame = tk.LabelFrame(
-            left_col,
-            text="📡 雷达配置",
-            font=("Microsoft YaHei UI", 10, "bold"),
-            bg="#ecf0f1",
-            fg="#2c3e50",
-            padx=10,
-            pady=10
-        )
-        radar_config_frame.pack(fill=tk.X, pady=(10, 0))
-        
-        # 雷达配置内容区域（当前为空白，预留扩展）
-        tk.Label(
-            radar_config_frame,
-            text="雷达配置功能开发中...",
-            font=("Microsoft YaHei UI", 9),
-            bg="#ecf0f1",
-            fg="#95a5a6",
-            pady=20
-        ).pack(fill=tk.X)
-        
         # ============= 右列：日志输出 =============
         
         # 日志标题
