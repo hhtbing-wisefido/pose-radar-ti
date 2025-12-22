@@ -372,20 +372,20 @@ def arprog_check_image_format(filepath):
         magic = f.read(4)
         if magic != b'MSTR':
             return "ERROR: Not a valid appimage"
-      
+    
         mstr_value = struct.unpack('<I', f.read(4))[0]
         file_size = os.path.getsize(filepath)
-      
+    
         if mstr_value == 0x00000001:
             # Single-Image格式
             return "RAM_LOAD_IMAGE: Skip Flash programming"
             # 行为：直接退出，耗时0秒
-      
+    
         elif abs(mstr_value - (file_size - 16)) < 100:
             # Multi-Image格式
             return "FLASH_IMAGE: Start programming sequence"
             # 行为：等待复位 → 烧录 → 307次进度
-      
+    
         else:
             return "UNKNOWN_FORMAT: Abort"
 ```
@@ -428,10 +428,10 @@ def check_appimage_format(filepath):
         magic = f.read(4)
         if magic != b'MSTR':
             return False, "文件头错误，不是有效的appimage文件"
-      
+    
         # 读取MSTR+4字节
         value = struct.unpack('<I', f.read(4))[0]
-      
+    
         if value > 0x00001000:  # 大于4KB
             return True, "Multi-Image格式（可烧录）"
         elif value == 0x00000001:
@@ -472,6 +472,7 @@ initialdir = r"C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\
 **RADAR_TOOLBOX中的SBL文件是Single-Image格式，设计用于RAM加载测试，不支持Flash烧录。**
 
 根据TI官方文档和深度分析：
+
 1. **文件格式差异**：MMWAVE_L_SDK使用Multi-Image格式（Flash烧录），RADAR_TOOLBOX使用Single-Image格式（RAM加载）
 2. **SDK定位不同**：MMWAVE_L_SDK是生产开发SDK，RADAR_TOOLBOX是示例工具箱
 3. **编译工具不同**：官方使用ti-arm-clang编译器，工具箱是预编译二进制
@@ -481,8 +482,8 @@ initialdir = r"C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\
 
 | 特征       | Multi-Image（正常） | Single-Image（异常） |
 | ---------- | ------------------- | -------------------- |
-| SDK来源 | MMWAVE_L_SDK | RADAR_TOOLBOX |
-| 路径特征 | ti-arm-clang | prebuilt_binaries |
+| SDK来源    | MMWAVE_L_SDK        | RADAR_TOOLBOX        |
+| 路径特征   | ti-arm-clang        | prebuilt_binaries    |
 | MSTR+4字节 | 文件大小-16         | 固定值0x00000001     |
 | MEND偏移   | 较大（~0x1DC）      | 很小（0x3C）         |
 | RPRC头     | 无                  | 有（偏移0x40）       |
@@ -492,11 +493,11 @@ initialdir = r"C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\
 
 ### 最佳实践
 
-✅ **始终使用MMWAVE_L_SDK中的SBL文件**  
-✅ **检查路径中是否包含"ti-arm-clang"**  
-✅ **添加文件格式自动验证**  
-✅ **提供清晰的错误提示和SDK导航**  
-❌ **不要使用RADAR_TOOLBOX中的prebuilt_binaries作为SBL**  
+✅ **始终使用MMWAVE_L_SDK中的SBL文件**
+✅ **检查路径中是否包含"ti-arm-clang"**
+✅ **添加文件格式自动验证**
+✅ **提供清晰的错误提示和SDK导航**
+❌ **不要使用RADAR_TOOLBOX中的prebuilt_binaries作为SBL**
 ❌ **避免使用缺少平台标识（xwrL684x-evm）的文件**
 
 ---
@@ -504,20 +505,21 @@ initialdir = r"C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\
 ## 📚 参考资料
 
 1. **TI官方技术手册**：
+
    - xWRL68xx Technical Reference Manual (SWRU621, December 2024)
    - Section 4.2: Device Initialization (ROM Bootloader)
    - Section 4.2.4: Meta Image Format
-
 2. **SDK文档**：
+
    - MMWAVE_L_SDK_06_01_00_01 官方开发SDK
    - RADAR_TOOLBOX_3_30_00_06 示例工具箱
-
 3. **分析工具**：
+
    - `analyze_appimage.py` - 文件格式分析
    - `analyze_sdk_compatibility.py` - SDK兼容性分析
 
 ---
 
-**文档生成时间**: 2025-12-20  
-**分析深度**: AWRL6844兼容性 + TI官方技术手册 + SDK源码路径分析  
+**文档生成时间**: 2025-12-20
+**分析深度**: AWRL6844兼容性 + TI官方技术手册 + SDK源码路径分析
 **结论置信度**: ⭐⭐⭐⭐⭐ (通过实验验证 + 官方文档确认)

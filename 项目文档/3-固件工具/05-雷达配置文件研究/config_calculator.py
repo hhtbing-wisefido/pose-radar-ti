@@ -121,14 +121,18 @@ class RadarConfigCalculator:
             chirp_time = ramp_time + idle_time  # μs
             
             # 带宽
-            bandwidth = freq_slope * ramp_time  # MHz
-            performance['带宽 (MHz)'] = bandwidth
-            performance['带宽 (GHz)'] = bandwidth / 1000
+            if freq_slope > 0 and ramp_time > 0:
+                bandwidth = freq_slope * ramp_time  # MHz
+                performance['带宽 (MHz)'] = bandwidth
+                performance['带宽 (GHz)'] = bandwidth / 1000
+            else:
+                bandwidth = 0
             
             # 距离性能
-            range_resolution = self.c / (2 * bandwidth * 1e6)  # m
-            performance['距离分辨率 (m)'] = range_resolution
-            performance['距离分辨率 (cm)'] = range_resolution * 100
+            if bandwidth > 0:
+                range_resolution = self.c / (2 * bandwidth * 1e6)  # m
+                performance['距离分辨率 (m)'] = range_resolution
+                performance['距离分辨率 (cm)'] = range_resolution * 100
             
             num_samples = config.get('numAdcSamples', 0)
             sample_rate = config.get('digOutSampleRate', 0)  # ksps
