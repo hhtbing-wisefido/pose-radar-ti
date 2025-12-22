@@ -961,7 +961,6 @@ class FlashTab:
                 text="（禁用时烧录命令无偏移参数）",
                 fg="#e74c3c"
             )
-                self.app.log_text.see(tk.END)
     
     def _adjust_sash_position(self):
         """动态调整分隔条位置为3:7比例"""
