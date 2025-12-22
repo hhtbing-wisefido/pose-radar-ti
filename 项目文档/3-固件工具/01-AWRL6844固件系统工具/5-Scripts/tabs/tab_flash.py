@@ -519,11 +519,10 @@ class FlashTab:
         # 烧录端口（COM3 - User UART）
         self.flash_port_label = tk.Label(
             port_config_frame,
-            text="App COM Port:",
+            text="烧录端口 - XDS110 Class Application/User UART:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
-            width=15,
             anchor="w"
         )
         self.flash_port_label.grid(row=0, column=0, sticky=tk.W, pady=5, padx=(0, 5))
@@ -556,7 +555,6 @@ class FlashTab:
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
-            width=13,
             anchor="w"
         ).grid(row=0, column=2, sticky=tk.W, pady=5, padx=(0, 5))
         
@@ -573,11 +571,10 @@ class FlashTab:
         # 数据输出端口（COM4 - Auxiliary Data Port）
         self.debug_port_label = tk.Label(
             port_config_frame,
-            text="Data COM Port:",
+            text="测试数据端口 - XDS110 Class Auxiliary Data Port:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
-            width=15,
             anchor="w"
         )
         self.debug_port_label.grid(row=1, column=0, sticky=tk.W, pady=5, padx=(0, 5))
@@ -599,7 +596,6 @@ class FlashTab:
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
-            width=13,
             anchor="w"
         ).grid(row=1, column=2, sticky=tk.W, pady=5, padx=(0, 5))
         
