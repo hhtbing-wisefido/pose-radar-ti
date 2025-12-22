@@ -485,6 +485,16 @@ class FlashTab:
         )
         self.app.log_text.pack(fill=tk.BOTH, expand=True)
         
+        # 创建右键菜单
+        self.log_context_menu = tk.Menu(self.app.log_text, tearoff=0)
+        self.log_context_menu.add_command(label="📋 复制选中内容", command=self.copy_selected_log)
+        self.log_context_menu.add_command(label="📋 复制全部日志", command=self.copy_all_log)
+        self.log_context_menu.add_separator()
+        self.log_context_menu.add_command(label="🗑️ 清空日志", command=self.clear_log)
+        
+        # 绑定右键菜单
+        self.app.log_text.bind("<Button-3>", self.show_log_context_menu)
+        
         # 配置日志颜色标签
         self.app.log_text.tag_config("INFO", foreground="#3498db")
         self.app.log_text.tag_config("SUCCESS", foreground="#27ae60")
@@ -594,6 +604,59 @@ class FlashTab:
                 self.app.log_text.insert(tk.END, message)
             self.app.log_text.see(tk.END)
             self.app.log_text.config(state=tk.DISABLED)
+    
+    def show_log_context_menu(self, event):
+        """显示日志右键菜单"""
+        try:
+            # 检查是否有选中内容
+            if self.app.log_text.tag_ranges(tk.SEL):
+                self.log_context_menu.entryconfig(0, state=tk.NORMAL)  # 启用"复制选中内容"
+            else:
+                self.log_context_menu.entryconfig(0, state=tk.DISABLED)  # 禁用"复制选中内容"
+            
+            # 显示菜单
+            self.log_context_menu.post(event.x_root, event.y_root)
+        except Exception as e:
+            print(f"显示右键菜单失败: {e}")
+    
+    def copy_selected_log(self):
+        """复制选中的日志内容"""
+        try:
+            # 临时启用文本框以获取选中内容
+            self.app.log_text.config(state=tk.NORMAL)
+            
+            # 检查是否有选中内容
+            if self.app.log_text.tag_ranges(tk.SEL):
+                selected_text = self.app.log_text.get(tk.SEL_FIRST, tk.SEL_LAST)
+                # 复制到剪贴板
+                self.app.log_text.clipboard_clear()
+                self.app.log_text.clipboard_append(selected_text)
+                self.log("✅ 已复制选中日志到剪贴板", "SUCCESS")
+            
+            self.app.log_text.config(state=tk.DISABLED)
+        except Exception as e:
+            self.app.log_text.config(state=tk.DISABLED)
+            self.log(f"❌ 复制失败: {e}", "ERROR")
+    
+    def copy_all_log(self):
+        """复制全部日志内容"""
+        try:
+            # 临时启用文本框以获取全部内容
+            self.app.log_text.config(state=tk.NORMAL)
+            
+            all_text = self.app.log_text.get(1.0, tk.END)
+            if all_text.strip():
+                # 复制到剪贴板
+                self.app.log_text.clipboard_clear()
+                self.app.log_text.clipboard_append(all_text)
+                self.log("✅ 已复制全部日志到剪贴板", "SUCCESS")
+            else:
+                self.log("⚠️ 日志为空，无内容可复制", "WARN")
+            
+            self.app.log_text.config(state=tk.DISABLED)
+        except Exception as e:
+            self.app.log_text.config(state=tk.DISABLED)
+            self.log(f"❌ 复制失败: {e}", "ERROR")
     
     def clear_log(self):
         """清空日志"""
