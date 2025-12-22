@@ -510,23 +510,31 @@ class FlashTab:
         port_config_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
         port_config_frame.pack(fill=tk.X, pady=(0, 8))
         
+        # 配置grid列权重
+        port_config_frame.columnconfigure(0, weight=0)  # 标签列
+        port_config_frame.columnconfigure(1, weight=0)  # 端口选择列
+        port_config_frame.columnconfigure(2, weight=0)  # 波特率标签列
+        port_config_frame.columnconfigure(3, weight=0)  # 波特率选择列
+        
         # 烧录端口（COM3 - User UART）
         self.flash_port_label = tk.Label(
             port_config_frame,
-            text="烧录端口 - XDS110 Class Application/User UART:",
+            text="App COM Port:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
-            fg="#2c3e50"
+            fg="#2c3e50",
+            width=15,
+            anchor="w"
         )
-        self.flash_port_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.flash_port_label.grid(row=0, column=0, sticky=tk.W, pady=5, padx=(0, 5))
         
         self.app.flash_port_combo = ttk.Combobox(
             port_config_frame,
-            width=10,
+            width=8,
             state="readonly",
             font=("Consolas", 9)
         )
-        self.app.flash_port_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(5, 0))
+        self.app.flash_port_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(0, 15))
         self.app.flash_port_combo.set("COM3")
         # 同步到主程序变量（SBL和App都使用此端口）
         try:
@@ -541,25 +549,69 @@ class FlashTab:
             self.app.app_port.set(port)  # App也同步
         self.app.flash_port_combo.bind('<<ComboboxSelected>>', sync_flash_port)
         
-        # 数据输出端口（COM4 - Auxiliary Data Port）
-        self.debug_port_label = tk.Label(
+        # App波特率
+        tk.Label(
             port_config_frame,
-            text="测试数据端口 - XDS110 Class Auxiliary Data Port:",
+            text="App Baudrate:",
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
-            fg="#2c3e50"
-        )
-        self.debug_port_label.grid(row=1, column=0, sticky=tk.W, pady=5)
+            fg="#2c3e50",
+            width=13,
+            anchor="w"
+        ).grid(row=0, column=2, sticky=tk.W, pady=5, padx=(0, 5))
         
-        self.app.debug_port_combo = ttk.Combobox(
+        self.app.app_baudrate_combo = ttk.Combobox(
             port_config_frame,
             width=10,
             state="readonly",
+            font=("Consolas", 9),
+            values=["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"]
+        )
+        self.app.app_baudrate_combo.grid(row=0, column=3, sticky=tk.W, pady=5)
+        self.app.app_baudrate_combo.set("115200")  # 默认115200
+        
+        # 数据输出端口（COM4 - Auxiliary Data Port）
+        self.debug_port_label = tk.Label(
+            port_config_frame,
+            text="Data COM Port:",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            width=15,
+            anchor="w"
+        )
+        self.debug_port_label.grid(row=1, column=0, sticky=tk.W, pady=5, padx=(0, 5))
+        
+        self.app.debug_port_combo = ttk.Combobox(
+            port_config_frame,
+            width=8,
+            state="readonly",
             font=("Consolas", 9)
         )
-        self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(5, 0))
+        self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(0, 15))
         self.app.debug_port_combo.set("COM4")
         # 不同步到app_port - 调试口仅用于数据输出，不用于烧录
+        
+        # Data波特率
+        tk.Label(
+            port_config_frame,
+            text="Data Baudrate:",
+            font=("Microsoft YaHei UI", 9, "bold"),
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            width=13,
+            anchor="w"
+        ).grid(row=1, column=2, sticky=tk.W, pady=5, padx=(0, 5))
+        
+        self.app.data_baudrate_combo = ttk.Combobox(
+            port_config_frame,
+            width=10,
+            state="readonly",
+            font=("Consolas", 9),
+            values=["9600", "19200", "38400", "57600", "115200", "125000", "230400", "460800", "921600"]
+        )
+        self.app.data_baudrate_combo.grid(row=1, column=3, sticky=tk.W, pady=5)
+        self.app.data_baudrate_combo.set("125000")  # 默认125000
         
         # 端口操作按钮行（刷新 + 测试）
         port_action_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
