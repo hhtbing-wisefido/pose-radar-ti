@@ -250,14 +250,14 @@ cd 3-Tools
 
 ## ❓ 常见问题
 
-### Q1: 为什么需要先烧录SBL？
-**A**: SBL是二级引导程序，负责从Flash加载应用程序。ROM Bootloader → SBL → Application是固定的启动顺序。
+### Q1: Multi-Image需要先烧录SBL吗？
+**A**: ❌ **不需要！实测结果：Multi-Image可以直接烧录到0x0成功启动。** ROM Bootloader能直接识别MSTR魔数，无需SBL作为中间层。
 
 ### Q2: .appimage文件可以直接烧录吗？
-**A**: 可以！.appimage由SDK编译生成，arprog工具使用`-cf`参数会自动创建Flash Header，无需手动生成meta。
+**A**: ✅ **可以！并且应该直接烧录到0x0。** .appimage由SDK编译生成，是Multi-Image格式，直接烧录即可启动。
 
 ### Q3: 可以只烧录应用吗？
-**A**: 不可以。首次烧录必须包含SBL。后续更新可以只更新应用部分（地址0x42000）。
+**A**: ✅ **可以！Multi-Image不需要SBL。** 直接烧录.appimage文件到0x0即可启动，无需烧录SBL。
 
 ### Q4: 串口没有输出？
 **A**: 检查：
