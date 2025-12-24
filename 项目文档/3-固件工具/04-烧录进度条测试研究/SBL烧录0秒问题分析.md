@@ -1,5 +1,10 @@
 # 🔍 SBL烧录0秒问题根因分析
 
+> ⚠️ **术语说明**（2025-12-23更新）  
+> 本文档中提到的"Meta Image格式"是TI官方术语（源码中的`img_Metaheader_t`）。  
+> **MSTR**（0x5254534D）是Meta Image的魔数标识，两者是同一格式。  
+> 详细说明见：《2025-12-23_MSTR与Meta Image关系终极澄清.md》
+
 **分析日期**: 2025-12-20
 **问题描述**: 部分SBL文件烧录耗时0秒，实际未烧录成功
 **分析范围**: AWRL6844兼容性 + TI官方技术手册 + SDK源码分析
@@ -245,12 +250,12 @@ C:\ti\radar_toolbox_3_30_00_06\
 
 > Primary functional boot mode is through QSPI FLASH. MCU ROM supports managing multiple (primary and backup) application images. It can identify the primary image, and switch to secondary image load if primary image load fails.
 
-#### 3. Meta Image格式 (Section 4.2.4)
+#### 3. MSTR格式固件（TI官方文档称为Meta Image）(Section 4.2.4)
 
 **TI官方定义**：
 
 ```
-Meta Image结构：
+MSTR格式结构：
 ┌─────────────────────────────────────────┐
 │  MSTR Header (Meta String)              │
 │  - Magic: "MSTR" (4 bytes)             │

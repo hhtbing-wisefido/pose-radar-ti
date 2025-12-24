@@ -1321,3 +1321,275 @@ SFLASH
 C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\mmwave_demo.release.appimage
 270336
 SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\drivers\boot\sbl\xwrL684x-evm\r5fss0-0_nortos\ti-arm-clang\sbl.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\drivers\boot\sbl\xwrL684x-evm\r5fss0-0_nortos\ti-arm-clang\sbl.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\drivers\boot\sbl\xwrL684x-evm\r5fss0-0_nortos\ti-arm-clang\sbl.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\drivers\boot\sbl\xwrL684x-evm\r5fss0-0_nortos\ti-arm-clang\sbl.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:/ti/MMWAVE_L_SDK_06_01_00_01/examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:/ti/MMWAVE_L_SDK_06_01_00_01/examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:/ti/MMWAVE_L_SDK_06_01_00_01/examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:/ti/MMWAVE_L_SDK_06_01_00_01/examples/drivers/boot/sbl/xwrL684x-evm/r5fss0-0_nortos/ti-arm-clang/sbl.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+270336
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\Automotive_InCabin_Security_and_Safety\AWRL6844_InCabin_Demos\prebuilt_binaries\demo_in_cabin_sensing_6844_system.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\Automotive_InCabin_Security_and_Safety\AWRL6844_InCabin_Demos\prebuilt_binaries\demo_in_cabin_sensing_6844_system.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\examples\hello_world\xwrL684x-evm\system_nortos\hello_world_system.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\examples\hello_world\xwrL684x-evm\system_nortos\hello_world_system.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Enter]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+test_file
+3859021824
+SFLASH
+[Enter]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+8192
+SFLASH
+[Enter]: Opening Comm port: COM3
+[Exit]: Opening Comm portCOM3[Exit]: Download file
+C:\ti\MMWAVE_L_SDK_06_01_00_01\mmwave_l_sdk_06_01_00_01\examples\mmw_demo\mmwave_demo\prebuilt_binaries\xwrL684x-evm\mmwave_demo.release.appimage
+8192
+SFLASH

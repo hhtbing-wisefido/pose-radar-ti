@@ -1344,7 +1344,7 @@ class FirmwareManagerTab:
         
         # 匹配配置
         cfg_matches = self.matcher.match_configs_for_firmware(fw)
-        for i, (cfg, score) in enumerate(cfg_matches[:8]):
+        for i, (cfg, score, validation) in enumerate(cfg_matches[:8]):
             params = []
             if cfg.tx_channels > 0:
                 params.append(f"{cfg.tx_channels}TX/{cfg.rx_channels}RX")
@@ -1353,21 +1353,33 @@ class FirmwareManagerTab:
             if cfg.mode:
                 params.append(cfg.mode)
             
+            # v4.0: 根据评分设置标签
             tag_list = [cfg.path]
-            if i == 0:  # 高亮最佳匹配
+            if score <= -999999:
+                score_text = "❌ 不可用"
+                tag_list.append('unavailable')
+            elif score < 0:
+                score_text = f"⚠️ {score:.0f}"
+                tag_list.append('warning')
+            elif i == 0:
+                score_text = f"✅ {score:.0f}"
                 tag_list.append('best')
+            else:
+                score_text = f"{score:.0f}"
             
             self.match_cfg_tree.insert('', 'end', values=(
                 cfg.filename,
                 cfg.application,
                 " | ".join(params),
-                f"{score:.0f}%",
+                score_text,
                 cfg.path
             ), tags=tuple(tag_list))
         
-        # 配置高亮样式
+        # 配置高亮样式（v4.0更新）
         self.match_sbl_tree.tag_configure('best', background='#c8ffc8')
         self.match_cfg_tree.tag_configure('best', background='#c8ffc8')
+        self.match_cfg_tree.tag_configure('warning', background='#fff4c8')  # 黄色警告
+        self.match_cfg_tree.tag_configure('unavailable', background='#ffc8c8')  # 红色不可用
     
     def clear_results(self):
         """清空结果"""

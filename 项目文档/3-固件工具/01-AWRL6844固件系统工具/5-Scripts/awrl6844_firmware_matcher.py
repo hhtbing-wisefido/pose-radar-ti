@@ -629,33 +629,194 @@ class AWRL6844FirmwareMatcher:
         matches.sort(key=lambda x: x[1], reverse=True)
         return matches
     
-    def match_configs_for_firmware(self, firmware: FirmwareInfo) -> List[Tuple[ConfigInfo, float]]:
-        """为应用固件匹配雷达配置文件（改进算法v2）
+    def match_configs_for_firmware(self, firmware: FirmwareInfo) -> List[Tuple[ConfigInfo, float, dict]]:
+        """为应用固件匹配雷达配置文件（v4.0.2 - 2025-12-23）
         
-        评分体系（总分最高可达200+）：
-        - 同Demo目录：100分（最高优先级）
-        - 同SDK关联目录：80分
-        - 配置文件名语义匹配：60分
-        - 应用场景文本匹配：20分
-        - 芯片型号匹配：20分
-        - 检测距离合理性：15分
-        - 功耗模式匹配：5分
+        v4.0.2关键改进：解决"所有固件推荐相同配置"的问题
+        - ✅ 添加固件名称语义匹配（60分）
+        - ✅ 降低SDK路径权重（80分→40分）
+        - ✅ 提取固件关键词进行精准匹配
+        
+        基于实际数据优化的评分体系：
+        
+        【P0级验证 - 一票否决】：
+        1. 必需命令检测：缺少channelCfg/frameCfg/sensorStart → -999999分
+        2. 中文字符检测：包含中文 → -500分
+        3. 文件编码检测：UTF-8编码 → -200分
+        
+        【P1级评分 - 核心匹配】（总分230分）:
+        1. 固件名称语义匹配：60分（v4.0.2新增，解决关键问题）
+           - 固件关键词完全匹配：+30分/个
+           - 固件关键词部分匹配：+15分/个
+        2. 同SDK路径：40分（v4.0.2降低，从80分）
+        3. 核心参数匹配：
+           - frameCfg完全匹配：50分
+           - runtimeCalibCfg=1：30分
+           - lowPowerCfg匹配：20分
+        4. Demo目录关联：30分（v4.0.2新增）
+        
+        【P2级评分 - 辅助参考】（总分75分）:
+        1. 应用场景文本：20分
+        2. 芯片型号：20分
+        3. 检测距离：15分
+        4. 天线配置：15分
+        5. 功耗模式：5分
+        
+        返回格式：List[Tuple[ConfigInfo, float, dict]]
+        - ConfigInfo: 配置文件信息
+        - float: 总分
+        - dict: 验证详情
+            {
+                'p0_encoding': True/False,  # 编码检测
+                'p0_antenna': True/False,   # 天线配置
+                'p0_comment': True/False,   # 注释格式
+                'p1_sdk': score,            # SDK匹配分数
+                'p1_params': score,         # 参数匹配分数
+                'warnings': [...]           # 警告信息
+            }
         """
         matches = []
         
         for config in self.config_files:
             score = 0.0
+            validation = {
+                'p0_encoding': True,
+                'p0_antenna': True,
+                'p0_comment': True,
+                'p0_required_commands': True,  # v4.0新增
+                'p1_sdk': 0,
+                'p1_params': 0,
+                'warnings': [],
+                'fatal_errors': []  # v4.0新增：致命错误
+            }
             
-            # ========== 1. 目录树关系匹配（最高优先级）==========
-            # 检查是否在同一Demo目录下
+            # ========== P0级验证：必需命令检测（v4.0新增，最高优先级）==========
+            required_check = self._check_required_commands(config.path)
+            
+            if not required_check['has_all_required']:
+                score = -999999.0  # 🔴 一票否决：缺少必需命令
+                validation['p0_required_commands'] = False
+                validation['fatal_errors'].append(
+                    f"❌ 缺少必需命令：{', '.join(required_check['missing_commands'])}"
+                )
+                # 缺少必需命令直接标记为不可用，但仍继续检测其他问题
+            
+            if required_check['has_invalid_commands']:
+                score -= 800.0  # 🔴 严重惩罚：使用不存在的命令
+                validation['p0_required_commands'] = False
+                validation['fatal_errors'].append(
+                    f"❌ 使用无效命令：{', '.join(required_check['invalid_commands'])}"
+                )
+            
+            # ========== P0级验证：文件编码检测 ==========
+            # v4.0.1: 降低编码问题的惩罚，因为很多官方配置使用%注释
+            encoding_check = self._check_file_encoding(config.path)
+            
+            if not encoding_check['is_ascii']:
+                score -= 200.0  # 🟡 中度惩罚：UTF-8编码（从-1000降低）
+                validation['p0_encoding'] = False
+                validation['warnings'].append(f"⚠️ UTF-8编码问题：{encoding_check['issue']}")
+            
+            if encoding_check['has_chinese']:
+                score -= 500.0  # 🔴 严重惩罚：中文字符（从-1000降低）
+                validation['p0_encoding'] = False
+                validation['warnings'].append(f"❌ 包含中文字符（字节{encoding_check['position']}）")
+            
+            if encoding_check['has_percent_comment']:
+                # v4.0.1: %注释很常见，不扣分，仅提示
+                validation['warnings'].append("ℹ️ 使用%注释符")
+            
+            # ========== P0级验证：天线配置方式检测 ==========
+            # v4.0.1: 移除天线配置的强制要求，仅作为加分项
+            antenna_check = self._check_antenna_config(config.path)
+            
+            # 天线配置作为P1加分项（不再扣分）
+            if antenna_check['uses_antGeometryCfg']:
+                # antGeometryCfg是有效命令，给予加分
+                score += 10.0
+                validation['warnings'].append("ℹ️ 使用antGeometryCfg配置")
+            
+            if antenna_check['missing_antGeometryBoard']:
+                # 不扣分，很多配置不需要Board
+                pass
+            
+            if antenna_check['uses_manual_config']:
+                manual_completeness = antenna_check['manual_completeness']
+                if manual_completeness >= 4:
+                    score += 15.0  # 手动配置完整，加分
+                    validation['warnings'].append("✓ 手动天线配置完整")
+            
+            # ========== P1级评分：固件名称语义匹配（v4.0.2新增，最高优先级）==========
+            # 解决"所有固件推荐相同配置"的核心问题
+            firmware_keywords = self._extract_firmware_keywords(firmware.filename)
+            config_keywords = self._extract_config_keywords(config.filename)
+            
+            keyword_match_score = 0
+            matched_keywords = []
+            
+            for fw_kw in firmware_keywords:
+                for cfg_kw in config_keywords:
+                    if fw_kw == cfg_kw:  # 完全匹配
+                        keyword_match_score += 30
+                        matched_keywords.append(fw_kw)
+                    elif fw_kw in cfg_kw or cfg_kw in fw_kw:  # 部分匹配
+                        keyword_match_score += 15
+                        matched_keywords.append(f"{fw_kw}~{cfg_kw}")
+            
+            # 限制最高60分
+            keyword_match_score = min(keyword_match_score, 60)
+            score += keyword_match_score
+            validation['p1_name_match'] = keyword_match_score
+            
+            if matched_keywords:
+                validation['warnings'].append(
+                    f"✓ 关键词匹配：{', '.join(matched_keywords[:3])}"  # 只显示前3个
+                )
+            
+            # ========== P1级评分：同SDK路径关系（降低权重）==========
+            # v4.0.2: 从80分降至40分，避免SDK路径主导排序
+            if self._is_same_sdk(firmware.path, config.path):
+                score += 40.0
+                validation['p1_sdk'] = 40
+            elif self._is_related_in_sdk(firmware.path, config.path):
+                score += 30.0
+                validation['p1_sdk'] = 30
+            
+            # ========== P1级评分：Demo目录关联（v4.0.2新增）==========
             if self._is_same_demo_directory(firmware.path, config.path):
-                score += 100.0  # 最高优先级
+                score += 30.0
+                validation['p1_demo'] = 30
+                validation['warnings'].append("✓ 同一Demo目录")
             
-            # 检查是否在同一SDK下的关联目录
-            if self._is_related_in_sdk(firmware.path, config.path):
-                score += 80.0
+            # ========== P1级评分：核心参数匹配验证 ==========
+            param_check = self._check_core_parameters(config.path, firmware)
             
-            # ========== 2. 配置文件名语义匹配 ==========
+            # frameCfg参数匹配
+            if param_check['frameCfg_match']:
+                score += 50.0
+                validation['p1_params'] += 50
+            else:
+                validation['warnings'].append(
+                    f"⚠️ frameCfg不匹配：{param_check['frameCfg_diff']}"
+                )
+            
+            # runtimeCalibCfg检测
+            if param_check['runtimeCalibCfg'] == 1:
+                score += 30.0
+                validation['p1_params'] += 30
+            elif param_check['runtimeCalibCfg'] == 0:
+                score -= 20.0
+                validation['warnings'].append("⚠️ runtimeCalibCfg=0（禁用校准）")
+            
+            # lowPowerCfg匹配
+            if param_check['lowPowerCfg'] == 1:
+                score += 20.0
+                validation['p1_params'] += 20
+            elif param_check['lowPowerCfg'] == 0:
+                score -= 10.0
+                validation['warnings'].append("⚠️ lowPowerCfg=0（未启用低功耗）")
+            
+            # ========== P1级评分：配置文件名语义匹配 ==========
             config_semantics = self._parse_config_filename(config.filename)
             
             # InCabin Demo特殊处理
@@ -671,49 +832,36 @@ class AWRL6844FirmwareMatcher:
             if 'scene' in config_semantics:
                 scene = config_semantics['scene']
                 fw_lower = firmware.path.lower() + firmware.subcategory.lower()
-                if 'child_presence' in scene and 'cpd' in fw_lower:
-                    score += 50.0
-                elif 'intrusion' in scene and 'intrusion' in fw_lower:
-                    score += 50.0
-                elif 'vital' in scene and 'vital' in fw_lower:
-                    score += 50.0
-                elif 'gesture' in scene and 'gesture' in fw_lower:
-                    score += 50.0
+                if any(kw in scene for kw in ['child_presence', 'intrusion', 'vital', 'gesture']):
+                    if any(kw in fw_lower for kw in ['cpd', 'intrusion', 'vital', 'gesture']):
+                        score += 50.0
             
-            # ========== 3. 应用场景文本匹配（降低权重）==========
+            # ========== P2级评分：应用场景文本匹配 ==========
             if firmware.subcategory and config.application:
                 if firmware.subcategory in config.application:
-                    score += 20.0  # 从40降到20
+                    score += 20.0
                 elif config.application in firmware.subcategory:
                     score += 15.0
             
-            # ========== 4. 芯片型号匹配 ==========
+            # ========== P2级评分：芯片型号匹配 ==========
             if '6844' in config.filename.lower():
                 score += 20.0  # 6844专用
             elif '68xx' in config.filename.lower():
                 score += 15.0  # 68xx系列通用
-            elif '6843' in config.filename.lower():
-                score += 10.0  # 6843可能兼容
             
-            # ========== 5. 检测距离合理性 ==========
+            # ========== P2级评分：检测距离合理性 ==========
             if config.range_m > 0:
                 if config.range_m <= 10 and self._is_short_range_app(firmware):
-                    score += 15.0  # 短距离匹配
+                    score += 15.0
                 elif 10 < config.range_m <= 50:
-                    score += 10.0  # 中距离
-                elif config.range_m > 50:
-                    score += 5.0   # 长距离
+                    score += 10.0
             
-            # ========== 6. 功耗模式匹配 ==========
+            # ========== P2级评分：功耗模式匹配 ==========
             if 'power' in config_semantics:
                 if config_semantics['power'] == 'low_power' and 'low_power' in firmware.path.lower():
                     score += 10.0
-                elif '_lp' in config.filename.lower() and '_lp' in firmware.path.lower():
-                    score += 10.0
-            elif config.power_mode == '低功耗' and 'low_power' in firmware.path.lower():
-                score += 5.0
             
-            matches.append((config, score))
+            matches.append((config, score, validation))
         
         # 按评分排序
         matches.sort(key=lambda x: x[1], reverse=True)
@@ -850,6 +998,88 @@ class AWRL6844FirmwareMatcher:
             
         return False
     
+    def _extract_firmware_keywords(self, firmware_filename: str) -> List[str]:
+        """从固件文件名提取关键词（v4.0.2新增）
+        
+        示例：
+        hwa_dc_sub.system.release.appimage → ['hwa', 'dc', 'sub', 'system']
+        hello_world.system.release.appimage → ['hello', 'world', 'basic', 'simple']
+        demo_in_cabin_sensing_6844.system.release.appimage → ['incabin', 'cabin', 'sensing', '6844']
+        """
+        keywords = set()
+        
+        # 移除文件扩展名和常见后缀
+        name = firmware_filename.lower()
+        name = name.replace('.system.release.appimage', '')
+        name = name.replace('.system.debug.appimage', '')
+        name = name.replace('.release.appimage', '')
+        name = name.replace('.debug.appimage', '')
+        name = name.replace('.appimage', '')
+        
+        # 按下划线和点分割
+        parts = re.split(r'[_.]', name)
+        
+        # 添加所有部分作为关键词
+        for part in parts:
+            if len(part) > 2:  # 过滤掉过短的部分
+                keywords.add(part)
+        
+        # 特殊关键词映射
+        keyword_mapping = {
+            'hello': ['basic', 'simple', 'demo'],
+            'empty': ['minimal', 'basic'],
+            'incabin': ['cabin', 'cpd', 'sbr', 'intrusion'],
+            'vital': ['signs', 'heartbeat', 'breathing'],
+            'gesture': ['hand', 'motion'],
+            'occupancy': ['presence', 'detection']
+        }
+        
+        # 应用映射扩展关键词
+        for kw in list(keywords):
+            if kw in keyword_mapping:
+                keywords.update(keyword_mapping[kw])
+        
+        return list(keywords)
+    
+    def _extract_config_keywords(self, config_filename: str) -> List[str]:
+        """从配置文件名提取关键词（v4.0.2新增）
+        
+        示例：
+        cpd.cfg → ['cpd', 'child', 'presence', 'detection']
+        6844_profile_4T4R_tdm.cfg → ['6844', 'profile', '4t4r', 'tdm']
+        high_accuracy_demo_68xx.cfg → ['accuracy', 'demo', '68xx', '6844']
+        """
+        keywords = set()
+        
+        # 移除文件扩展名
+        name = config_filename.lower().replace('.cfg', '')
+        
+        # 按下划线、点、空格分割
+        parts = re.split(r'[_.\s]', name)
+        
+        # 添加所有部分作为关键词
+        for part in parts:
+            if len(part) > 1:  # 过滤掉单字符
+                keywords.add(part)
+        
+        # 特殊关键词映射
+        keyword_mapping = {
+            'cpd': ['child', 'presence', 'detection', 'cabin', 'incabin'],
+            'sbr': ['seatbelt', 'belt', 'reminder', 'cabin', 'incabin'],
+            'intrusion': ['intruder', 'detection', 'cabin', 'incabin'],
+            'vital': ['signs', 'heartbeat', 'breathing'],
+            '68xx': ['6844', '6843', '6843aop'],
+            'hwa': ['hardware', 'accelerator'],
+            'dc': ['datacollection', 'data']
+        }
+        
+        # 应用映射扩展关键词
+        for kw in list(keywords):
+            if kw in keyword_mapping:
+                keywords.update(keyword_mapping[kw])
+        
+        return list(keywords)
+    
     def _parse_config_filename(self, filename: str) -> Dict[str, str]:
         """解析配置文件名的语义
         
@@ -934,3 +1164,224 @@ class AWRL6844FirmwareMatcher:
         self.application_firmwares.clear()
         self.sbl_firmwares.clear()
         self.config_files.clear()
+    
+    def _check_required_commands(self, config_path: str) -> dict:
+        """检测必需命令（v4.0.1修正）
+        
+        基于实际配置文件分析的必需命令：
+        1. channelCfg - 通道配置
+        2. frameCfg - 帧配置
+        3. sensorStart - 启动命令
+        
+        注意：天线配置不是必需的（很多配置依赖默认值）
+        
+        返回:
+            {
+                'has_all_required': True/False,
+                'missing_commands': List[str],
+                'has_invalid_commands': False,  # 已移除
+                'invalid_commands': [],
+                'antenna_config_mode': 'board'/'cfg'/'geometry'/'none'
+            }
+        """
+        # 3个核心必需命令（移除天线配置要求）
+        REQUIRED_COMMANDS = [
+            'channelCfg',
+            'frameCfg',
+            'sensorStart'
+        ]
+        
+        result = {
+            'has_all_required': True,
+            'missing_commands': [],
+            'has_invalid_commands': False,  # 保持兼容性
+            'invalid_commands': [],
+            'antenna_config_mode': 'none'
+        }
+        
+        try:
+            with open(config_path, 'r', encoding='ascii', errors='ignore') as f:
+                content = f.read()
+            
+            # 检查必需命令
+            for cmd in REQUIRED_COMMANDS:
+                if cmd not in content:
+                    result['has_all_required'] = False
+                    result['missing_commands'].append(cmd)
+            
+            # 识别天线配置方式（仅用于信息展示，不影响必需命令判断）
+            if 'antGeometryBoard' in content:
+                result['antenna_config_mode'] = 'board'
+            elif 'antGeometryCfg' in content:
+                result['antenna_config_mode'] = 'cfg'
+            elif 'antGeometry0' in content or 'antGeometry1' in content:
+                result['antenna_config_mode'] = 'geometry'
+            else:
+                result['antenna_config_mode'] = 'none'
+            
+            return result
+            
+        except Exception as e:
+            result['has_all_required'] = False
+            result['missing_commands'].append(f'Error reading file: {str(e)}')
+            return result
+    
+    def _check_file_encoding(self, config_path: str) -> dict:
+        """检测配置文件编码和中文字符（P0级验证）
+        
+        返回:
+            {
+                'is_ascii': True/False,      # 是否纯ASCII
+                'has_chinese': True/False,   # 是否包含中文
+                'has_percent_comment': True/False,  # 是否使用%注释
+                'issue': str,                # 问题描述
+                'position': int              # 问题位置（字节）
+            }
+        """
+        result = {
+            'is_ascii': True,
+            'has_chinese': False,
+            'has_percent_comment': False,
+            'issue': '',
+            'position': -1
+        }
+        
+        try:
+            # 读取文件二进制内容
+            with open(config_path, 'rb') as f:
+                content = f.read()
+            
+            # 检测BOM
+            if content.startswith(b'\xef\xbb\xbf'):  # UTF-8 BOM
+                result['is_ascii'] = False
+                result['issue'] = 'UTF-8 BOM detected'
+                return result
+            
+            # 逐字节检查
+            for i, byte in enumerate(content):
+                # ASCII范围：0x00-0x7F
+                if byte > 0x7F:
+                    result['is_ascii'] = False
+                    result['has_chinese'] = True
+                    result['position'] = i
+                    result['issue'] = f'Non-ASCII byte 0x{byte:02x} at position {i}'
+                    return result
+            
+            # 检测注释符（文本层面）
+            try:
+                text = content.decode('ascii')
+                if '%' in text:
+                    result['has_percent_comment'] = True
+            except:
+                pass
+            
+            return result
+            
+        except Exception as e:
+            result['is_ascii'] = False
+            result['issue'] = f'Error reading file: {str(e)}'
+            return result
+    
+    def _check_antenna_config(self, config_path: str) -> dict:
+        """检测天线配置方式（P0级验证）
+        
+        返回:
+            {
+                'uses_antGeometryCfg': True/False,      # 使用错误命令
+                'missing_antGeometryBoard': True/False, # 缺少Board配置
+                'uses_manual_config': True/False,       # 使用手动配置
+                'manual_completeness': int              # 手动配置完整度(0-4)
+            }
+        """
+        result = {
+            'uses_antGeometryCfg': False,
+            'missing_antGeometryBoard': False,
+            'uses_manual_config': False,
+            'manual_completeness': 0
+        }
+        
+        try:
+            with open(config_path, 'r', encoding='ascii', errors='ignore') as f:
+                content = f.read()
+            
+            # 检测antGeometryCfg（错误命令）
+            if 'antGeometryCfg' in content:
+                result['uses_antGeometryCfg'] = True
+            
+            # 检测antGeometryBoard（推荐方式）
+            if 'antGeometryBoard' not in content:
+                result['missing_antGeometryBoard'] = True
+                
+                # 检查手动配置完整度
+                manual_commands = [
+                    'antGeometryTX',
+                    'antGeometryRx',
+                    'antGeometryDist',
+                    'compRangeBiasAndRxChanPhase'
+                ]
+                completeness = sum(1 for cmd in manual_commands if cmd in content)
+                
+                if completeness > 0:
+                    result['uses_manual_config'] = True
+                    result['manual_completeness'] = completeness
+            
+            return result
+            
+        except Exception as e:
+            return result
+    
+    def _check_core_parameters(self, config_path: str, firmware: FirmwareInfo) -> dict:
+        """检测核心参数匹配度（P1级评分）
+        
+        返回:
+            {
+                'frameCfg_match': True/False,
+                'frameCfg_diff': str,
+                'runtimeCalibCfg': 0/1/-1,
+                'lowPowerCfg': 0/1/-1,
+                'adcDataDitherCfg': 0/1/-1
+            }
+        """
+        result = {
+            'frameCfg_match': False,
+            'frameCfg_diff': '',
+            'runtimeCalibCfg': -1,
+            'lowPowerCfg': -1,
+            'adcDataDitherCfg': -1
+        }
+        
+        try:
+            with open(config_path, 'r', encoding='ascii', errors='ignore') as f:
+                content = f.read()
+            
+            # 解析frameCfg（期望：64 0 1358 1 100 0）
+            import re
+            frame_match = re.search(r'frameCfg\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', content)
+            if frame_match:
+                loops = int(frame_match.group(3))
+                period = int(frame_match.group(5))
+                
+                if loops == 1358 and period == 100:
+                    result['frameCfg_match'] = True
+                else:
+                    result['frameCfg_diff'] = f'loops={loops}(期望1358), period={period}(期望100)'
+            
+            # 解析runtimeCalibCfg
+            runtime_match = re.search(r'runtimeCalibCfg\s+(\d+)', content)
+            if runtime_match:
+                result['runtimeCalibCfg'] = int(runtime_match.group(1))
+            
+            # 解析lowPowerCfg
+            lowpower_match = re.search(r'lowPowerCfg\s+(\d+)', content)
+            if lowpower_match:
+                result['lowPowerCfg'] = int(lowpower_match.group(1))
+            
+            # 解析adcDataDitherCfg
+            dither_match = re.search(r'adcDataDitherCfg\s+(\d+)', content)
+            if dither_match:
+                result['adcDataDitherCfg'] = int(dither_match.group(1))
+            
+            return result
+            
+        except Exception as e:
+            return result

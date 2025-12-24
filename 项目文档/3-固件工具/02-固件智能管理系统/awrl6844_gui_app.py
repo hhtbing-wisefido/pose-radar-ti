@@ -845,7 +845,7 @@ class AWRL6844GUI(QMainWindow):
         # 匹配配置文件
         cfg_matches = self.matcher.match_configs_for_firmware(fw)
         self.match_cfg_table.setRowCount(min(5, len(cfg_matches)))
-        for i, (cfg, score) in enumerate(cfg_matches[:5]):
+        for i, (cfg, score, validation) in enumerate(cfg_matches[:5]):
             self.match_cfg_table.setItem(i, 0, QTableWidgetItem(cfg.filename))
             self.match_cfg_table.setItem(i, 1, QTableWidgetItem(cfg.application))
             
@@ -858,13 +858,40 @@ class AWRL6844GUI(QMainWindow):
                 params.append(cfg.mode)
             self.match_cfg_table.setItem(i, 2, QTableWidgetItem(" | ".join(params)))
             
-            self.match_cfg_table.setItem(i, 3, QTableWidgetItem(f"{score:.0f}%"))
+            # v4.0: 显示评分和状态
+            if score <= -999999:
+                score_text = "❌ 不可用"
+                color = QColor(255, 200, 200)  # 红色
+            elif score < 0:
+                score_text = f"⚠️ {score:.0f}"
+                color = QColor(255, 255, 200)  # 黄色
+            else:
+                score_text = f"✅ {score:.0f}"
+                color = QColor(200, 255, 200) if i == 0 else QColor(255, 255, 255)
+            
+            self.match_cfg_table.setItem(i, 3, QTableWidgetItem(score_text))
             self.match_cfg_table.setItem(i, 4, QTableWidgetItem(cfg.path))
             
-            # 高亮最佳匹配
-            if i == 0:
+            # v4.0: 根据评分设置背景色
+            for j in range(5):
+                self.match_cfg_table.item(i, j).setBackground(color)
+            
+            # v4.0: 设置tooltip显示详细验证信息
+            tooltip_lines = []
+            if validation.get('fatal_errors'):
+                tooltip_lines.append("致命错误:")
+                tooltip_lines.extend([f"  {err}" for err in validation['fatal_errors']])
+            if validation.get('warnings'):
+                tooltip_lines.append("警告:")
+                tooltip_lines.extend([f"  {warn}" for warn in validation['warnings']])
+            if validation.get('p1_sdk') or validation.get('p1_params'):
+                tooltip_lines.append(f"SDK匹配: {validation.get('p1_sdk', 0)}分")
+                tooltip_lines.append(f"参数匹配: {validation.get('p1_params', 0)}分")
+            
+            if tooltip_lines:
+                tooltip_text = "\n".join(tooltip_lines)
                 for j in range(5):
-                    self.match_cfg_table.item(i, j).setBackground(QColor(200, 255, 200))
+                    self.match_cfg_table.item(i, j).setToolTip(tooltip_text)
         
         self.statusBar().showMessage(
             f"为 {fw.filename} 找到 {len(sbl_matches)} 个SBL匹配, {len(cfg_matches)} 个配置匹配"
