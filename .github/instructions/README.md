@@ -31,12 +31,14 @@ applyTo: "**"              # Glob 模式，定义应用范围
 
 ## 📋 现有规则
 
-| 文件 | 描述 | 应用范围 |
-|------|------|----------|
-| `file-operations.instructions.md` | 文件操作强制规则 | 所有文件 |
-| `directory-management.instructions.md` | 目录结构管理 | 所有文件 |
-| `naming-conventions.instructions.md` | 文件命名标准 | 所有文件 |
-| `emoji-style.instructions.md` | Markdown 文档风格 | 所有 .md 文件 |
+| 文件 | 描述 | 应用范围 | 优先级 |
+|------|------|----------|--------|
+| `file-reading.instructions.md` | 🔴🔴🔴 **严禁AI偷懒不读文件** | 所有文件 | **最高** |
+| `file-operations.instructions.md` | 文件操作强制规则 | 所有文件 | 高 |
+| `directory-management.instructions.md` | 目录结构管理 | 所有文件 | 高 |
+| `naming-conventions.instructions.md` | 文件命名标准 | 所有文件 | 中 |
+| `git-operations.instructions.md` | Git操作规范 | 所有文件 | 高 |
+| `emoji-style.instructions.md` | Markdown 文档风格 | 所有 .md 文件 | 低 |
 
 ## 🔄 与 Windsurf 规则的关系
 
@@ -48,7 +50,11 @@ applyTo: "**"              # Glob 模式，定义应用范围
 | `01-文件操作规范.md` | `file-operations.instructions.md` |
 | `02-目录管理规范.md` | `directory-management.instructions.md` |
 | `03-文件命名规范.md` | `naming-conventions.instructions.md` |
+| `06-Git操作规范.md` | `git-operations.instructions.md` |
 | `07-Emoji文档风格规范.md` | `emoji-style.instructions.md` |
+| **新增** | `file-reading.instructions.md` ⭐ |
+
+> ⭐ **最新规则**：`file-reading.instructions.md` 是从实际案例中提炼的最高优先级规则，用于防止AI偷懒不读文件就瞎推测。
 
 ## ⚙️ 配置
 
