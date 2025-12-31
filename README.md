@@ -38,17 +38,7 @@ Ti雷达项目/
 │   │   └── 08-跌倒检测xWRL6432迁移AWRL6844方案研究/
 │   └── 4-测试实验结果/            # 测试数据与结果
 │
-├── 📂 知识库/                      # 技术资料库
-│   ├── C_ti_link/                 # TI开发工具链 (CCS等)
-│   ├── Pose_And_Fall_Detection/   # 姿态与跌倒检测参考
-│   ├── Refer_data_LEE/            # 参考资料
-│   ├── SDK配置文件/               # SDK配置示例
-│   ├── 知识库PDF转机器可读文件/    # 技术文档 (40+ 文档)
-│   └── 雷达模块/                  # 雷达硬件相关
-│       ├── IDE/
-│       ├── MMWAVE-STUDIO-XWRL68XX/
-│       ├── RADAR-TOOLBOX/
-│       └── UniFlash 闪存编程工具/
+├── 📂 知识库/                      # ⚠️ 本地技术资料库 (不包含在Git仓库)
 │
 ├── 📂 project-code/               # 项目代码
 ├── 📂 Keys/                       # 密钥文件
@@ -179,6 +169,18 @@ Ti雷达项目/
 ## 📄 许可证
 
 本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
+
+---
+
+## ⚠️ 注意事项
+
+### 知识库目录
+`知识库/` 目录包含本地技术资料（TI SDK、PDF文档、参考代码等），由于体积较大且为只读参考资料，**不包含在Git仓库中**。
+
+如需完整知识库，请自行从TI官网下载：
+- [MMWAVE_L_SDK](https://www.ti.com/tool/MMWAVE-L-SDK)
+- [Radar Toolbox](https://www.ti.com/tool/RADAR-TOOLBOX)
+- [Code Composer Studio](https://www.ti.com/tool/CCSTUDIO)
 
 ---
 
