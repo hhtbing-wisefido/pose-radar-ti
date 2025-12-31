@@ -20,7 +20,7 @@
 
 ## 📂 文档结构
 
-本研究分为**11个部分**，由浅入深，循序渐进：
+本研究分为**12个部分**，由浅入深，循序渐进：
 
 ### Part 1: SDK基础概念与三目录详解 ⭐⭐⭐
 
@@ -624,7 +624,10 @@ mmwave_studio = RF测试工具（测试 + 标定 + 数据采集）
 | 使用测试工具 | Part1 → Part11（mmWave Studio） |
 | 理解Toolbox | Part1 → Part8（工具链+应用） |
 | 深入SDK架构 | Part10（MMWAVE_L_SDK完整解析） |
-| 系统学习 | Part1 → Part2 → Part3 → Part4 → Part8 → Part9 → Part10 → Part11 |
+| 烧录工具选择 | Part12（arprog vs UniFlash） |
+| 烧录问题排查 | Part12（E2E案例+解决方案） |
+| 生产烧录脚本 | Part12（批量烧录自动化） |
+| 系统学习 | Part1 → Part2 → Part3 → Part4 → Part8 → Part9 → Part10 → Part11 → Part12 |
 
 ### 参考速查
 
@@ -645,6 +648,10 @@ mmwave_studio = RF测试工具（测试 + 标定 + 数据采集）
 | Lua脚本如何写？ | Part11 第二章（359页API文档） |
 | 有哪些可视化工具？ | Part8 第四章（18个工具） |
 | 算法库在哪里？ | Part8 第五章 + Part10 第六章 |
+| 烧录工具如何选？ | Part12 第一章（TI官方推荐） |
+| arprog如何使用？ | Part12 第四章（完整步骤） |
+| UniFlash为什么失败？ | Part12 第二章（E2E案例分析） |
+| 烧录脚本怎么写？ | Part12 第五章（生产脚本示例） |
 
 ### 快速定位工具
 
@@ -699,6 +706,17 @@ mmwave_studio = RF测试工具（测试 + 标定 + 数据采集）
 | 2025-12-25 | v2.0 | 新增Part5-7（SysConfig、硬件设计、Radar Academy） |
 | 2025-12-25 | v3.0 | 🎉 新增Part8-11（Radar Toolbox、跌倒检测、MMWAVE_L_SDK、mmWave Studio深度解析） |
 | 2025-12-25 | v3.1 | ✅ PDF转换完成，所有推测内容已用实际文件验证 |
+| 2025-12-29 | v4.0 | 🎉 新增Part12（arprog与UniFlash烧录工具深度对比，基于TI E2E官方论坛） |
+
+**v4.0重大更新**：
+- ✨ **Part12**: arprog与UniFlash烧录工具深度对比（545行）
+  - 基于TI E2E官方论坛真实案例
+  - TI工程师Kristien Everett明确推荐
+  - 完整E2E案例分析（3个典型案例）
+  - 批量烧录自动化脚本
+  - 证据级别：⭐⭐⭐⭐⭐
+
+**历史更新**：
 
 **v3.0重大更新**：
 - ✨ **Part8**: Radar Toolbox工具链与应用实例（1483行）
@@ -706,7 +724,69 @@ mmwave_studio = RF测试工具（测试 + 标定 + 数据采集）
 - ✨ **Part10**: MMWAVE_L_SDK深度解析（2533行）
 - ✨ **Part11**: mmWave Studio深度解析（3126行）
 
-**文档规模**：11个Part文档，总计约**15,000+行**，覆盖完整SDK生态系统
+**文档规模**：12个Part文档，总计约**16,000+行**，覆盖完整SDK生态系统
+
+---
+
+### Part 12: arprog与UniFlash烧录工具深度对比 ⭐⭐⭐⭐⭐ 🆕
+
+**文件**: [Part12-arprog与UniFlash烧录工具深度对比.md](Part12-arprog与UniFlash烧录工具深度对比.md)
+
+**内容概要**：
+- 🔍 TI E2E官方论坛真实案例分析（3个典型案例）
+- 📊 两种工具的详细对比（功能、性能、可靠性）
+- 🎯 TI工程师官方推荐（Kristien Everett明确建议）
+- 🔧 arprog_cmdline_6844正确使用步骤（来自TI工程师）
+- ⚠️ UniFlash在AWRL6844上的问题分析
+- 💡 批量烧录自动化脚本示例
+- 📚 E2E论坛案例统计（7个帖子完整分析）
+- 🎓 烧录工具选择建议
+
+**适合人群**：
+- ✅ 选择烧录工具（arprog vs UniFlash）
+- ✅ 烧录过程遇到问题
+- ✅ 开发生产烧录脚本
+- ✅ 理解Flash编程原理
+- ✅ **所有需要烧录固件的开发者**
+
+**核心解答**：
+```
+TI官方推荐：
+✅ arprog_cmdline_6844.exe - TI工程师明确推荐
+✅ SDK Visualizer - 图形化工具，简单易用
+❌ UniFlash - E2E论坛多个失败案例，不推荐
+
+统计数据（E2E论坛）：
+- TI工程师推荐arprog: 5次
+- 推荐SDK Visualizer: 2次  
+- 推荐UniFlash: 0次
+
+arprog优势：
+1. 专为AWRL6844设计（工具名包含"6844"）
+2. 支持Flash分区格式化（-cf参数）
+3. 多区域烧录（-f1/-f2同时烧录SBL+App）
+4. SDK自带，版本兼容性好
+5. 命令行，易于自动化
+
+UniFlash问题：
+1. 通用工具，不是专门为mmWave设计
+2. 需要复杂的设备配置文件
+3. 不支持6844特殊Flash布局
+4. E2E论坛成功案例极少
+
+典型命令（来自TI工程师）：
+arprog_cmdline_6844.exe -p COM3 \
+  -f1 "sbl_lite.release.appimage" \
+  -f2 "mmwave_demo.release.appimage" \
+  -of1 8192 -of2 270336 -c -s SFLASH -cf
+```
+
+**E2E论坛原始案例**：
+- 案例1 (#1469046): 硬件问题诊断，TI工程师推荐arprog
+- 案例2 (#1531816): 烧录错误解决，详细步骤说明
+- 案例3 (#1513519): SBL烧录，官方命令示例
+
+**证据级别**: ⭐⭐⭐⭐⭐ (基于TI E2E官方论坛 + TI工程师明确推荐)
 
 ---
 
@@ -744,6 +824,7 @@ mmwave_studio = RF测试工具（测试 + 标定 + 数据采集）
 - 🏥 [Part9 - 跌倒检测完整实现](Part9-跌倒检测完整实现与深度学习.md) ⭐ 机器学习
 - 📡 [Part10 - MMWAVE_L_SDK深度解析](Part10-MMWAVE_L_SDK深度解析.md) ⭐ 固件开发
 - 📊 [Part11 - mmWave Studio深度解析](Part11-mmWave%20Studio深度解析.md) ⭐ RF测试
+- 🔧 [Part12 - arprog与UniFlash烧录工具对比](Part12-arprog与UniFlash烧录工具深度对比.md) ⭐ 烧录工具
 
 **核心问题直达**：
 - ❓ [SDK是什么？](Part1-SDK基础概念与三目录详解.md#11-什么是sdk)
@@ -754,10 +835,12 @@ mmwave_studio = RF测试工具（测试 + 标定 + 数据采集）
 - ❓ [如何开发跌倒检测？](Part9-跌倒检测完整实现与深度学习.md#第七章实战部署指南)
 - ❓ [如何修改固件？](Part10-MMWAVE_L_SDK深度解析.md#第三章示例项目深度分析)
 - ❓ [如何使用测试工具？](Part11-mmWave%20Studio深度解析.md#第二章主要组件详解)
+- ❓ [烧录工具如何选？](Part12-arprog与UniFlash烧录工具深度对比.md#核心结论)
+- ❓ [UniFlash为什么失败？](Part12-arprog与UniFlash烧录工具深度对比.md#e2e论坛真实案例分析)
 
 ---
 
-**最后更新**：2025-12-25  
+**最后更新**：2025-12-29  
 **文档作者**：项目开发团队  
-**文档状态**：✅ 完整且经过验证（v3.1）  
-**文档规模**：11个Part，15,000+行，PDF已全部转换
+**文档状态**：✅ 完整且经过验证（v4.0）  
+**文档规模**：12个Part，16,000+行，PDF已全部转换
