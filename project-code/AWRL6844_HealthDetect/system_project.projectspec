@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectSpec>
+    <!-- Import MSS and DSS projects -->
+    <import spec="mss_project.projectspec"/>
+    <import spec="dss_project.projectspec"/>
+    
+    <project
+        name="AWRL6844_HealthDetect_System"
+        products="MMWAVE-L-SDK-6:06.01.00.01"
+        configurations="
+            Release,
+            Debug,
+        "
+        connection="TIXDS110_Connection.xml"
+        device="Cortex R.AWRL68xx"
+        outputType="system"
+        toolChain="TICLANG"
+        description="AWRL6844 Health Detection - Multi-Core System Project">
+        
+        <configuration name="Debug">
+        </configuration>
+        
+        <configuration name="Release">
+        </configuration>
+        
+        <pathVariable name="MCU_PLUS_SDK_PATH" path="${COM_TI_MMWAVE_L_SDK_6_INSTALL_DIR}" scope="project" />
+        
+        <!-- System Configuration Files -->
+        <file path="src/system/system.xml" action="copy" openOnCreation="true"/>
+        <file path="src/system/makefile_system_ccs_bootimage_gen" action="copy" openOnCreation="false"/>
+        <file path="src/system/config/metaimage_cfg.debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+        <file path="src/system/config/metaimage_cfg.release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+    </project>
+</projectSpec>
