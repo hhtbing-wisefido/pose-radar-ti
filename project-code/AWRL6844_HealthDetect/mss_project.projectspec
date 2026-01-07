@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectSpec>
+    <project
+        name="AWRL6844_HealthDetect_MSS"
+        deviceFamily="ARM"
+        deviceEndianness="little"
+        deviceId="Cortex R.AWR6843"
+        cgtVersion="20.2.7.LTS"
+        outputType="executable"
+        compilerBuildOptions="
+            -mv7R5 --code_state=32 --float_support=VFPv3D16 
+            -O3 -g --diag_warning=225 --display_error_number 
+            --enum_type=int --abi=eabi --c99
+            -I${PROJECT_ROOT}/src/common
+            -I${PROJECT_ROOT}/src/mss
+            -I${TI_SDK_ROOT}/packages
+            -I${TI_SDK_ROOT}/packages/ti/control/mmwave
+            -I${TI_SDK_ROOT}/packages/ti/drivers
+            -D_LITTLE_ENDIAN
+            -DSOC_XWR68XX
+            -DSUBSYS_MSS
+            -DHEALTH_DETECT_VERSION=1.0.0
+        "
+        linkerBuildOptions="
+            -m AWRL6844_HealthDetect_MSS.map
+            -i${TI_SDK_ROOT}/packages/ti/control/mmwave/lib
+            -i${TI_SDK_ROOT}/packages/ti/drivers/lib
+            -i${TI_SDK_ROOT}/packages/ti/alg/mmwavelib/lib
+            --reread_libs --warn_sections
+            --display_error_number --rom_model
+            -heap 0x4000 -stack 0x2000
+        "
+        postBuildStep=""
+        description="AWRL6844 Health Detection - MSS/R5F Application">
+
+        <!-- Source Files - MSS Application Layer -->
+        <file path="src/mss/health_detect_main.c" targetDirectory="src/mss"/>
+        <file path="src/mss/dpc_control.c" targetDirectory="src/mss"/>
+        <file path="src/mss/cli.c" targetDirectory="src/mss"/>
+        <file path="src/mss/presence_detect.c" targetDirectory="src/mss"/>
+        <file path="src/mss/tlv_output.c" targetDirectory="src/mss"/>
+        <file path="src/mss/radar_control.c" targetDirectory="src/mss"/>
+
+        <!-- Header Files - MSS -->
+        <file path="src/mss/health_detect_main.h" targetDirectory="src/mss"/>
+        <file path="src/mss/dpc_control.h" targetDirectory="src/mss"/>
+        <file path="src/mss/cli.h" targetDirectory="src/mss"/>
+        <file path="src/mss/presence_detect.h" targetDirectory="src/mss"/>
+        <file path="src/mss/tlv_output.h" targetDirectory="src/mss"/>
+        <file path="src/mss/radar_control.h" targetDirectory="src/mss"/>
+
+        <!-- Common Interface Layer -->
+        <file path="src/common/shared_memory.h" targetDirectory="src/common"/>
+        <file path="src/common/data_path.h" targetDirectory="src/common"/>
+        <file path="src/common/mmwave_output.h" targetDirectory="src/common"/>
+        <file path="src/common/health_detect_types.h" targetDirectory="src/common"/>
+
+        <!-- Linker Command File -->
+        <file path="src/system/linker_mss.cmd" targetDirectory="src/system"/>
+        <file path="src/system/shared_memory.ld" targetDirectory="src/system"/>
+
+        <!-- Configuration -->
+        <pathVariable name="PROJECT_ROOT" path="." scope="project"/>
+        <pathVariable name="TI_SDK_ROOT" path="C:/ti/mmwave_sdk_03_06_02_00_00" scope="project"/>
+        
+        <configuration name="Debug"
+            compilerBuildOptions="-g -O0"
+            linkerBuildOptions=""/>
+            
+        <configuration name="Release"
+            compilerBuildOptions="-O3 -DNDEBUG"
+            linkerBuildOptions="--opt_level=3"/>
+    </project>
+</projectSpec>

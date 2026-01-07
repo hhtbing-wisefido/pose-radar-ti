@@ -1,0 +1,1780 @@
+﻿# 📋 AWRL6844雷达健康检测-03-实施目录大纲
+
+> **目标**: 详细的实施步骤和代码开发大纲
+> **创建日期**: 2026-01-05
+> **状态**: ✅ 已生成
+
+---
+
+## 📊 实施总览
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│           AWRL6844雷达健康检测 实施章节结构                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Phase 1A (核心功能)     Phase 1B (辅助功能)    Phase 2 (扩展)   │
+│  ──────────────────     ──────────────────    ─────────────     │
+│  第1章 环境搭建          第5章 杂波移除优化     第8章 呼吸检测    │
+│  第2章 人存检测验证      第6章 背景学习开发     第9章 人数统计    │
+│  第3章 姿态检测开发      第7章 区域划分开发     第10章 综合测试   │
+│  第4章 跌倒检测开发                                             │
+│       ↓                       ↓                    ↓            │
+│  [基础固件]              [增强固件]            [完整固件]        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 项目目录演进规划 ⭐
+
+> **核心原则**：每个文件明确标注来源（新建/复制/修改）和依赖关系，确保完整可追溯
+
+### 文件来源标记说明
+
+| 标记             | 含义             | 说明                     |
+| ---------------- | ---------------- | ------------------------ |
+| 🆕**新建** | 从零创建         | 本项目原创代码/文档      |
+| 📋**复制** | 从SDK复制        | 复制后可能需要修改       |
+| 🔧**修改** | 修改已有文件     | 在已有文件基础上增加功能 |
+| 📦**依赖** | 直接使用SDK库    | 不修改，直接链接使用     |
+| 📄**派生** | 基于参考代码改写 | 参考SDK代码重新实现      |
+
+---
+
+### 第1章 环境搭建 - 目录变更详情
+
+**本章目标**：创建项目骨架，复制必要的SDK资源
+
+```
+project-code/AWRL6844_HealthDetect/          # 🆕 新建目录
+├── README.md                                 # 🆕 新建：项目说明文档
+│   └── 内容：项目概述、目录结构、构建说明
+│
+├── src/                                      # 🆕 新建空目录
+│   └── （待后续章节填充）
+│
+├── lib/                                      # 🆕 新建目录
+│   ├── cnn_classifier.lib                   # 📦 依赖：CNN分类器库
+│   │   └── 来源：C:\ti\MMWAVE_L_SDK_06_01_00_01\examples\mmw_demo\mmwave_demo\lib\
+│   ├── intrusionDetection.lib               # 📦 依赖：入侵检测库
+│   │   └── 来源：同上
+│   └── occupancyClassifier.lib              # 📦 依赖：占用分类库
+│       └── 来源：同上
+│
+├── radar_config_file/                        # 🆕 新建目录
+│   ├── README.md                            # 🆕 新建：配置文件说明
+│   │   └── 内容：配置文件用途、参数说明、修改指南
+│   └── profile_base.cfg                     # 📋 复制：基础雷达配置
+│       ├── 来源：C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\visualizer\tmp\6844_profile_4T4R_tdm.cfg
+│       └── 用途：作为项目基础配置模板
+│
+└── docs/                                     # 🆕 新建空目录
+    └── （待第10章填充）
+```
+
+**文件清单**：
+
+| 文件                                   | 操作    | 来源/依赖           | 用途         |
+| -------------------------------------- | ------- | ------------------- | ------------ |
+| `README.md`                          | 🆕 新建 | -                   | 项目说明     |
+| `lib/cnn_classifier.lib`             | 📦 依赖 | SDK mmw_demo/lib/   | CNN推理      |
+| `lib/intrusionDetection.lib`         | 📦 依赖 | SDK mmw_demo/lib/   | 入侵检测算法 |
+| `lib/occupancyClassifier.lib`        | 📦 依赖 | SDK mmw_demo/lib/   | 占用分类算法 |
+| `radar_config_file/README.md`        | 🆕 新建 | -                   | 配置说明     |
+| `radar_config_file/profile_base.cfg` | 📋 复制 | SDK visualizer/tmp/ | 基础配置     |
+
+---
+
+### 第2章 人存检测验证 - 目录变更详情
+
+**本章目标**：分析SDK现有代码，验证人存检测功能，无代码产出
+
+```
+project-code/AWRL6844_HealthDetect/
+└── （无文件变更，本章为分析验证阶段）
+
+分析对象（使用本地副本，已修复API兼容性问题）：
+├── project-code/AWRL6844_InCabin_Demos/src/
+│   ├── mss/source/alg/occupancyClassifier/  # 分析：占用分类器实现
+│   ├── mss/source/alg/intrusionDetection/   # 分析：入侵检测实现
+│   └── mss/source/mmwave_demo_mss.c         # 分析：主程序流程（已修复）
+└── 输出：人存检测接口分析文档（记录在开发记录目录）
+```
+
+**产出物**：
+
+- 接口分析文档（放入 `项目文档/2-开发记录/` 而非项目代码目录）
+- 无代码文件新增
+
+---
+
+### 第3章 姿态检测开发 - 目录变更详情
+
+**本章目标**：开发姿态检测模块，参考xWRL6432的pose算法
+
+```
+project-code/AWRL6844_HealthDetect/
+└── src/
+    ├── pose_detect.h                        # 🆕 新建：姿态检测头文件
+    │   ├── 参考：知识库/Pose_And_Fall_Detection/src/xWRL6432/pose.h
+    │   ├── 内容：姿态类型枚举、结果结构体、接口声明
+    │   └── 依赖：需要点云数据结构（从SDK头文件引用）
+    │
+    └── pose_detect.c                        # 📄 派生：姿态检测实现
+        ├── 参考：知识库/Pose_And_Fall_Detection/src/xWRL6432/pose.c
+        ├── 内容：
+        │   ├── 特征提取（点云质心、分布、速度特征）
+        │   ├── CNN分类调用（使用lib/cnn_classifier.lib）
+        │   └── 姿态结果输出
+        └── 依赖：
+            ├── lib/cnn_classifier.lib（CNN推理）
+            └── SDK头文件（点云数据结构）
+```
+
+**文件清单**：
+
+| 文件                  | 操作    | 来源/参考            | 依赖               | 用途         |
+| --------------------- | ------- | -------------------- | ------------------ | ------------ |
+| `src/pose_detect.h` | 🆕 新建 | 参考 xWRL6432/pose.h | SDK点云结构        | 接口定义     |
+| `src/pose_detect.c` | 📄 派生 | 参考 xWRL6432/pose.c | cnn_classifier.lib | 姿态检测实现 |
+
+**参考资源**：
+
+- `知识库/Pose_And_Fall_Detection/src/xWRL6432/pose.c` - 特征提取算法
+- `知识库/Pose_And_Fall_Detection/src/xWRL6432/pose.h` - 数据结构定义
+- `知识库/Pose_And_Fall_Detection/retraining_resources/dataset/` - 验证数据集
+
+---
+
+### 第4章 跌倒检测开发 - 目录变更详情
+
+**本章目标**：开发跌倒检测模块和健康检测主模块
+
+```
+project-code/AWRL6844_HealthDetect/
+└── src/
+    ├── fall_detect.h                        # 🆕 新建：跌倒检测头文件
+    │   ├── 内容：跌倒状态枚举、检测结构体、接口声明
+    │   └── 依赖：pose_detect.h（姿态结果）
+    │
+    ├── fall_detect.c                        # 🆕 新建：跌倒检测实现
+    │   ├── 内容：
+    │   │   ├── 状态机实现（正常→疑似→确认→告警）
+    │   │   ├── 跌倒判断逻辑
+    │   │   └── 防误报机制
+    │   └── 依赖：pose_detect.h/c
+    │
+    ├── health_detect.h                      # 🆕 新建：主模块头文件
+    │   ├── 内容：健康检测总接口、配置结构体
+    │   └── 依赖：pose_detect.h, fall_detect.h
+    │
+    ├── health_detect.c                      # 🆕 新建：主模块实现
+    │   ├── 内容：
+    │   │   ├── 初始化流程
+    │   │   ├── 主处理循环（人存→姿态→跌倒）
+    │   │   ├── TLV输出封装
+    │   │   └── CLI命令处理
+    │   └── 依赖：pose_detect.c, fall_detect.c, SDK库
+    │
+    └── pose_detect.c                        # 🔧 修改：添加与主模块的集成接口
+        └── 修改内容：优化接口以便health_detect调用
+```
+
+**文件清单**：
+
+| 文件                    | 操作    | 来源/参考 | 依赖               | 用途         |
+| ----------------------- | ------- | --------- | ------------------ | ------------ |
+| `src/fall_detect.h`   | 🆕 新建 | 自主设计  | pose_detect.h      | 跌倒检测接口 |
+| `src/fall_detect.c`   | 🆕 新建 | 自主设计  | pose_detect.*      | 跌倒检测实现 |
+| `src/health_detect.h` | 🆕 新建 | 自主设计  | pose/fall_detect.h | 主模块接口   |
+| `src/health_detect.c` | 🆕 新建 | 自主设计  | 所有模块           | 主模块实现   |
+| `src/pose_detect.c`   | 🔧 修改 | 第3章产物 | -                  | 集成优化     |
+
+---
+
+### 第5章 杂波移除优化 - 目录变更详情
+
+**本章目标**：优化雷达配置参数，减少杂波影响
+
+```
+project-code/AWRL6844_HealthDetect/
+└── radar_config_file/
+    ├── profile_base.cfg                     # （保留不变）
+    │
+    └── profile_health.cfg                   # 📄 派生：健康检测优化配置
+        ├── 来源：基于 profile_base.cfg 修改
+        ├── 修改内容：
+        │   ├── clutterRemoval 参数优化
+        │   ├── MTI滤波器系数调整
+        │   ├── CFAR阈值优化
+        │   └── 帧率/检测范围调整
+        └── 参考：项目文档/3-固件工具/05-雷达配置参数研究/
+```
+
+**文件清单**：
+
+| 文件                                     | 操作    | 来源/参考            | 用途                 |
+| ---------------------------------------- | ------- | -------------------- | -------------------- |
+| `radar_config_file/profile_health.cfg` | 📄 派生 | 基于profile_base.cfg | 优化后的健康检测配置 |
+
+**参考资源**：
+
+- `项目文档/3-固件工具/05-雷达配置参数研究/雷达配置文件深度分析_v2.0_Part1.md`
+- `项目文档/4-测试实验结果/2.雷达配置实际测试结果.md`
+
+#### ⭐ TI官方调优指南（必读）
+
+> **重要**：以下TI官方文档包含经过验证的参数调优经验，开发时必须参考！
+
+| 文档                                | 知识库位置                                                                                | 价值等级                 | 关键内容                                            |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------ | --------------------------------------------------- |
+| **Point Cloud Tuning Guide**  | `知识库/知识库PDF转机器可读文件/AWRL6844_CPD_&_SBR_Point_Cloud_Tuning_Guide.md`         | ⭐⭐⭐⭐⭐**最高** | 相位校准、传感器安装位置、sensorPosition CLI        |
+| **Parameter Tuning Guide**    | `知识库/知识库PDF转机器可读文件/Parameter_Tuning_Guide_for_Intrusion_Detection_Demo.md` | ⭐⭐⭐⭐⭐**最高** | CFAR配置、杂波移除、天线模式补偿                    |
+| **3D Detection Layer Tuning** | `知识库/知识库PDF转机器可读文件/3D_people_tracking_detection_layer_tuning_guide.md`     | ⭐⭐⭐⭐**高**     | 更详细的CFAR配置、静态杂波移除、角度估计            |
+| **TI校准指南**                | `知识库/知识库PDF转机器可读文件/TI 低功耗毫米波雷达传感器中的校准 (Rev. B).md`          | ⭐⭐⭐**中等**     | 运行时校准流程、OLPC/CLPC功率控制                   |
+| **AOA校正DPU**                | `知识库/知识库PDF转机器可读文件/AOA_SVC_DPU_Implementation_Details.md`                  | ⭐⭐⭐**中等**     | 角度估计校正、Steering Vector方法（角度问题时参考） |
+
+**必须参考的调优步骤**：
+
+1. **相位校准（Phase Calibration）**
+
+   - 参考SDK用户指南的Rx Gain Measurement Compensation章节
+   - 提升点云质量的关键步骤
+2. **CFAR参数配置**
+
+   - 参考 Parameter Tuning Guide 的 Section 2.2 CFAR Configuration
+   - 参考 3D Detection Layer Tuning 的 Section 2.2 Dynamic Scene CFAR Configuration
+   - 调整检测阈值减少漏检/误检
+3. **杂波移除配置**
+
+   - 参考 Parameter Tuning Guide 的 Section 2.3 Clutter Removal Configuration
+   - 参考 3D Detection Layer Tuning 的 Section 1.1.2 Static Clutter Removal
+   - 静态杂波过滤参数优化
+4. **运行时校准（可选）**
+
+   - 参考 TI校准指南 的 Section 6.2 运行时操作软件序列
+   - 温度变化时的校准补偿
+
+---
+
+### 第6章 背景学习开发 - 目录变更详情
+
+**本章目标**：开发背景学习模块，减少静态物体误检
+
+```
+project-code/AWRL6844_HealthDetect/
+└── src/
+    ├── background_learn.h                   # 🆕 新建：背景学习头文件
+    │   ├── 内容：背景模型结构体、学习状态、接口声明
+    │   └── 依赖：SDK Flash存储API
+    │
+    ├── background_learn.c                   # 🆕 新建：背景学习实现
+    │   ├── 内容：
+    │   │   ├── 学习模式（采集静态点云）
+    │   │   ├── 背景模型构建
+    │   │   ├── 背景过滤算法
+    │   │   ├── Flash存储/加载
+    │   │   └── CLI命令（learnBackground, clearBackground）
+    │   └── 依赖：SDK Flash API
+    │
+    └── health_detect.c                      # 🔧 修改：集成背景过滤
+        └── 修改内容：
+            ├── 初始化时加载背景模型
+            ├── 处理流程中调用Background_filter()
+            └── 添加背景学习CLI命令处理
+```
+
+**文件清单**：
+
+| 文件                       | 操作    | 来源/参考 | 依赖               | 用途         |
+| -------------------------- | ------- | --------- | ------------------ | ------------ |
+| `src/background_learn.h` | 🆕 新建 | 自主设计  | SDK Flash API      | 背景学习接口 |
+| `src/background_learn.c` | 🆕 新建 | 自主设计  | SDK Flash API      | 背景学习实现 |
+| `src/health_detect.c`    | 🔧 修改 | 第4章产物 | background_learn.* | 集成背景过滤 |
+
+#### ⭐ TI官方参考：Reference Zone概念
+
+> **重要**：TI入侵检测Demo中的"Reference Zone"概念可直接复用于背景学习！
+
+| 概念                     | TI原始用途                 | 健康检测复用       |
+| ------------------------ | -------------------------- | ------------------ |
+| **Reference Zone** | 车内中心区域作为非占用参考 | 静态背景区域       |
+| **Target Zone**    | 边界区域检测入侵           | 活动检测区域       |
+| **SNR对比**        | 目标区vs参考区SNR差异      | 动态目标vs背景差异 |
+
+**参考文档**：
+
+- `知识库/知识库PDF转机器可读文件/Parameter_Tuning_Guide_for_Intrusion_Detection_Demo.md`
+  - Section 1: Introduction - Figure 2 区域定义概念
+  - High-Level Processing 中的 Reference Zone 与 Target Zone 对比逻辑
+
+---
+
+### 第7章 区域划分开发 - 目录变更详情
+
+**本章目标**：开发区域配置模块，实现床区/活动区差异化策略
+
+```
+project-code/AWRL6844_HealthDetect/
+├── src/
+│   ├── zone_config.h                        # 🆕 新建：区域配置头文件
+│   │   ├── 内容：区域类型枚举、区域结构体、接口声明
+│   │   └── 依赖：无
+│   │
+│   ├── zone_config.c                        # 🆕 新建：区域配置实现
+│   │   ├── 内容：
+│   │   │   ├── 区域定义（矩形范围）
+│   │   │   ├── 目标区域判断
+│   │   │   ├── Flash存储/加载
+│   │   │   └── CLI命令（zoneConfig, zoneShow）
+│   │   └── 依赖：SDK Flash API
+│   │
+│   └── fall_detect.c                        # 🔧 修改：添加区域联动
+│       └── 修改内容：
+│           ├── 跌倒检测考虑区域因素
+│           ├── 床区降低灵敏度
+│           └── 活动区正常灵敏度
+│
+└── radar_config_file/
+    └── zone_default.cfg                     # 🆕 新建：默认区域配置
+        ├── 内容：默认床区/活动区坐标定义
+        └── 格式：自定义配置格式
+```
+
+**文件清单**：
+
+| 文件                                   | 操作    | 来源/参考                    | 依赖          | 用途         |
+| -------------------------------------- | ------- | ---------------------------- | ------------- | ------------ |
+| `src/zone_config.h`                  | 🆕 新建 | 参考TI cuboidDef格式         | -             | 区域配置接口 |
+| `src/zone_config.c`                  | 🆕 新建 | 参考TI区域定义CLI            | SDK Flash API | 区域配置实现 |
+| `src/fall_detect.c`                  | 🔧 修改 | 第4章产物                    | zone_config.* | 区域联动     |
+| `radar_config_file/zone_default.cfg` | 🆕 新建 | 参考TI zoneDefinitionGenTool | -             | 默认区域     |
+
+#### ⭐ TI官方区域定义工具（关键参考）
+
+> **重要**：TI提供了完整的区域定义工具和CLI格式，可直接复用！
+
+**工具位置**（本地副本）：
+
+```
+项目文档/3-固件工具/08-AWRL6844雷达健康检测实现方案/
+  AWRL6844_InCabin_Demos/docs/Seat_Belt_Reminder/zoneDefinitionGenTool.xlsx
+```
+
+**TI区域定义CLI格式**（直接复用）：
+
+| CLI命令            | 参数                                           | 说明             |
+| ------------------ | ---------------------------------------------- | ---------------- |
+| `sensorPosition` | xOffset yOffset zOffset azimTilt elevTilt      | 传感器安装位置   |
+| `cuboidDef`      | zoneId subZoneId xMin xMax yMin yMax zMin zMax | 3D立方体区域定义 |
+
+**TI区域定义示例**（从zoneDefinitionGenTool.xlsx提取）：
+
+```
+# 传感器位置
+sensorPosition 0 0.7 1.1 0 -59
+
+# 区域定义格式：cuboidDef zoneId subZoneId xMin xMax yMin yMax zMin zMax
+# Zone 0 - 驾驶座
+cuboidDef 0 0 0.15 0.7 0.45 1.06 0.6 1.2    # body区域
+cuboidDef 0 1 0.15 0.7 0.1 0.9 0.3 0.6      # leg区域
+cuboidDef 0 2 0.15 0.7 -0.2 0.5 -0.2 0.3    # footwell区域
+```
+
+**健康检测场景区域设计**（基于TI格式扩展）：
+
+```
+# 室内健康检测场景区域定义示例
+# Zone 0 - 床区（降低跌倒检测灵敏度）
+cuboidDef 0 0 -1.0 1.0 0.0 2.0 0.0 0.8      # 床面区域
+
+# Zone 1 - 活动区（正常跌倒检测）
+cuboidDef 1 0 -2.0 2.0 2.0 5.0 0.0 2.0      # 主活动区域
+
+# Zone 2 - 入口区
+cuboidDef 2 0 -1.5 1.5 5.0 6.0 0.0 2.0      # 门口区域
+```
+
+**参考文档**：
+
+- `知识库/知识库PDF转机器可读文件/Parameter_Tuning_Guide_for_Intrusion_Detection_Demo.md`
+  - Section 2.3.1 Scene Configuration
+  - Figure 2: 区域划分概念图
+- TI E2E论坛：区域配置最佳实践
+
+---
+
+### 第8章 呼吸检测研究 - 目录变更详情
+
+**本章目标**：研究呼吸检测可行性（可选功能）
+
+```
+project-code/AWRL6844_HealthDetect/
+└── src/
+    ├── breath_detect.h                      # 🆕 新建（可选）：呼吸检测头文件
+    │   ├── 内容：呼吸检测结果结构体、接口声明
+    │   ├── 参考：IWR6843 Vital Signs Demo
+    │   └── 状态：视研究结果决定是否实现
+    │
+    ├── breath_detect.c                      # 📄 派生（可选）：呼吸检测实现
+    │   ├── 内容：
+    │   │   ├── 相位提取
+    │   │   ├── 带通滤波（0.1-0.5Hz）
+    │   │   ├── 呼吸频率估计
+    │   │   └── CLI命令
+    │   ├── 参考：IWR6843 Vital Signs算法
+    │   └── 依赖：SDK DSP库（FFT）
+    │
+    └── health_detect.c                      # 🔧 修改（可选）：集成呼吸检测
+        └── 修改内容：可选编译开关，集成呼吸检测模块
+```
+
+**文件清单**：
+
+| 文件                    | 操作    | 来源/参考   | 状态      | 用途         |
+| ----------------------- | ------- | ----------- | --------- | ------------ |
+| `src/breath_detect.h` | 🆕 新建 | 参考IWR6843 | ⚠️ 可选 | 呼吸检测接口 |
+| `src/breath_detect.c` | 📄 派生 | 参考IWR6843 | ⚠️ 可选 | 呼吸检测实现 |
+| `src/health_detect.c` | 🔧 修改 | 第6章产物   | ⚠️ 可选 | 集成呼吸检测 |
+
+**参考资源**：
+
+- TI IWR6843 Vital Signs Demo（SDK外部资源）
+- `知识库/知识库PDF转机器可读文件/` 中的相关文档
+
+---
+
+### 第9章 人数统计开发 - 目录变更详情
+
+**本章目标**：开发人数统计模块
+
+```
+project-code/AWRL6844_HealthDetect/
+└── src/
+    ├── people_count.h                       # 🆕 新建：人数统计头文件
+    │   ├── 内容：人数统计结果结构体、接口声明
+    │   └── 依赖：点云数据结构
+    │
+    ├── people_count.c                       # 🆕 新建：人数统计实现
+    │   ├── 内容：
+    │   │   ├── DBSCAN点云聚类算法
+    │   │   ├── 多目标分离
+    │   │   ├── 人数计数（0/1/2/3+）
+    │   │   └── CLI命令
+    │   └── 依赖：SDK点云数据结构
+    │
+    └── health_detect.c                      # 🔧 修改：集成人数统计
+        └── 修改内容：
+            ├── 初始化人数统计模块
+            ├── 处理流程中调用PeopleCount_process()
+            └── TLV输出中添加人数信息
+```
+
+**文件清单**：
+
+| 文件                    | 操作    | 来源/参考                 | 依赖           | 用途         |
+| ----------------------- | ------- | ------------------------- | -------------- | ------------ |
+| `src/people_count.h`  | 🆕 新建 | 参考TI Group Tracker      | SDK点云结构    | 人数统计接口 |
+| `src/people_count.c`  | 🆕 新建 | 参考TI 3D People Tracking | SDK点云结构    | 人数统计实现 |
+| `src/health_detect.c` | 🔧 修改 | 第8章产物                 | people_count.* | 集成人数统计 |
+
+#### ⭐ TI官方人数统计/跟踪参考资料（关键必读）
+
+> **重要**：以下文档是TI官方的人数跟踪实现指南，包含完整的算法和参数调优经验！
+
+| 文档                                                                | 知识库位置                          | 价值等级                 | 关键内容                                   |
+| ------------------------------------------------------------------- | ----------------------------------- | ------------------------ | ------------------------------------------ |
+| **3D_people_tracking_demo_implementation_guide.md**           | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐⭐**最高** | SDK处理链架构、DPU设计、执行流程、任务模型 |
+| **3D_people_tracking_tracker_layer_tuning_guide.md**          | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐⭐**最高** | Tracker参数调优、状态转换、Ghost问题解决   |
+| **3D_people_tracking_detection_layer_tuning_guide.md**        | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐**高**     | 检测层CFAR配置、角度估计、静态杂波移除     |
+| **people_counting_customization_guide.md**                    | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐**高**     | 常见问题解决（太少/太多检测、鬼影）        |
+| **Tracking_radar_targets_with_multiple_reflection_points.md** | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐**高**     | Group Tracker算法详解、实现细节            |
+
+**必须参考的核心内容**：
+
+1. **Group Tracker算法**（Tracking_radar_targets...）
+
+   - Point Cloud Tagging（点云标记）
+   - Predict → Associate → Allocate → Update → Maintenance 流程
+   - 状态机设计（DETECT → ACTIVE → FREE）
+2. **Tracker参数调优**（tracker_layer_tuning_guide）
+
+   - Scenery Parameters（场景边界）
+   - Gating Parameters（门限参数）
+   - Allocation Parameters（分配参数）
+   - State Transition Parameters（状态转换）
+3. **常见问题解决**（people_counting_customization_guide）
+
+   - 太少检测：降低SNR阈值、Points阈值
+   - 太多检测（Ghost）：调整Allocation参数、增加Det2Active阈值
+   - 多人粘连：调整Gating Volume/Length/Width
+
+---
+
+### 第10章 综合测试与验收 - 目录变更详情
+
+**本章目标**：完善文档，进行综合测试
+
+```
+project-code/AWRL6844_HealthDetect/
+└── docs/
+    ├── API参考.md                           # 🆕 新建：API文档
+    │   ├── 内容：
+    │   │   ├── 各模块API详细说明
+    │   │   ├── 数据结构定义
+    │   │   ├── 函数原型和参数说明
+    │   │   └── 使用示例
+    │   └── 来源：基于src/中所有头文件自动生成+手动补充
+    │
+    └── 使用手册.md                          # 🆕 新建：用户手册
+        ├── 内容：
+        │   ├── 硬件安装指南
+        │   ├── 固件烧录步骤
+        │   ├── 配置文件说明
+        │   ├── CLI命令大全
+        │   ├── 功能使用说明
+        │   └── 常见问题解答
+        └── 来源：汇总各章节文档
+```
+
+**文件清单**：
+
+| 文件                 | 操作    | 来源/参考       | 用途     |
+| -------------------- | ------- | --------------- | -------- |
+| `docs/API参考.md`  | 🆕 新建 | 基于src/*.h生成 | API文档  |
+| `docs/使用手册.md` | 🆕 新建 | 汇总各章节      | 用户指南 |
+
+---
+
+### 项目目录最终结构（第10章完成后）
+
+```
+project-code/AWRL6844_HealthDetect/
+├── README.md                                # 第1章 🆕 新建
+├── src/
+│   ├── health_detect.c                     # 第4章 🆕 新建 → 第6/8/9章 🔧 修改
+│   ├── health_detect.h                     # 第4章 🆕 新建
+│   ├── pose_detect.c                       # 第3章 📄 派生 → 第4章 🔧 修改
+│   ├── pose_detect.h                       # 第3章 🆕 新建
+│   ├── fall_detect.c                       # 第4章 🆕 新建 → 第7章 🔧 修改
+│   ├── fall_detect.h                       # 第4章 🆕 新建
+│   ├── background_learn.c                  # 第6章 🆕 新建
+│   ├── background_learn.h                  # 第6章 🆕 新建
+│   ├── zone_config.c                       # 第7章 🆕 新建
+│   ├── zone_config.h                       # 第7章 🆕 新建
+│   ├── breath_detect.c                     # 第8章 🆕 新建（可选）
+│   ├── breath_detect.h                     # 第8章 🆕 新建（可选）
+│   ├── people_count.c                      # 第9章 🆕 新建
+│   └── people_count.h                      # 第9章 🆕 新建
+├── lib/
+│   ├── cnn_classifier.lib                  # 第1章 📦 依赖
+│   ├── intrusionDetection.lib              # 第1章 📦 依赖
+│   └── occupancyClassifier.lib             # 第1章 📦 依赖
+├── radar_config_file/
+│   ├── README.md                           # 第1章 🆕 新建
+│   ├── profile_base.cfg                    # 第1章 📋 复制
+│   ├── profile_health.cfg                  # 第5章 📄 派生
+│   └── zone_default.cfg                    # 第7章 🆕 新建
+└── docs/
+    ├── API参考.md                          # 第10章 🆕 新建
+    └── 使用手册.md                         # 第10章 🆕 新建
+```
+
+---
+
+### 文件依赖关系图
+
+```
+                    ┌─────────────────┐
+                    │ health_detect.* │ ← 主模块，集成所有功能
+                    └────────┬────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        ↓                    ↓                    ↓
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│ pose_detect.* │   │ fall_detect.* │   │ background_   │
+│  (第3章)      │   │  (第4章)      │   │  learn.*      │
+└───────┬───────┘   └───────┬───────┘   │  (第6章)      │
+        │                   │           └───────────────┘
+        │                   ↓
+        │           ┌───────────────┐   ┌───────────────┐
+        │           │ zone_config.* │   │ people_count.*│
+        │           │  (第7章)      │   │  (第9章)      │
+        │           └───────────────┘   └───────────────┘
+        │
+        ↓
+┌───────────────┐   ┌───────────────┐
+│cnn_classifier │   │ breath_detect │
+│   .lib        │   │ .* (第8章)    │
+│  (SDK依赖)    │   │  (可选)       │
+└───────────────┘   └───────────────┘
+```
+
+---
+
+## 📚 目录
+
+### 项目目录规划
+
+- [📁 项目目录演进规划](#-项目目录演进规划-) ⭐
+
+### Phase 1A：核心功能
+
+- [第1章 环境搭建](#第1章-环境搭建)（含项目目录初始化）
+- [第2章 人存检测验证](#第2章-人存检测验证)
+- [第3章 姿态检测开发](#第3章-姿态检测开发)
+- [第4章 跌倒检测开发](#第4章-跌倒检测开发)
+
+### Phase 1B：辅助功能
+
+- [第5章 杂波移除优化](#第5章-杂波移除优化)
+- [第6章 背景学习开发](#第6章-背景学习开发)
+- [第7章 区域划分开发](#第7章-区域划分开发)
+
+### Phase 2：扩展研究
+
+- [第8章 呼吸检测研究](#第8章-呼吸检测研究)
+- [第9章 人数统计开发](#第9章-人数统计开发)
+- [第10章 综合测试与验收](#第10章-综合测试与验收)
+
+### 附录
+
+- [附录A 现有数据集资源](#附录a-现有数据集资源)
+- [附录B 代码目录结构](#附录b-代码目录结构)
+- [附录C CLI命令清单](#附录c-cli命令清单)
+- [附录D TLV输出格式](#附录d-tlv输出格式)
+- [附录E 参考资料索引](#附录e-参考资料索引) ⭐ 新增
+- [附录F CCS与VS Code开发对比](./AWRL6844雷达健康检测-附录F-CCS与VSCode开发对比.md) ⭐ 新增
+
+---
+
+# Phase 1A：核心功能
+
+---
+
+## 第1章 环境搭建
+
+### 1.1 开发环境准备
+
+```
+任务清单：
+├── □ 1.1.1 安装/确认 CCS 版本
+├── □ 1.1.2 安装 MMWAVE_L_SDK
+├── □ 1.1.3 安装 Radar Toolbox
+├── □ 1.1.4 导入 AWRL6844_InCabin_Demos 工程
+└── □ 1.1.5 编译验证（无错误）
+```
+
+### 1.2 硬件验证
+
+```
+任务清单：
+├── □ 1.2.1 连接 AWRL6844-EVM
+├── □ 1.2.2 烧录预编译固件
+├── □ 1.2.3 串口通信验证
+└── □ 1.2.4 基础CLI功能验证
+```
+
+### 1.3 雷达配置文件加载 ⭐
+
+> **关键步骤**：没有配置文件，雷达无法启动工作！
+
+```
+任务清单：
+├── □ 1.3.1 理解配置文件作用（chirp参数、检测模式）
+├── □ 1.3.2 获取SDK默认配置文件位置
+│   ├── SDK Visualizer: visualizer/tmp/6844_profile_4T4R_tdm.cfg
+│   ├── InCabin GUI: chirpConfigs6844/cpd.cfg、sbr.cfg、intrusion_detection.cfg
+│   └── 数据采集工具: mmwave_data_recorder/src/cfg/
+├── □ 1.3.3 使用SDK Visualizer发送配置（首选方法）
+├── □ 1.3.4 使用05-雷达配置参数研究工具验证配置
+├── □ 1.3.5 验证雷达数据输出正常
+└── □ 1.3.6 配置文件参数说明（详见05-雷达配置参数研究）
+```
+
+**配置文件工具对照**：
+
+| 工具                          | 用途              | 详细说明                   |
+| ----------------------------- | ----------------- | -------------------------- |
+| **SDK Visualizer**      | 发送配置+可视化   | TI官方一体化工具，首选     |
+| **05-雷达配置参数研究** | 配置测试+参数分析 | 项目自研工具，详细参数说明 |
+| **InCabin GUI**         | 专用Demo配置      | CPD/SBR/入侵检测专用       |
+
+### 1.4 项目目录初始化 ⭐
+
+> **关键步骤**：创建项目代码目录结构，为后续开发做准备
+
+```
+任务清单：
+├── □ 1.4.1 创建项目根目录
+│   └── project-code/AWRL6844_HealthDetect/
+├── □ 1.4.2 创建子目录结构
+│   ├── src/              # 源代码（待第3章开始填充）
+│   ├── lib/              # 依赖库
+│   ├── radar_config_file/# 雷达配置文件
+│   └── docs/             # 项目文档
+├── □ 1.4.3 从SDK复制依赖库到 lib/
+│   ├── cnn_classifier.lib        # CNN分类器
+│   ├── intrusionDetection.lib    # 入侵检测
+│   └── occupancyClassifier.lib   # 占用分类
+├── □ 1.4.4 复制基础雷达配置到 radar_config_file/
+│   └── profile_base.cfg          # 从SDK复制6844_profile_4T4R_tdm.cfg
+├── □ 1.4.5 创建项目README.md
+└── □ 1.4.6 在CCS中创建工程配置（可选，后续章节详细说明）
+```
+
+**SDK依赖库位置**：
+
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01\examples\mmw_demo\mmwave_demo\lib\
+├── cnn_classifier_***.lib
+├── intrusionDetection.lib
+└── occupancyClassifier.lib
+```
+
+**第1章完成后的目录结构**：
+
+```
+project-code/AWRL6844_HealthDetect/
+├── README.md
+├── src/                          # 空目录，待第3章开始开发
+├── lib/
+│   ├── cnn_classifier.lib
+│   ├── intrusionDetection.lib
+│   └── occupancyClassifier.lib
+├── radar_config_file/
+│   ├── README.md
+│   └── profile_base.cfg
+└── docs/                         # 空目录，待第10章完善
+```
+
+### 1.5 输出物
+
+- ✅ 可编译的基础工程
+- ✅ 硬件连接验证通过
+- ✅ 雷达配置文件加载成功
+- ✅ 雷达数据输出正常
+- ✅ **项目目录结构已创建** (`project-code/AWRL6844_HealthDetect/`) ⭐
+- ✅ 开发环境配置文档
+
+---
+
+## 第2章 人存检测验证
+
+> **📁 目录变更**：无新增文件（本章为分析验证阶段）
+>
+> **分析对象**（SDK源码，不复制）：
+>
+> - `AWRL6844_InCabin_Demos/src/occupancyClassifier.c/h`
+> - `AWRL6844_InCabin_Demos/src/intrusionDetection.c/h`
+> - `AWRL6844_InCabin_Demos/src/demo_in_cabin_sensing_main.c`
+>
+> **产出物**：接口分析文档（记录在 `项目文档/2-开发记录/`）
+
+### 2.1 InCabin Demo分析
+
+```
+任务清单：
+├── □ 2.1.1 分析 occupancyClassifier 模块
+├── □ 2.1.2 分析 intrusionDetection 模块
+├── □ 2.1.3 确定人存检测接口
+└── □ 2.1.4 理解 TLV 输出格式
+```
+
+### 2.2 功能验证测试
+
+```
+任务清单：
+├── □ 2.2.1 运行 InCabin Demo
+├── □ 2.2.2 测试人存检测功能
+├── □ 2.2.3 记录检测距离、角度范围
+├── □ 2.2.4 验证 CLI 命令
+└── □ 2.2.5 记录性能指标
+```
+
+### 2.3 输出物
+
+- ✅ 人存检测功能验证报告
+- ✅ 接口分析文档
+
+---
+
+## 第3章 姿态检测开发
+
+> **📚 参考资料**（详见[附录E](#附录e-参考资料索引)）：
+>
+> | 资料                 | 位置                                                                       | 价值       | 用途                 |
+> | -------------------- | -------------------------------------------------------------------------- | ---------- | -------------------- |
+> | **pose.c/h**   | `07-跌倒检测研究/跌倒检测汇总资料/Pose_And_Fall_Detection/src/xWRL6432/` | ⭐⭐⭐⭐⭐ | 特征提取算法核心参考 |
+> | **训练数据集** | `知识库/Pose_And_Fall_Detection/retraining_resources/dataset/classes/`   | ⭐⭐⭐⭐⭐ | 算法验证+模型重训练  |
+> | **dpc.c**      | `07-跌倒检测研究/.../src/xWRL6432/`                                      | ⭐⭐⭐     | 理解数据处理流程     |
+
+> **📁 目录变更**：
+>
+> | 文件                  | 操作    | 来源/参考                                                   | 依赖                   |
+> | --------------------- | ------- | ----------------------------------------------------------- | ---------------------- |
+> | `src/pose_detect.h` | 🆕 新建 | 参考 `知识库/Pose_And_Fall_Detection/src/xWRL6432/pose.h` | SDK点云结构            |
+> | `src/pose_detect.c` | 📄 派生 | 参考 `知识库/Pose_And_Fall_Detection/src/xWRL6432/pose.c` | lib/cnn_classifier.lib |
+>
+> **详见**：[第3章目录变更详情](#第3章-姿态检测开发---目录变更详情)
+
+### 3.1 xWRL6432算法分析
+
+```
+任务清单：
+├── □ 3.1.1 阅读 pose.c / pose.h 源码
+├── □ 3.1.2 理解5类姿态定义
+├── □ 3.1.3 分析特征提取方式
+├── □ 3.1.4 分析 CNN 输入格式
+└── □ 3.1.5 对比 InCabin cnn_classifier 接口
+```
+
+### 3.2 现有数据集分析
+
+```
+任务清单：
+├── □ 3.2.1 分析 classes/ 数据集结构
+├── □ 3.2.2 理解 CSV 数据格式
+├── □ 3.2.3 统计各类样本数量
+├── □ 3.2.4 确定特征字段对应关系
+└── □ 3.2.5 编写数据加载脚本（用于离线验证）
+```
+
+**数据集位置**：
+
+```
+知识库/Pose_And_Fall_Detection/retraining_resources/dataset/classes/
+├── falling/   (24个文件)
+├── lying/     (6个文件)
+├── sitting/   (9个文件)
+├── standing/  (8个文件)
+└── walking/   (5个文件)
+```
+
+### 3.3 特征提取开发
+
+```
+任务清单：
+├── □ 3.3.1 创建 pose_detect.c / pose_detect.h
+├── □ 3.3.2 实现特征向量提取
+│   ├── 点云质心 (x, y, z)
+│   ├── 点云分布 (std_x, std_y, std_z)
+│   ├── 速度特征 (mean_v, max_v, min_v)
+│   ├── 高度分布 (z_percentiles)
+│   └── 运动特征 (motion_energy)
+├── □ 3.3.3 适配 InCabin 点云格式
+└── □ 3.3.4 单元测试
+```
+
+### 3.4 CNN分类集成
+
+```
+任务清单：
+├── □ 3.4.1 调用 cnn_classifier 库
+├── □ 3.4.2 加载/转换姿态分类模型
+├── □ 3.4.3 实现推理接口
+├── □ 3.4.4 输出姿态类别 + 置信度
+└── □ 3.4.5 使用数据集离线验证精度
+```
+
+### 3.5 代码框架
+
+```c
+// pose_detect.h
+typedef enum {
+    POSE_UNKNOWN = 0,
+    POSE_STOOD,      // 站立
+    POSE_SAT,        // 坐
+    POSE_LYING,      // 躺
+    POSE_WALKING,    // 走
+    POSE_FALLING     // 跌倒
+} PoseType_e;
+
+typedef struct {
+    float features[22];    // 特征向量
+    PoseType_e pose;       // 当前姿态
+    float confidence;      // 置信度
+} PoseResult_t;
+
+int32_t PoseDetect_init(void);
+int32_t PoseDetect_process(PointCloud_t* pointCloud, PoseResult_t* result);
+```
+
+### 3.6 输出物
+
+- ✅ pose_detect.c / pose_detect.h
+- ✅ 特征提取模块
+- ✅ 姿态分类功能可用
+- ✅ 离线验证精度报告
+
+---
+
+## 第4章 跌倒检测开发
+
+> **📚 参考资料**（详见[附录E](#附录e-参考资料索引)）：
+>
+> | 资料                                       | 位置                                             | 价值     | 用途                           |
+> | ------------------------------------------ | ------------------------------------------------ | -------- | ------------------------------ |
+> | **fall_detection.html**              | `07-跌倒检测研究/跌倒检测汇总资料/TI官方文档/` | ⭐⭐⭐   | 跌倒检测应用概述+算法原理      |
+> | **Fall_Detection_Using_mmWave.html** | 同上                                             | ⭐⭐⭐   | 实验案例+测试结果参考          |
+> | **motion_detect.c**                  | `07-.../Pose_And_Fall_Detection/src/xWRL6432/` | ⭐⭐⭐⭐ | 运动检测算法参考               |
+> | **Migration Part3**                  | `07-跌倒检测研究/Migration_深度总结_Part3.md`  | ⭐⭐⭐   | ℹ️ 备用：DOA问题时查相位校正 |
+
+> **📁 目录变更**：
+>
+> | 文件                    | 操作   | 来源/参考                                | 依赖          |
+> | ----------------------- | ------ | ---------------------------------------- | ------------- |
+> | `src/fall_detect.c`   | 🆕新建 | 参考SDK `intrusionDetection`状态机模式 | pose_detect.h |
+> | `src/fall_detect.h`   | 🆕新建 | 4.4节代码框架API设计                     | -             |
+> | `src/health_detect.c` | 🆕新建 | 主模块，集成人存+姿态+跌倒               | 所有子模块    |
+> | `src/health_detect.h` | 🆕新建 | 统一对外API接口                          | -             |
+
+### 4.1 跌倒检测算法设计
+
+```
+状态机设计：
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│    [正常]  ──姿态=FALLING──→  [疑似跌倒]  ──持续>1s──→  [确认跌倒]  │
+│      ↑                            │                       │      │
+│      │                            │                       │      │
+│      └─────姿态≠躺────────────────┘                       │      │
+│      │                                                    │      │
+│      └──────────────超时30s或用户确认────────────────────────┘      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 跌倒检测实现
+
+```
+任务清单：
+├── □ 4.2.1 创建 fall_detect.c / fall_detect.h
+├── □ 4.2.2 实现状态机
+├── □ 4.2.3 跌倒判断条件：
+│   ├── 姿态从非躺→躺
+│   ├── 变化速度快（<2秒）
+│   └── 持续躺姿>1秒
+├── □ 4.2.4 告警输出（TLV/GPIO/串口）
+└── □ 4.2.5 防误报逻辑（正常上床不告警）
+```
+
+### 4.3 区域联动设计
+
+```
+任务清单：
+├── □ 4.3.1 床区跌倒策略（降低灵敏度）
+├── □ 4.3.2 活动区跌倒策略（正常灵敏度）
+└── □ 4.3.3 区域切换检测
+```
+
+### 4.4 代码框架
+
+```c
+// fall_detect.h
+typedef enum {
+    FALL_STATE_NORMAL = 0,
+    FALL_STATE_SUSPECTED,
+    FALL_STATE_CONFIRMED,
+    FALL_STATE_ALERT_SENT
+} FallState_e;
+
+typedef struct {
+    FallState_e state;
+    uint32_t suspectTime;     // 疑似跌倒开始时间
+    uint32_t lastPoseTime;    // 上次姿态变化时间
+    PoseType_e lastPose;      // 上次姿态
+    bool alertSent;           // 是否已发送告警
+} FallDetect_t;
+
+int32_t FallDetect_init(void);
+int32_t FallDetect_process(PoseResult_t* pose, uint8_t zone, bool* fallDetected);
+void FallDetect_reset(void);
+```
+
+### 4.5 集成测试
+
+```
+任务清单：
+├── □ 4.5.1 人存 + 姿态 + 跌倒 串联
+├── □ 4.5.2 TLV 输出格式定义
+├── □ 4.5.3 CLI 命令添加
+└── □ 4.5.4 功能验证测试
+```
+
+### 4.6 输出物
+
+- ✅ fall_detect.c / fall_detect.h
+- ✅ 跌倒检测 + 告警功能
+- ✅ Phase 1A 集成固件
+
+---
+
+# Phase 1B：辅助功能
+
+---
+
+## 第5章 杂波移除优化
+
+> **📁 目录变更**：
+>
+> | 文件                                     | 操作   | 来源/参考                         | 依赖                           |
+> | ---------------------------------------- | ------ | --------------------------------- | ------------------------------ |
+> | `radar_config_file/profile_health.cfg` | 🔧修改 | 基于第1章复制的SDK配置优化MTI参数 | 第1章6844_profile_4T4R_tdm.cfg |
+
+### 5.1 现有功能分析
+
+```
+任务清单：
+├── □ 5.1.1 测试现有 clutterRemoval 效果
+├── □ 5.1.2 分析 MTI 滤波器参数
+└── □ 5.1.3 记录当前性能基线
+```
+
+### 5.2 参数优化
+
+```
+任务清单：
+├── □ 5.2.1 调整滤波系数
+├── □ 5.2.2 调整更新速率
+├── □ 5.2.3 对比优化前后效果
+└── □ 5.2.4 确定最优参数配置
+```
+
+### 5.3 输出物
+
+- ✅ 杂波移除优化参数
+- ✅ 性能对比报告
+
+---
+
+## 第6章 背景学习开发
+
+> **📁 目录变更**：
+>
+> | 文件                       | 操作   | 来源/参考                      | 依赖               |
+> | -------------------------- | ------ | ------------------------------ | ------------------ |
+> | `src/background_learn.c` | 🆕新建 | 6.3节代码框架，参考SDK MTI滤波 | Flash驱动API       |
+> | `src/background_learn.h` | 🆕新建 | 6.3节BackgroundModel_t结构定义 | -                  |
+> | `src/health_detect.c`    | 🔧修改 | 添加背景过滤调用               | background_learn.h |
+
+### 6.1 背景学习设计
+
+```
+工作流程：
+┌─────────────────────────────────────────────────────────────────┐
+│  1. 首次启动                                                     │
+│     └── 检测到无配置文件 → 进入"学习模式"                         │
+│                                                                 │
+│  2. 学习模式（约30秒）                                           │
+│     ├── 确保房间无人                                             │
+│     ├── 采集N帧静态点云                                          │
+│     ├── 记录所有静态回波位置+强度                                 │
+│     └── 保存为"背景模型"                                         │
+│                                                                 │
+│  3. 正常模式                                                     │
+│     ├── 加载背景模型                                             │
+│     ├── 实时点云 - 背景点云 = 有效目标                            │
+│     └── 减少家具、墙壁误检                                        │
+│                                                                 │
+│  4. 重新学习（可选）                                              │
+│     └── CLI命令: learnBackground                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 6.2 背景学习实现
+
+```
+任务清单：
+├── □ 6.2.1 创建 background_learn.c / background_learn.h
+├── □ 6.2.2 实现学习模式
+│   ├── 采集100帧静态点云
+│   ├── 统计每个位置出现频率
+│   └── 频率>90%标记为背景点
+├── □ 6.2.3 Flash 存储/加载
+├── □ 6.2.4 CLI 命令实现
+└── □ 6.2.5 功能测试
+```
+
+### 6.3 代码框架
+
+```c
+// background_learn.h
+typedef struct {
+    float x, y, z;
+    float intensity;
+    uint8_t frequency;  // 出现频率 0-100
+} BackgroundPoint_t;
+
+typedef struct {
+    BackgroundPoint_t points[MAX_BG_POINTS];
+    uint16_t numPoints;
+    bool isLearned;
+    uint32_t learnTime;
+} BackgroundModel_t;
+
+int32_t Background_startLearning(void);
+int32_t Background_isLearning(void);
+int32_t Background_filter(PointCloud_t* input, PointCloud_t* output);
+int32_t Background_save(void);
+int32_t Background_load(void);
+```
+
+### 6.4 输出物
+
+- ✅ background_learn.c / background_learn.h
+- ✅ 背景学习功能可用
+
+---
+
+## 第7章 区域划分开发
+
+> **📁 目录变更**：
+>
+> | 文件                                   | 操作   | 来源/参考                  | 依赖          |
+> | -------------------------------------- | ------ | -------------------------- | ------------- |
+> | `src/zone_config.c`                  | 🆕新建 | 7.4节代码框架              | Flash驱动API  |
+> | `src/zone_config.h`                  | 🆕新建 | 7.4节Zone_t/ZoneType_e定义 | -             |
+> | `radar_config_file/zone_default.cfg` | 🆕新建 | 自定义区域配置格式         | -             |
+> | `src/fall_detect.c`                  | 🔧修改 | 添加区域联动逻辑           | zone_config.h |
+
+### 7.1 区域定义设计
+
+```
+区域布局：
+┌─────────────────────────────────────────────────────────────────┐
+│                        监测房间                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────┐                                               │
+│   │  🛏️ 床区    │    雷达位置: 壁挂/吸顶                         │
+│   │  Zone A     │         ↘                                     │
+│   │             │          📡                                   │
+│   └─────────────┘                                               │
+│                                                                 │
+│   ┌─────────────────────────────────────┐                       │
+│   │         🚶 活动区 Zone B            │                       │
+│   │                                     │                       │
+│   └─────────────────────────────────────┘                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 7.2 区域配置实现
+
+```
+任务清单：
+├── □ 7.2.1 创建 zone_config.c / zone_config.h
+├── □ 7.2.2 定义区域结构（矩形范围）
+├── □ 7.2.3 实现区域判断逻辑
+├── □ 7.2.4 CLI 命令实现
+└── □ 7.2.5 Flash 存储配置
+```
+
+### 7.3 区域策略实现
+
+```
+任务清单：
+├── □ 7.3.1 床区策略（关注躺姿，降低跌倒灵敏度）
+├── □ 7.3.2 活动区策略（正常跌倒检测）
+├── □ 7.3.3 区域切换事件
+└── □ 7.3.4 功能测试
+```
+
+### 7.4 代码框架
+
+```c
+// zone_config.h
+typedef enum {
+    ZONE_UNKNOWN = 0,
+    ZONE_BED,       // 床区
+    ZONE_ACTIVITY   // 活动区
+} ZoneType_e;
+
+typedef struct {
+    float x_min, x_max;
+    float y_min, y_max;
+    ZoneType_e type;
+} Zone_t;
+
+ZoneType_e Zone_getTargetZone(float x, float y);
+void Zone_configure(uint8_t id, float x1, float y1, float x2, float y2);
+```
+
+### 7.5 输出物
+
+- ✅ zone_config.c / zone_config.h
+- ✅ 区域划分功能可用
+- ✅ Phase 1B 完整固件
+
+---
+
+# Phase 2：扩展研究
+
+---
+
+## 第8章 呼吸检测研究
+
+> **📁 目录变更**（可选，视研究结果而定）：
+>
+> | 文件                    | 操作         | 来源/参考                        | 依赖            |
+> | ----------------------- | ------------ | -------------------------------- | --------------- |
+> | `src/breath_detect.c` | 🆕新建(可选) | 参考IWR6843 Vital Signs Demo算法 | DSP FFT库       |
+> | `src/breath_detect.h` | 🆕新建(可选) | API设计                          | -               |
+> | `src/health_detect.c` | 🔧修改(可选) | 集成呼吸检测调用                 | breath_detect.h |
+
+### 8.1 算法原理研究
+
+```
+任务清单：
+├── □ 8.1.1 分析 IWR6843 Vital Signs 算法原理
+├── □ 8.1.2 研究相位提取方法
+├── □ 8.1.3 研究呼吸频率估计方法
+└── □ 8.1.4 评估 AWRL6844 硬件适配性
+```
+
+### 8.2 相位提取实现
+
+```
+任务清单：
+├── □ 8.2.1 从 Range-Doppler 提取目标相位
+├── □ 8.2.2 相位解缠绕算法
+├── □ 8.2.3 相位信号滤波
+└── □ 8.2.4 初步测试
+```
+
+### 8.3 呼吸频率估计
+
+```
+任务清单：
+├── □ 8.3.1 带通滤波 (0.1-0.5Hz)
+├── □ 8.3.2 FFT 频谱分析
+├── □ 8.3.3 呼吸率计算
+└── □ 8.3.4 精度验证
+```
+
+### 8.4 输出物
+
+- ✅ 呼吸检测可行性报告
+- ⚠️ 呼吸检测模块（如成功）
+
+---
+
+## 第9章 人数统计开发
+
+> **📁 目录变更**：
+>
+> | 文件                    | 操作   | 来源/参考                          | 依赖           |
+> | ----------------------- | ------ | ---------------------------------- | -------------- |
+> | `src/people_count.c`  | 🆕新建 | 参考SDK 3D_people_tracking聚类算法 | -              |
+> | `src/people_count.h`  | 🆕新建 | API设计，DBSCAN接口                | -              |
+> | `src/health_detect.c` | 🔧修改 | 集成人数统计输出                   | people_count.h |
+
+### 9.1 点云聚类算法
+
+```
+任务清单：
+├── □ 9.1.1 实现 DBSCAN 聚类
+├── □ 9.1.2 多目标分离
+├── □ 9.1.3 人数计数输出
+└── □ 9.1.4 功能测试
+```
+
+### 9.2 输出物
+
+- ✅ 人数统计功能（0, 1, 2, 3+）
+
+---
+
+## 第10章 综合测试与验收
+
+> **📁 目录变更**：
+>
+> | 文件                 | 操作   | 来源/参考                            | 依赖         |
+> | -------------------- | ------ | ------------------------------------ | ------------ |
+> | `docs/API参考.md`  | 🆕新建 | 汇总所有模块API（附录C CLI命令清单） | 各模块.h文件 |
+> | `docs/使用手册.md` | 🆕新建 | 功能说明+配置指南+故障排查           | 全项目       |
+> | `docs/测试报告.md` | 🆕新建 | 10.1-10.2节测试结果记录              | 验收标准10.3 |
+
+### 10.1 功能测试
+
+```
+测试项目：
+├── □ 10.1.1 人存检测测试（有人/无人各20次）
+├── □ 10.1.2 姿态检测测试（5类×20次）
+├── □ 10.1.3 跌倒检测测试（模拟跌倒30次）
+├── □ 10.1.4 背景学习测试（空房间+家具场景）
+├── □ 10.1.5 区域划分测试（床区/活动区切换）
+└── □ 10.1.6 呼吸检测测试（静止躺姿5分钟）
+```
+
+### 10.2 稳定性测试
+
+```
+任务清单：
+├── □ 10.2.1 24小时连续运行测试
+├── □ 10.2.2 异常场景测试
+└── □ 10.2.3 边界条件测试
+```
+
+### 10.3 验收标准
+
+| 功能     | 验收标准             |
+| -------- | -------------------- |
+| 人存检测 | ≥98%检测率          |
+| 姿态检测 | ≥90%准确率          |
+| 跌倒检测 | ≥95%检测率，<5%误报 |
+| 背景学习 | 家具不误报           |
+| 区域划分 | 正确识别目标所在区域 |
+| 呼吸检测 | 能检测到即成功       |
+
+### 10.4 输出物
+
+- ✅ 完整测试报告
+- ✅ 验收文档
+- ✅ 用户使用手册
+
+---
+
+# 附录
+
+---
+
+## 附录A 现有数据集资源
+
+### A.1 数据集位置
+
+```
+知识库/Pose_And_Fall_Detection/retraining_resources/dataset/classes/
+├── falling/   (24个CSV文件)
+├── lying/     (6个CSV文件)
+├── sitting/   (9个CSV文件)
+├── standing/  (8个CSV文件)
+└── walking/   (5个CSV文件)
+```
+
+### A.2 数据格式
+
+| 字段类型               | 字段名                    | 说明       |
+| ---------------------- | ------------------------- | ---------- |
+| **追踪目标**     | tid                       | 追踪ID     |
+|                        | posx, posy, posz          | 目标位置   |
+|                        | velx, vely, velz          | 目标速度   |
+|                        | accx, accy, accz          | 目标加速度 |
+| **点云点(×14)** | pointxN, pointyN, pointzN | 点位置     |
+|                        | dopplerN                  | 多普勒速度 |
+|                        | snrN                      | 信噪比     |
+
+### A.3 数据用途
+
+| 用途                   | 说明                       |
+| ---------------------- | -------------------------- |
+| **特征提取参考** | 明确需要提取哪些特征       |
+| **模型训练**     | 可用于重新训练姿态分类模型 |
+| **算法验证**     | 离线验证姿态分类精度       |
+| **单元测试**     | 为代码提供测试数据         |
+
+### A.4 数据集使用建议
+
+```
+第3章使用：
+├── 分析数据格式，确定特征提取方式
+├── 编写数据加载脚本
+└── 离线验证分类精度
+
+第10章使用：
+├── 与实际测试结果对比
+└── 验证算法一致性
+```
+
+---
+
+## 附录B 代码目录结构
+
+> **代码位置**：`project-code/AWRL6844_HealthDetect/`
+
+```
+AWRL6844_HealthDetect/
+├── src/
+│   ├── main.c                    # 主程序入口
+│   ├── health_detect.c           # 健康检测主模块
+│   ├── health_detect.h
+│   ├── pose_detect.c             # 姿态检测
+│   ├── pose_detect.h
+│   ├── fall_detect.c             # 跌倒检测
+│   ├── fall_detect.h
+│   ├── background_learn.c        # 背景学习
+│   ├── background_learn.h
+│   ├── zone_config.c             # 区域配置
+│   ├── zone_config.h
+│   ├── breath_detect.c           # 呼吸检测(Phase 2)
+│   ├── breath_detect.h
+│   ├── people_count.c            # 人数统计(Phase 2)
+│   └── people_count.h
+├── lib/
+│   ├── cnn_classifier.lib        # CNN分类器库
+│   ├── intrusionDetection.lib    # 入侵检测库
+│   └── occupancyClassifier.lib   # 占用分类库
+├── radar_config_file/            # 雷达配置文件目录 ⭐
+│   ├── README.md                 # 配置文件说明
+│   ├── profile_health.cfg        # 健康检测专用雷达配置
+│   └── zone_default.cfg          # 默认区域配置
+└── docs/
+    ├── API参考.md
+    └── 使用手册.md
+```
+
+**雷达配置文件说明**：
+
+- `profile_health.cfg` - 针对健康检测优化的雷达chirp配置
+- `zone_default.cfg` - 区域划分默认配置
+- 详细参数说明见 `项目文档/3-固件工具/05-雷达配置参数研究/`
+
+---
+
+## 附录C CLI命令清单
+
+| 命令                | 参数           | 说明         | 章节  |
+| ------------------- | -------------- | ------------ | ----- |
+| `poseDetect`      | 0/1            | 开关姿态检测 | 第3章 |
+| `fallDetect`      | 0/1            | 开关跌倒检测 | 第4章 |
+| `getPoseResult`   | -              | 查询当前姿态 | 第3章 |
+| `learnBackground` | -              | 触发背景学习 | 第6章 |
+| `clearBackground` | -              | 清除背景模型 | 第6章 |
+| `zoneConfig`      | id x1 y1 x2 y2 | 配置区域     | 第7章 |
+| `zoneShow`        | -              | 显示区域配置 | 第7章 |
+| `breathDetect`    | 0/1            | 开关呼吸检测 | 第8章 |
+| `getBreathRate`   | -              | 查询呼吸率   | 第8章 |
+
+---
+
+## 附录D TLV输出格式
+
+| TLV类型      | 值   | 内容              | 章节  |
+| ------------ | ---- | ----------------- | ----- |
+| PRESENCE     | 0x01 | 人存状态 (0/1)    | 第2章 |
+| POSE         | 0x02 | 姿态类型 + 置信度 | 第3章 |
+| FALL_ALERT   | 0x03 | 跌倒告警          | 第4章 |
+| ZONE         | 0x04 | 目标所在区域      | 第7章 |
+| BREATH_RATE  | 0x05 | 呼吸率            | 第8章 |
+| PEOPLE_COUNT | 0x06 | 人数              | 第9章 |
+
+---
+
+## 附录E 参考资料索引 ⭐
+
+> **核心原则**：明确标注每份参考资料的价值等级和适用场景，避免重复劳动
+
+### E.1 参考资料来源概览
+
+| 资料来源                          | 路径                                     | 用途                                    |
+| --------------------------------- | ---------------------------------------- | --------------------------------------- |
+| **07-跌倒检测研究**         | `项目文档/3-固件工具/07-跌倒检测研究/` | xWRL6432迁移+算法参考                   |
+| **知识库Pose_And_Fall**     | `知识库/Pose_And_Fall_Detection/`      | 源码+数据集+模型                        |
+| **知识库PDF转机器可读文件** | `知识库/知识库PDF转机器可读文件/`      | TI官方文档(53个MD文件)                  |
+| ⭐**InCabin Demo本地副本**  | `project-code/AWRL6844_InCabin_Demos/` | 基础工程（已修复API兼容性）             |
+| **MMWAVE_L_SDK**            | `C:\ti\MMWAVE_L_SDK_06_01_00_01/`      | SDK库+工具+API文档                      |
+| ⭐**TI Radar Academy**      | `C:\ti\radar_academy_3_10_00_1/`       | **雷达基础教程+算法讲解**         |
+| ⭐**Radar Toolbox**         | `C:\ti\radar_toolbox_3_30_00_06/`      | **应用文档+调优指南（原始参考）** |
+| **mmWave Studio**           | `C:\ti\mmwave_studio_04_03_01_00/`     | 调试工具+Lua API                        |
+
+> ⚠️ **重要说明**：InCabin Demo已复制到本地项目目录并修复了API兼容性问题，开发时使用本地副本而非官方SDK路径。
+
+---
+
+### E.2 07-跌倒检测研究 详细索引
+
+> **位置**：`项目文档/3-固件工具/07-跌倒检测研究/`
+
+#### E.2.1 Migration迁移文档
+
+| 文件                                             | 内容                                          | 参考价值    | 适用场景                                              |
+| ------------------------------------------------ | --------------------------------------------- | ----------- | ----------------------------------------------------- |
+| `Migration_xWRL6432_to_6844_索引与快速指南.md` | 5分钟速览10项必改、迁移路径建议               | ⭐⭐⭐ 中等 | ℹ️**备用**：遇到通道配置问题时查阅            |
+| `Migration_深度总结_Part1.md`                  | 硬件对比(14项)、内存映射、DFP变更             | ⭐⭐ 低     | ℹ️**备用**：SDK已处理，仅深度调试时需要       |
+| `Migration_深度总结_Part2.md`                  | TX/RX通道掩码(8位格式)、Per-Chirp LUT         | ⭐⭐ 低     | ℹ️**备用**：SDK CLI自动处理                   |
+| `Migration_深度总结_Part3.md`                  | 时序配置、ADC格式、**相位旋转校正代码** | ⭐⭐⭐ 中等 | ℹ️**备用**：InCabin Demo已内置，DOA问题时参考 |
+
+**说明**：因为我们使用 **方案A（基于InCabin Demo扩展）**，SDK已经处理了通道配置、相位校正等底层问题，这些文档主要作为 **深度调试参考**。
+
+#### E.2.2 跌倒检测汇总资料
+
+| 子目录                                            | 内容                               | 参考价值                 | 适用章节                                |
+| ------------------------------------------------- | ---------------------------------- | ------------------------ | --------------------------------------- |
+| `Pose_And_Fall_Detection/src/xWRL6432/`         | **pose.c/h** 姿态检测源码    | ⭐⭐⭐⭐⭐**最高** | 📖**第3章核心参考**：特征提取算法 |
+| `Pose_And_Fall_Detection/src/xWRL6432/`         | **motion_detect.c** 运动检测 | ⭐⭐⭐⭐ 高              | 📖 第2章、第4章参考                     |
+| `Pose_And_Fall_Detection/src/xWRL6432/`         | **dpc.c** 数据处理链         | ⭐⭐⭐ 中等              | ℹ️ 了解算法流程                       |
+| `Pose_And_Fall_Detection/retraining_resources/` | 训练数据集+Jupyter Notebook        | ⭐⭐⭐⭐⭐**最高** | 📖**第3章、第10章**：验证+重训练  |
+| `Pose_And_Fall_Detection/prebuilt_binaries/`    | xWRL6432预编译固件                 | ⭐ 低                    | ℹ️ 仅参6432硬件验证                   |
+| `TI官方文档/fall_detection.html`                | 跌倒检测应用概述                   | ⭐⭐⭐ 中等              | 📖**第4章背景知识**               |
+| `TI官方文档/Fall_Detection_Using_mmWave.html`   | 实验案例和测试结果                 | ⭐⭐⭐ 中等              | 📖**第10章验收参考**              |
+| `TI官方文档/medical_overview.html`              | 医疗应用总览                       | ⭐⭐ 低                  | ℹ️ 背景了解                           |
+| `配置文件/fall_detection.cfg`                   | xWRL6432跌倒检测配置               | ⭐⭐ 低                  | ℹ️ 参数参考，需适配6844               |
+| `配置文件/sit_stand_detection.cfg`              | 坐站检测配置                       | ⭐⭐ 低                  | ℹ️ 参考姿态检测配置                   |
+
+---
+
+### E.2.3 ⭐ TI InCabin Demo 官方文档（新增）
+
+> **位置**：`知识库/知识库PDF转机器可读文件/` 和 SDK docs目录
+> **重要性**：这些是TI官方调优指南，包含经过验证的参数配置经验！
+
+| 文档                                                             | 知识库位置                          | 参考价值                 | 适用章节                                                    |
+| ---------------------------------------------------------------- | ----------------------------------- | ------------------------ | ----------------------------------------------------------- |
+| **AWRL6844_CPD_&_SBR_Point_Cloud_Tuning_Guide.md**         | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐⭐**最高** | 📖**第5章**：相位校准、传感器安装、sensorPosition CLI |
+| **AWRL6844_CPD_&_SBR_Test_Results.md**                     | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐ 高              | 📖**第10章**：TI官方测试数据、准确率参考              |
+| **Parameter_Tuning_Guide_for_Intrusion_Detection_Demo.md** | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐⭐**最高** | 📖**第5/6/7章**：CFAR配置、杂波移除、区域划分         |
+| **AWRL6844_Intruder_Detection_Testing.md**                 | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐ 中等              | 📖**第10章**：入侵检测测试方法参考                    |
+| **zoneDefinitionGenTool.xlsx**                             | SDK docs/Seat_Belt_Reminder/        | ⭐⭐⭐⭐⭐**最高** | 📖**第7章**：区域定义CLI格式、cuboidDef命令           |
+
+**关键文档内容速览**：
+
+| 文档                                 | 关键章节      | 直接可用内容                                  |
+| ------------------------------------ | ------------- | --------------------------------------------- |
+| **Point Cloud Tuning Guide**   | Step 1-3      | 相位校准流程、sensorPosition CLI参数          |
+| **Parameter Tuning Guide**     | Section 2.2   | CFAR阈值配置表                                |
+| **Parameter Tuning Guide**     | Section 2.3   | Clutter Removal参数                           |
+| **Parameter Tuning Guide**     | Section 2.3.1 | Zone定义方法（Target Zone vs Reference Zone） |
+| **zoneDefinitionGenTool.xlsx** | 全表          | cuboidDef CLI格式、区域坐标计算公式           |
+
+---
+
+### E.2.4 ⭐ 3D People Tracking 官方文档（第9章关键）
+
+> **位置**：`知识库/知识库PDF转机器可读文件/`
+> **重要性**：这些是TI官方的人数跟踪算法文档，第9章开发必读！
+
+| 文档                                                                | 知识库位置                          | 参考价值                 | 适用章节                                                  |
+| ------------------------------------------------------------------- | ----------------------------------- | ------------------------ | --------------------------------------------------------- |
+| **3D_people_tracking_demo_implementation_guide.md**           | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐⭐**最高** | 📖**第9章核心**：SDK处理链架构、DPU设计、执行流程   |
+| **3D_people_tracking_tracker_layer_tuning_guide.md**          | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐⭐**最高** | 📖**第9章核心**：Tracker参数调优、状态机、Ghost问题 |
+| **3D_people_tracking_detection_layer_tuning_guide.md**        | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐**高**     | 📖**第5章/第9章**：检测层CFAR、静态杂波移除         |
+| **people_counting_customization_guide.md**                    | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐**高**     | 📖**第9章**：常见问题解决方案                       |
+| **Tracking_radar_targets_with_multiple_reflection_points.md** | `知识库/知识库PDF转机器可读文件/` | ⭐⭐⭐⭐**高**     | 📖**第9章**：Group Tracker算法详解                  |
+
+**关键文档内容速览**：
+
+| 文档                             | 核心章节                       | 直接可用内容                                  |
+| -------------------------------- | ------------------------------ | --------------------------------------------- |
+| **implementation_guide**   | Section 4 DPC                  | 数据处理链架构、DPU组织                       |
+| **implementation_guide**   | Section 1.7 Execution flow     | 初始化→配置→每帧处理流程                    |
+| **tracker_layer_tuning**   | Section 2 Group Tracker Module | Predict→Associate→Allocate→Update流程      |
+| **tracker_layer_tuning**   | Section 3 Configuration        | Scenery/Gating/Allocation/StateTransition参数 |
+| **tracker_layer_tuning**   | Section 4 Tuning               | 常见问题调优指南                              |
+| **Tracking_radar_targets** | Section 2 Group Tracking       | 完整算法原理和实现细节                        |
+
+---
+
+### E.2.5 其他有价值的知识库文档
+
+> **位置**：`知识库/知识库PDF转机器可读文件/`
+
+| 文档                                                     | 参考价值    | 适用场景                              |
+| -------------------------------------------------------- | ----------- | ------------------------------------- |
+| **TI 低功耗毫米波雷达传感器中的校准 (Rev. B).md**  | ⭐⭐⭐ 中等 | 运行时校准、温度补偿（第5章深度优化） |
+| **AOA_SVC_DPU_Implementation_Details.md**          | ⭐⭐⭐ 中等 | 角度估计校正（第5章角度问题时参考）   |
+| **AWR6843_CPD_with_Classification_Setup_Guide.md** | ⭐⭐ 低     | 天线几何配置参考                      |
+| **Beamforming_in_LRPD.md**                         | ⭐⭐ 低     | TX波束成形（深度优化时参考）          |
+| **通过单芯片 60GHz 毫米波雷达传感器...**           | ⭐ 最低     | 背景知识了解                          |
+
+---
+
+### E.2.6 ⭐ TI Radar Academy 官方教程（新增）
+
+> **位置**：`C:\ti\radar_academy_3_10_00_1\_build_radar_academy_3_10_00_1\source\`
+> **重要性**：TI官方雷达培训教程，包含算法原理讲解和配图！
+
+#### 核心模块索引
+
+| 模块文件                                      | 内容概述                                                                             | 参考价值                 | 适用章节                                            |
+| --------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------ | --------------------------------------------------- |
+| `algorithms/tracking.html`                  | **GTRACK算法详解**：聚类、卡尔曼滤波、状态机流程                               | ⭐⭐⭐⭐⭐**最高** | 📖**第9章核心**：人数跟踪算法原理             |
+| `algorithms/motion_presence_detection.html` | **存在检测状态机**：Empty/Minor/Major状态切换、majorStateCfg/minorStateCfg参数 | ⭐⭐⭐⭐⭐**最高** | 📖**第2章核心**：人存检测算法、状态机参数调优 |
+| `introduction/radar_data.html`              | 雷达数据格式：Frame结构、Point Cloud、Radar Cube                                     | ⭐⭐⭐⭐**高**     | 📖**第1/2章**：理解雷达数据流                 |
+| `introduction/fundamentals.html`            | FMCW原理：Chirp、距离/速度/角度估计                                                  | ⭐⭐⭐ 中等              | ℹ️ 背景知识                                       |
+| `introduction/terminology.html`             | 术语表：SDK专业名词解释                                                              | ⭐⭐⭐ 中等              | ℹ️ 查阅参考                                       |
+| `integration/antenna_design.html`           | 天线设计基础                                                                         | ⭐⭐ 低                  | ℹ️ 深度优化时参考                                 |
+
+#### 关键内容速览
+
+**📘 Tracking with GTRACK (tracking.html)**：
+
+```
+GTRACK Flow:
+Point Cloud Input → Predict → Associate → Allocate → Update → Output Tracks
+
+关键图示：
+- Figure 1: Tracker在处理链中的位置
+- Figure 2: Point Cloud与Track的关系可视化
+- Figure 3: GTRACK算法完整流程图
+```
+
+**📘 Motion and Presence Detection (motion_presence_detection.html)**：
+
+```
+状态机模型：
+Empty State → Major State → Minor State → Empty State
+
+关键参数：
+- pointThre1/pointThre2: 点数阈值
+- snrThre2: SNR阈值
+- histBufferSize: 历史缓冲区大小（帧数）
+- major2minorThre: Major→Minor转换阈值
+```
+
+---
+
+### E.2.7 ⭐ MMWAVE_L_SDK 官方文档（新增）
+
+> **位置**：`C:\ti\MMWAVE_L_SDK_06_01_00_01\docs\`
+> **重要性**：SDK官方调优指南和API文档！
+
+#### SDK核心文档
+
+| 文档路径                                    | 内容概述                                                      | 参考价值                 | 适用章节                                                     |
+| ------------------------------------------- | ------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------ |
+| `docs/mmWave_Demo_Tuning_Guide.md`        | **xWRL6844 mmWave Demo调优指南v2.0** - 36页完整调优手册 | ⭐⭐⭐⭐⭐**最高** | 📖**第2-7章全部**：信号处理链、CLI参数、CFAR、杂波移除 |
+| `docs/Low_Power_Visualizer_User_Guide.md` | 低功耗可视化工具使用                                          | ⭐⭐⭐ 中等              | 📖**第10章**：调试验证工具                             |
+| `docs/api_guide_xwrL684x/`                | **完整API文档** - DPU/驱动/内核                         | ⭐⭐⭐⭐**高**     | 📖**全部章节**：API查阅参考                            |
+
+#### mmWave_Demo_Tuning_Guide 核心章节
+
+| 章节                    | 内容                              | 直接可用内容                                 |
+| ----------------------- | --------------------------------- | -------------------------------------------- |
+| **Section 2**     | Signal Processing Algorithm       | 信号处理流程图、MIMO解调                     |
+| **Section 3.1**   | Sensor Front-End Parameters       | Chirp配置、Frame配置、Low-Power模式          |
+| **Section 3.2**   | Detection Layer Parameters        | **CFAR配置、ROI配置、Clutter Removal** |
+| **Section 3.2.6** | Range Bias and Phase Compensation | 相位补偿配置方法                             |
+| **Section 4**     | Parameter Tuning and Performance  | 距离配置、运动灵敏度配置、角度精度配置       |
+
+---
+
+### E.2.8 ⭐ Radar Toolbox 调优指南集（新增）
+
+> **位置**：`C:\ti\radar_toolbox_3_30_00_06\software_docs\`
+> **重要性**：TI官方调优指南合集！
+
+#### 调优指南索引
+
+| 文档路径                                     | 内容概述                 | 参考价值                 | 适用章节                        |
+| -------------------------------------------- | ------------------------ | ------------------------ | ------------------------------- |
+| `Tuning_Guides/presence_detection_tuning/` | **存在检测调优**   | ⭐⭐⭐⭐⭐**最高** | 📖**第2章**：人存检测参数 |
+| `Tuning_Guides/motion_sensitivity_tuning/` | **运动灵敏度调优** | ⭐⭐⭐⭐**高**     | 📖**第2/5章**：检测灵敏度 |
+| `Tuning_Guides/tracker_tuning/`            | **Tracker调优**    | ⭐⭐⭐⭐⭐**最高** | 📖**第9章**：人数跟踪     |
+| `Tuning_Guides/range_tuning/`              | **距离调优**       | ⭐⭐⭐ 中等              | 📖**第5章**：检测范围     |
+| `Tuning_Guides/power_tuning/`              | **功耗调优**       | ⭐⭐ 低                  | ℹ️ 低功耗场景参考             |
+| `Low_Power_SDK_Guides/`                    | 低功耗SDK指南（4个文档） | ⭐⭐ 低                  | ℹ️ 低功耗模式参考             |
+
+#### 应用参考文档
+
+| 文档路径                                                                                         | 内容概述               | 参考价值             | 适用章节                        |
+| ------------------------------------------------------------------------------------------------ | ---------------------- | -------------------- | ------------------------------- |
+| `applications/industrial/medical/fall_detection.html`                                          | **跌倒检测应用** | ⭐⭐⭐⭐**高** | 📖**第4章**：跌倒检测背景 |
+| `applications/industrial/medical/vital_signs_monitoring.html`                                  | 生命体征监测           | ⭐⭐⭐ 中等          | 📖**第8章**：呼吸检测参考 |
+| `applications/industrial/building_automation_and_lighting/occupancy_sensing_and_lighting.html` | 占用感应               | ⭐⭐⭐ 中等          | 📖**第2章**：人存检测场景 |
+| `applications/automotive/in-cabin_security_and_safety/in-cabin_sensing_overview.html`          | In-Cabin概述           | ⭐⭐⭐ 中等          | 📖**第1章**：项目背景     |
+
+#### 其他有用文档
+
+| 文档                                           | 用途             |
+| ---------------------------------------------- | ---------------- |
+| `Understanding_UART_Data_Output_Format.html` | UART数据格式解析 |
+| `Debugging_with_CCS_20.html`                 | CCS 20调试方法   |
+| `using_uniflash_with_mmwave.html`            | UniFlash烧录指南 |
+
+---
+
+### E.2.9 mmWave Studio 文档（备用）
+
+> **位置**：`C:\ti\mmwave_studio_04_03_01_00\docs\`
+> **重要性**：调试工具文档，按需查阅
+
+| 文档                                       | 参考价值 | 用途                  |
+| ------------------------------------------ | -------- | --------------------- |
+| `mmwave_studio_user_guide.md`            | ⭐⭐ 低  | mmWave Studio使用指南 |
+| `mmwave_studio_lua_api_documentation.md` | ⭐⭐ 低  | Lua脚本API            |
+| `DCA1000_Quick_Start_Guide.md`           | ⭐ 最低  | DCA1000硬件（不适用） |
+
+---
+
+### E.3 参考资料与章节对应关系（完整版）
+
+| 章节                      | 必读参考                                                                                                                                                               | 备用参考                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **第1章 环境搭建**  | SDK安装文档、InCabin Demo User Guide、⭐**Radar Academy: radar_data.html**、⭐ **in-cabin_sensing_overview.html**                                          | Migration索引(硬件对比)、TI校准指南、Debugging_with_CCS_20.html |
+| **第2章 人存检测**  | InCabin Demo源码、⭐**Radar Academy: motion_presence_detection.html**、⭐ **presence_detection_tuning_guide.html**、⭐ **motion_sensitivity_tuning** | motion_detect.c、occupancy_sensing_and_lighting.html            |
+| **第3章 姿态检测**  | ⭐**pose.c/h**、**数据集**                                                                                                                                 | dpc.c                                                           |
+| **第4章 跌倒检测**  | ⭐**fall_detection.html**(toolbox)、pose.c                                                                                                                       | Migration Part3(相位)                                           |
+| **第5章 杂波移除**  | ⭐**mmWave_Demo_Tuning_Guide.md Section 3.2**、**Point Cloud Tuning Guide**、**Parameter Tuning Guide**、**3D Detection Layer Tuning**         | TI校准指南、AOA校正DPU、range_tuning                            |
+| **第6章 背景学习**  | ⭐**Parameter Tuning Guide** (Reference Zone概念)、⭐ **mmWave_Demo_Tuning_Guide.md Section 3.2.4**                                                        | 自主设计扩展                                                    |
+| **第7章 区域划分**  | ⭐**zoneDefinitionGenTool.xlsx**、**Parameter Tuning Guide** Section 2.3.1、⭐ **mmWave_Demo_Tuning_Guide.md Section 3.2.3**                         | cuboidDef格式参考                                               |
+| **第8章 呼吸检测**  | IWR6843 Vital Signs Demo、⭐**vital_signs_monitoring.html**                                                                                                      | -                                                               |
+| **第9章 人数统计**  | ⭐**3D_people_tracking实现指南**、**tracker_layer_tuning**、⭐ **Radar Academy: tracking.html**、⭐ **Tracker_Tuning_Guide.html**              | people_counting_customization、Tracking_radar_targets           |
+| **第10章 综合测试** | ⭐**数据集**、**CPD_SBR_Test_Results**、**实验案例**、**Low_Power_Visualizer_User_Guide.md**                                                   | 验收标准参考、Understanding_UART_Data_Output_Format.html        |
+
+---
+
+### E.4 参考价值等级说明
+
+| 等级                     | 含义                       | 使用建议           |
+| ------------------------ | -------------------------- | ------------------ |
+| ⭐⭐⭐⭐⭐**最高** | 直接参考实现，代码可复用   | 必须仔细阅读并理解 |
+| ⭐⭐⭐⭐**高**     | 算法原理参考，需要改写适配 | 建议阅读核心部分   |
+| ⭐⭐⭐**中等**     | 背景知识/概念理解          | 根据需要查阅       |
+| ⭐⭐**低**         | 仅作备用参考               | 遇到问题时查阅     |
+| ⭐**最低**         | 基本不需要                 | 可忽略             |
+
+---
+
+### E.5 特别说明：为什么Migration文档不是必读？
+
+```
+我们的方案：方案A - 基于 InCabin Demo 扩展
+                       ↓
+        SDK已经处理了以下底层问题：
+        ├─ TX/RX通道配置 (8位掩码)     → SDK CLI自动处理
+        ├─ 采样率翻倍                    → SDK配置文件已调整
+        ├─ 相位旋转校正                  → InCabin Demo已内置
+        ├─ ADC数据格式                    → SDK内部处理
+        └─ 内存映射                      → 链接脚本已配置
+                       ↓
+        我们只需要关注应用层算法！
+                       ↓
+        Migration文档 = 备用参考（遇到底层问题时查阅）
+```
+
+**何时需要阅读Migration文档**：
+
+- ✅ 遇到角度估计(DOA)不准确 → 查看Part3相位校正
+- ✅ 遇到通道配置错误 → 查看Part2通道掩码
+- ✅ 需要自定义底层信号处理 → 查看Part1-3全部
+- ✅ SDK固件有bug需要排查 → Migration文档是最好参考
+
+---
+
+## ✅ 检查清单
+
+### Phase 1A 完成标准
+
+- [ ] 人存检测 ≥98%
+- [ ] 姿态检测 ≥90%
+- [ ] 跌倒检测 ≥95%，误报<5%
+- [ ] 响应时间 <500ms
+
+### Phase 1B 完成标准
+
+- [ ] 背景学习可用
+- [ ] 区域划分可用
+- [ ] 家具不误报
+
+### Phase 2 完成标准
+
+- [ ] 呼吸检测可检测（不要求精度）
+- [ ] 人数统计基本可用
+
+---
+
+> 📅 **创建日期**: 2026-01-05
+> 📌 **使用方式**: 逐章展开讨论实施

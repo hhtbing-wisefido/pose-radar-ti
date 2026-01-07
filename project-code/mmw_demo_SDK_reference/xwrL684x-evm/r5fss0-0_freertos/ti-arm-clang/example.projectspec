@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectSpec>
+    <applicability>
+        <when>
+            <context
+                deviceFamily="ARM"
+                deviceId="Cortex R.AWRL68xx"
+            />
+        </when>
+    </applicability>
+
+    <project
+        title="Mmwave Demo"
+        name = "mmwave_demo_xwrL684x-evm_r5fss0-0_freertos_ti-arm-clang"
+        products="sysconfig;MMWAVE-L-SDK-6"
+        configurations="
+            Debug,
+            Release,
+        "
+        connection="TIXDS110_Connection.xml"
+        toolChain="TICLANG"
+        cgtVersion="4.0.4.LTS"
+        device="Cortex R.AWRL68xx"
+        deviceCore="Cortex_R5_0"
+        ignoreDefaultDeviceSettings="true"
+        ignoreDefaultCCSSettings="true"
+        endianness="little"
+        outputFormat="ELF"
+        outputType="executable"
+
+        compilerBuildOptions="
+            -I${CG_TOOL_ROOT}/include/c
+            -I${MCU_PLUS_SDK_PATH}/source
+            -I${MCU_PLUS_SDK_PATH}/examples/mmw_demo/mmwave_demo
+            -I${MCU_PLUS_SDK_PATH}/examples/mmw_demo/mmwave_demo/source
+            -I${MCU_PLUS_SDK_PATH}/examples/mmw_demo/mmwave_demo/source/test
+            -I${MCU_PLUS_SDK_PATH}/examples/mmw_demo/mmwave_demo/source/mmwave_control
+            -I${MCU_PLUS_SDK_PATH}/examples/mmw_demo/mmwave_demo/source/calibrations
+            -I${MCU_PLUS_SDK_PATH}/examples/mmw_demo/mmwave_demo/source/power_management
+            -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-Kernel/include
+            -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/portable/TI_ARM_CLANG/ARM_CR5F
+            -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/xwrL684x/r5f
+            -I${MMW_DFP_PATH}
+            -mcpu=cortex-r5
+            -mfloat-abi=hard
+            -mfpu=vfpv3-d16
+            -mno-unaligned-access
+            -mthumb
+            -Wall
+            -Werror
+            -g
+            -Wno-gnu-variable-sized-type-not-at-end
+            -Wno-unused-function
+            -DSOC_XWRL684X
+        "
+        linkerBuildOptions="
+            -i${MCU_PLUS_SDK_PATH}
+            -i${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib
+            -i${MCU_PLUS_SDK_PATH}/source/drivers/lib
+            -i${MCU_PLUS_SDK_PATH}/source/datapath/lib
+            -i${MCU_PLUS_SDK_PATH}/source/board/lib
+            -i${MCU_PLUS_SDK_PATH}/source/control/lib
+            -i${MCU_PLUS_SDK_PATH}/source/utils/lib
+            -i${MMW_DFP_PATH}/mmwavelink/lib/xWRL68XX
+            -i${MMW_DFP_PATH}/fecsslib/lib/xWRL68XX
+            -i${CG_TOOL_ROOT}/lib
+            -m=mmwave_demo.${ConfigName}.map
+            --diag_suppress=10063
+            --ram_model
+            --reread_libs
+        "
+
+        postBuildStep="$(MAKE) -C ${CCS_PROJECT_DIR} -f makefile_ccs_bootimage_gen OUTNAME=${BuildArtifactFileBaseName} PROFILE=${ConfigName} MCU_PLUS_SDK_PATH=${MCU_PLUS_SDK_PATH} CG_TOOL_ROOT=${CG_TOOL_ROOT} CCS_INSTALL_DIR=${CCS_INSTALL_DIR} CCS_IDE_MODE=${CCS_IDE_MODE}"
+
+        enableSysConfigTool="true"
+        sysConfigBuildOptions="
+            --context r5fss0-0 --part Default --package FCCSP
+        "
+
+        description="A Mmwave Demo FREERTOS project">
+
+        <configuration name="Debug"
+            compilerBuildOptions="
+                -D_DEBUG_=1
+            "
+            linkerBuildOptions="
+                -lfreertos.xwrL684x.r5f.ti-arm-clang.debug.lib
+                -ldatapath_tracker3d.xwrL684x.r5f.ti-arm-clang.debug.lib
+                -ldrivers.xwrL684x.r5f.ti-arm-clang.debug.lib
+                -lboard.xwrL684x.r5f.ti-arm-clang.debug.lib
+                -lcontrol.xwrL684x.r5f.ti-arm-clang.debug.lib
+                -lutils.xwrL684x.r5f.ti-arm-clang.debug.lib
+                -lmmwavelink_r5.lib
+                -lfecss_ram_r5.lib
+                -llibc.a
+            "
+        ></configuration>
+        <configuration name="Release"
+            compilerBuildOptions="
+                -Os
+            "
+            linkerBuildOptions="
+                -lfreertos.xwrL684x.r5f.ti-arm-clang.release.lib
+                -ldatapath_tracker3d.xwrL684x.r5f.ti-arm-clang.release.lib
+                -ldrivers.xwrL684x.r5f.ti-arm-clang.release.lib
+                -lboard.xwrL684x.r5f.ti-arm-clang.release.lib
+                -lcontrol.xwrL684x.r5f.ti-arm-clang.release.lib
+                -lutils.xwrL684x.r5f.ti-arm-clang.release.lib
+                -lmmwavelink_r5.lib
+                -lfecss_ram_r5.lib
+                -llibc.a
+            "
+        ></configuration>
+        <pathVariable name="MCU_PLUS_SDK_PATH" path="${COM_TI_MMWAVE_L_SDK_6_INSTALL_DIR}" scope="project" />
+        <pathVariable name="MMW_DFP_PATH" path="${COM_TI_MMWAVE_L_SDK_6_INSTALL_DIR}/firmware/mmwave_dfp" scope="project" />
+        <file path="../../../source/mmw_cli.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/mmwave_demo.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/mmwave_control/mmwave_control_config.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/calibrations/mmw_flash_cal.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/calibrations/factory_cal.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/calibrations/range_phase_bias_measurement.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../main.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/test/ADC_testbuf.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/mmwave_control/interrupts.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/dpc/dpc.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/power_management/power_management.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/lvds_streaming/mmw_lvds_stream.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../source/mmwave_control/monitors.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="linker.cmd" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../example.syscfg" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="${MCU_PLUS_SDK_PATH}/docs/api_guide_xwrL684x/MMWAVE_DEMO.html"
+                openOnCreation="false" excludeFromBuild="false" targetName="README.html" action="link">
+        </file>
+        <file path="syscfg_c.rov.xs" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="makefile_ccs_bootimage_gen" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="memory_hex.cmd" openOnCreation="false" excludeFromBuild="true" action="copy">
+        </file>
+        <file path="config/metaimage_cfg.debug.json" openOnCreation="false" excludeFromBuild="true" action="copy">
+        </file>
+        <file path="config/metaimage_cfg.release.json" openOnCreation="false" excludeFromBuild="true" action="copy">
+        </file>
+    </project>
+</projectSpec>

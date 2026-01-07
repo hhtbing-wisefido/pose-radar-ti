@@ -1,0 +1,1104 @@
+# 🛠️ AWRL6844雷达健康检测-04-第1章-环境搭建
+
+> **目标**: 完整的开发环境搭建和验证指南
+> **创建日期**: 2026-01-05
+> **状态**: ✅ 已生成
+> **前置文档**: `AWRL6844雷达健康检测-03-实施目录大纲.md`
+
+---
+
+## 📊 本章概览
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    第1章 环境搭建 路线图                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1.1 软件安装    1.2 工程导入     1.3 编译验证    1.4 硬件验证   │
+│  ─────────────  ─────────────    ────────────   ────────────    │
+│  CCS安装         导入工程         编译检查        连接EVM       │
+│  SDK安装         配置路径         构建固件        烧录固件       │
+│  Toolbox安装     依赖确认         生成镜像        功能测试       │
+│      ↓               ↓               ↓              ↓           │
+│  [工具就绪]      [工程就绪]      [固件就绪]      [硬件就绪]      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📋 目录
+
+- [1.1 软件安装要求](#11-软件安装要求)
+- [1.2 工程导入与配置](#12-工程导入与配置)
+- [1.3 编译验证](#13-编译验证)
+- [1.4 硬件连接确认](#14-硬件连接确认)
+- [1.5 固件烧录测试](#15-固件烧录测试)
+- [1.6 雷达配置文件加载](#16-雷达配置文件加载) ⭐
+- [1.7 常见问题排查](#17-常见问题排查)
+- [1.8 完成检查清单](#18-完成检查清单)
+
+---
+
+## 1.1 软件安装要求
+
+### 1.1.1 开发工具版本要求
+
+| 工具                                 | 版本             | 说明                                 | 状态      |
+| ------------------------------------ | ---------------- | ------------------------------------ | --------- |
+| **Code Composer Studio (CCS)** | 20.4.0 (ccs2040) | TI嵌入式开发IDE                      | ✅ 已安装 |
+| **MMWAVE_L_SDK**               | 06_01_00_01      | 毫米波SDK                            | ✅ 已安装 |
+| **Radar Toolbox**              | 3.30.00.06       | 雷达开发工具包                       | ✅ 已安装 |
+| **TI Radar Academy**           | 3.10.00.1        | ⭐**雷达学习教程**（强烈推荐） | ✅ 已安装 |
+| **SDK Visualizer**             | 6.0.5.1          | ⭐**首选推荐烧录工具**（GUI）  | ✅ 已安装 |
+| **项目flash_tool.py**          | v1.4.1           | 自动化烧录工具（封装arprog）         | ✅ 已安装 |
+| **SysConfig**                  | 1.20.0           | 系统配置工具                         | ✅ 已安装 |
+| **mmWave Studio**              | 04.03.01.00      | RF测试工具                           | ✅ 已安装 |
+
+> **📍 安装路径**: `C:\ti\`
+
+### 1.1.2 CCS安装
+
+#### ✅ 已安装确认
+
+**安装路径**：
+
+```
+C:\ti\ccs2040\
+```
+
+**备份资源**（如需重装）：
+
+```
+知识库/雷达模块/IDE/CCS_20.4.0.00013_win.zip
+```
+
+**官方下载**：
+
+- [Code Composer Studio 下载页面](https://www.ti.com/tool/CCSTUDIO)
+
+#### 验证安装
+
+```powershell
+# 确认安装目录存在
+Test-Path "C:\ti\ccs2040"
+# 应返回: True
+```
+
+#### 启动验证
+
+```
+CCS验证步骤：
+1. 启动 C:\ti\ccs2040\ccs\eclipse\ccstudio.exe
+2. 进入 Help → About Code Composer Studio
+3. 确认版本号包含 "20.4"
+```
+
+### 1.1.3 MMWAVE_L_SDK安装
+
+#### ✅ 已安装确认
+
+| 属性     | 值                                   |
+| -------- | ------------------------------------ |
+| SDK版本  | **MMWAVE_L_SDK_06_01_00_01**   |
+| 目标芯片 | AWRL6844 (xWRL6844)                  |
+| 安装路径 | `C:\ti\MMWAVE_L_SDK_06_01_00_01`   |
+| 官方下载 | https://www.ti.com/tool/MMWAVE-L-SDK |
+
+#### 验证安装
+
+```powershell
+# 确认SDK目录存在
+Test-Path "C:\ti\MMWAVE_L_SDK_06_01_00_01"
+# 应返回: True
+```
+
+#### SDK目录结构
+
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01/
+├── docs/
+│   └── api_guide_xwrL64xx/        # API文档
+├── examples/
+│   ├── Motion_And_Presence_Detection/
+│   └── ...
+├── kernel/
+├── source/
+│   ├── ti/
+│   │   ├── board/
+│   │   ├── drivers/
+│   │   └── datapath/
+│   └── ...
+└── tools/
+```
+
+### 1.1.4 Radar Toolbox安装
+
+#### ✅ 已安装确认
+
+**安装路径**：
+
+```
+C:\ti\radar_toolbox_3_30_00_06\
+```
+
+**备份资源**：
+
+```
+知识库/雷达模块/RADAR-TOOLBOX/radar_toolbox_3_30_00_06/
+```
+
+#### 关键目录说明
+
+```
+C:\ti\radar_toolbox_3_30_00_06/
+├── source/ti/examples/
+│   └── Automotive_InCabin_Security_and_Safety/
+│       └── AWRL6844_InCabin_Demos/         # ⭐ 本项目基础工程
+│           ├── docs/                        # 用户指南
+│           ├── prebuilt_binaries/           # 预编译固件
+│           └── src/                         # 源代码
+├── software_docs/                           # ⭐ 调优指南集（新发现）
+│   └── Tuning_Guides/                       # 各种调优指南
+├── tools/
+│   ├── visualizers/                         # 可视化工具
+│   └── mmwave_data_recorder/                # 数据记录工具
+└── applications/                            # 应用示例
+```
+
+### 1.1.5 ⭐ TI Radar Academy（强烈推荐）
+
+> 💡 **新发现资源**：TI官方雷达培训教程，包含算法原理讲解和配图！
+
+**安装路径**：
+
+```
+C:\ti\radar_academy_3_10_00_1\
+```
+
+**访问方式**：打开 `_build_radar_academy_3_10_00_1\index.html`
+
+#### 核心教程模块
+
+| 模块                                      | 内容                              | 本项目价值           |
+| ----------------------------------------- | --------------------------------- | -------------------- |
+| **Tracking with GTRACK**            | GTRACK算法详解、流程图、参数调优  | ⭐⭐⭐⭐⭐ 第9章必读 |
+| **Motion and Presence Detection**   | 存在检测状态机、majorStateCfg配置 | ⭐⭐⭐⭐⭐ 第2章必读 |
+| **What Does Radar Data Look Like?** | 雷达数据格式、处理链、Frame结构   | ⭐⭐⭐⭐ 本章推荐    |
+| **How Does Radar Work?**            | FMCW基础原理、Chirp概念           | ⭐⭐⭐ 入门参考      |
+
+**建议学习顺序**：
+
+1. 📖 `radar_data.html` - 理解雷达数据格式（本章）
+2. 📖 `motion_presence_detection.html` - 存在检测原理（第2章）
+3. 📖 `tracking.html` - 跟踪算法原理（第9章）
+
+### 1.1.6 烧录工具说明
+
+#### 烧录工具对比
+
+| 工具                          | 类型    | 推荐程度    | 适用场景               |
+| ----------------------------- | ------- | ----------- | ---------------------- |
+| **SDK Visualizer**      | GUI     | ⭐⭐⭐ 首选 | 日常开发、调试、初学者 |
+| **项目flash_tool.py**   | GUI+CLI | ⭐⭐ 推荐   | 批量烧录、自动化、生产 |
+| **arprog_cmdline_6844** | CLI     | ⭐ 底层     | 被上层工具封装调用     |
+| ~~UniFlash~~                 | GUI     | ❌ 不推荐   | AWRL6844兼容性差       |
+
+#### ⭐ 首选推荐：SDK Visualizer
+
+**工具位置**：
+
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\visualizer\visualizer.exe
+```
+
+**为什么推荐SDK Visualizer**：
+
+| 优势                    | 说明                                 |
+| ----------------------- | ------------------------------------ |
+| ✅**TI官方集成**  | SDK自带，版本完全匹配                |
+| ✅**一体化功能**  | 烧录 + 配置发送 + 可视化 + 功耗估算  |
+| ✅**自动SOP处理** | 自动提示切换FUNCTIONAL/FLASHING模式  |
+| ✅**版本检测**    | 自动检测固件版本是否匹配             |
+| ✅**E2E成功案例** | TI论坛UniFlash失败后用Visualizer成功 |
+| ✅**初学者友好**  | TI工程师推荐给初学者                 |
+| ✅**预置配置**    | 自带预置配置文件，快速测试           |
+
+**官方文档**：
+
+```
+C:\ti\MMWAVE_L_SDK_06_01_00_01\docs\Low_Power_Visualizer_User_Guide.pdf
+```
+
+#### 项目flash_tool.py（自动化场景）
+
+**工具位置**：
+
+```
+项目文档/3-固件工具/01-AWRL6844固件系统工具/5-Scripts/flash_tool.py
+```
+
+**特点**：
+
+- 封装了 `arprog_cmdline_6844.exe`
+- 支持批量烧录、固件智能匹配
+- 适合生产和自动化测试
+
+#### 为什么不用UniFlash
+
+- ❌ TI E2E论坛多个AWRL6844失败案例
+- ❌ TI工程师很少推荐用于AWRL6844
+- ❌ 不支持AWRL6844特殊的Flash分区格式化
+- ❌ 项目实测从未成功
+
+### 1.1.7 XDS110驱动安装
+
+#### 下载地址
+
+https://software-dl.ti.com/ccs/esd/documents/xdsdebugprobes/emu_xds_software_package_download.html
+
+#### 验证安装
+
+```powershell
+# Windows设备管理器中应显示：
+# XDS110 Class Application/User UART (COMxx)
+# XDS110 Class Auxiliary Data Port (COMxx)
+```
+
+---
+
+## 1.2 工程导入与配置
+
+### 1.2.1 导入AWRL6844_InCabin_Demos工程
+
+#### 🔴 重要：使用项目本地副本
+
+> ⚠️ **为什么使用本地副本而非官方SDK路径？**
+>
+> 1. **保持官方源代码干净** - 不修改 `C:\ti\radar_toolbox` 中的原始代码
+> 2. **版本控制** - 本地副本纳入Git管理，便于追踪修改
+> 3. **API兼容性修复** - Radar Toolbox 3.30与SDK 06.01.00.01存在API不兼容，已在本地副本中修复
+> 4. **便于扩展** - 后续健康检测功能开发可直接在此基础上进行
+
+#### 工程位置（⭐ 使用本地副本）
+
+**本地副本路径**（推荐）：
+
+```
+project-code/AWRL6844_InCabin_Demos/
+├── docs/                       # 文档
+├── prebuilt_binaries/          # 预编译固件
+└── src/                        # 源代码（⭐ CCS导入这个目录）
+    ├── common_mss_dss/         # MSS/DSS共享代码
+    ├── dss/                    # DSP子系统
+    ├── mss/                    # 主子系统(R5F) - 已修复API兼容性
+    └── system/                 # 系统工程
+```
+
+**官方原始路径**（仅供参考，不建议直接使用）：
+
+```
+C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\
+└── Automotive_InCabin_Security_and_Safety\AWRL6844_InCabin_Demos\
+```
+
+#### 已修复的API兼容性问题
+
+> ⚠️ **问题描述**：Radar Toolbox 3.30的代码与MMWAVE_L_SDK 06.01.00.01存在API签名不匹配
+>
+> **错误信息**：
+>
+> ```
+> error: too few arguments to function 'MMWave_FecssDevClockCtrl'
+> mmwave_demo_mss.c:1313
+> ```
+>
+> **修复内容**（已在本地副本中修复）：
+>
+> | 文件                                 | 修改                                             |
+> | ------------------------------------ | ------------------------------------------------ |
+> | `src/mss/source/mmwave_demo_mss.c` | 第1314行：添加 `MMWAVE_APLL_CLOCK_ENABLE` 参数 |
+>
+> **修复前**：
+>
+> ```c
+> retVal = MMWave_FecssDevClockCtrl(&gMmwMssMCB.mmWaveCfg.initCfg, &errCode);
+> ```
+>
+> **修复后**：
+>
+> ```c
+> retVal = MMWave_FecssDevClockCtrl(&gMmwMssMCB.mmWaveCfg.initCfg, MMWAVE_APLL_CLOCK_ENABLE, &errCode);
+> ```
+
+#### CCS导入步骤
+
+> ⚠️ **重要**：必须选择**整个src目录**，而不是单独的子目录！
+>
+> ⚠️ **CCS版本说明**：CCS 20.4 是基于 Theia/VS Code 的新版本，菜单与旧版Eclipse不同！
+
+**正式导入步骤**
+
+```
+步骤1: 打开CCS
+步骤2: 文件 → 导入 → CCS Projects（或 Project → Import CCS Projects）
+  
+步骤3: 选择搜索目录（⭐ 选择本地副本的src目录）：
+        D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src
+  
+步骤4: CCS会自动发现3个工程，全部勾选：
+        ☑ demo_in_cabin_sensing_6844_system  ← 系统工程（主工程）
+        ☑ demo_in_cabin_sensing_6844_mss     ← MSS工程（R5F核心）
+        ☑ demo_in_cabin_sensing_6844_dss     ← DSS工程（C66x核心）
+  
+步骤5: 点击 Finish
+```
+
+> 💡 **常见问题1**：如果只选择 `src/system` 目录，CCS可能找不到工程。
+>
+> **解决方法**：向上一级，选择整个 `src` 目录，让CCS自动扫描所有子目录。
+
+> ⚠️ **常见问题2**：导入时报错 `Product ti.mathlib.c66x v0.0 is not currently installed`
+>
+> **完整错误信息**：
+>
+> ```
+> Problems importing projects:
+> Product ti.mathlib.c66x v0.0 is not currently installed and no compatible version is available.
+> Product ti.mas.dsplib.c66x v0.0 is not currently installed and no compatible version is available.
+> Please install this product or a compatible version.
+> ```
+>
+> **原因**：CCS未识别SDK中自带的mathlib/dsplib库路径
+>
+> **✅ 解决方法**（CCS 20.4 Theia版 - 已验证有效）：
+>
+> SDK中已包含这些库，需要手动添加到CCS的产品发现路径：
+>
+> | 库名称  | 路径                                                    |
+> | ------- | ------------------------------------------------------- |
+> | mathlib | `C:\ti\MMWAVE_L_SDK_06_01_00_01\mathlib_c66x_3_1_2_1` |
+> | dsplib  | `C:\ti\MMWAVE_L_SDK_06_01_00_01\dsplib_c66x_3_4_0_0`  |
+>
+> **操作步骤**：
+>
+> ```
+> 1. 菜单栏：文件 → 首选项 → Code Composer Studio Settings...
+> 2. 在设置页面找到以下两项：
+>    - Compiler discovery-path
+>    - Product discovery-path
+> 3. 分别在这两项中添加以下路径：
+>    C:\ti\MMWAVE_L_SDK_06_01_00_01\mathlib_c66x_3_1_2_1
+>    C:\ti\MMWAVE_L_SDK_06_01_00_01\dsplib_c66x_3_4_0_0
+> 4. 点击应用/确定
+> 5. 重新导入工程，错误消失
+> ```
+>
+> **验证成功**：添加路径后可正常导入 `demo_in_cabin_sensing_6844_system` 工程。
+
+### 1.2.2 CCS产品发现确认（无需手动配置变量）
+
+> ✅ **重要说明**：CCS 20.4 Theia 通过 `Product discovery-path` 自动发现SDK和库，**无需手动配置路径变量**。
+
+#### 确认产品已发现
+
+完成1.2.1的路径添加后，在 `Code Composer Studio Settings` → `Products` 页面应显示：
+
+| 产品名称                      | 版本      | 路径                                                    |
+| ----------------------------- | --------- | ------------------------------------------------------- |
+| DSPLIB C66x                   | 3.4.0.0   | `C:/ti/MMWAVE_L_SDK_06_01_00_01/dsplib_c66x_3_4_0_0`  |
+| MATHLIB C66x                  | 3.1.2.1   | `C:/ti/MMWAVE_L_SDK_06_01_00_01/mathlib_c66x_3_1_2_1` |
+| mmWave low-power SDK xWRL68xx | 6.1.0.01  | `C:/ti/MMWAVE_L_SDK_06_01_00_01`                      |
+| Radar Toolbox                 | 3.30.0.06 | `C:/ti/radar_toolbox_3_30_00_06`                      |
+| SysConfig                     | 1.20.0    | `C:/ti/sysconfig_1.20.0`                              |
+
+#### Variables页面
+
+`Code Composer Studio Settings` → `Variables` 页面：
+
+- **无需配置任何用户变量**
+- 列表为空是正常状态
+- 工程通过 `Product discovery-path` 自动获取所需路径
+
+> 💡 **旧版CCS说明**：网上部分教程提到手动配置 `MMWAVE_L_SDK_INSTALL_DIR` 等变量，这是旧版Eclipse-based CCS的做法。CCS 20.4 Theia版本不需要手动配置这些变量。
+
+### 1.2.3 工程依赖关系
+
+```
+demo_in_cabin_sensing_6844_system (系统工程)
+├── demo_in_cabin_sensing_6844_mss (MSS工程 - R5F核心)
+│   ├── mmwave_demo_mss.c          # 主入口
+│   ├── mmw_cli.c                  # CLI命令处理
+│   └── 子模块：
+│       ├── dpc/                   # 数据路径控制
+│       ├── dpu/                   # 数据处理单元
+│       └── alg/                   # 算法模块
+│           └── cnn_classifier/    # ⭐ CNN分类器(姿态检测关键)
+└── demo_in_cabin_sensing_6844_dss (DSS工程 - 信号处理)
+    ├── mmwave_demo_dss.c          # DSS入口
+    └── dpu/                       # 信号处理单元
+```
+
+---
+
+## 1.3 编译验证
+
+> ✅ **编译状态**：已完成编译，生成固件文件
+
+### 1.3.1 编译前检查
+
+```
+检查清单：
+├── ✅ CCS版本正确 (20.4.0.00013)
+├── ✅ SDK路径配置正确 (Product discovery-path)
+├── ✅ Toolbox路径配置正确
+├── ✅ 编译器版本正确 (tiarmclang)
+└── ✅ 工程无红色错误标记 (API兼容性问题已修复)
+### 1.3.2 执行编译
+
+> ✅ **已完成** - 2026年1月6日
+
+```
+
+步骤1: 选择系统工程 "demo_in_cabin_sensing_6844_system"
+步骤2: 右键 → Build Project
+步骤3: 等待编译完成
+步骤4: 检查Console输出
+
+```
+
+#### 编译结果
+
+```
+
+**** Build of configuration Release for project demo_in_cabin_sensing_6844_system ****
+
+...编译过程...
+
+**** Build Finished ****
+
+Build Summary:
+  ✅ 0 errors, 0 warnings
+  ✅ 已生成 .appimage 文件
+
+```ld
+  0 errors, 0 warnings (0 new)
+```
+
+### 1.3.3 编译输出
+
+#### 输出文件位置
+
+```
+{工程目录}/
+└── Release/
+    └── demo_in_cabin_sensing_6844_system.release.appimage  # ⭐ 最终固件
+```
+
+> ⚠️ **重要说明：编译不会覆盖预编译固件**
+>
+> | 位置                 | 路径                                                       | 说明                 |
+> | -------------------- | ---------------------------------------------------------- | -------------------- |
+> | **编译输出**   | `{工程目录}/Release/`                                    | 您自己编译生成的固件 |
+> | **预编译固件** | `{Toolbox}/...AWRL6844_InCabin_Demos/prebuilt_binaries/` | TI提供的原始固件     |
+>
+> 两者位于完全不同的目录，**互不影响**。
+>
+> **使用建议**：
+>
+> - ✅ **验证编译能力**：使用 `Release/` 目录的编译固件
+> - ✅ **快速功能测试**：使用 `prebuilt_binaries/` 目录的预编译固件
+> - ✅ **后续开发修改**：使用自己编译的固件
+
+#### 输出文件说明
+
+| 文件           | 说明             |
+| -------------- | ---------------- |
+| `*.appimage` | 合并的可烧录固件 |
+| `*.out`      | ELF调试文件      |
+| `*.map`      | 内存映射文件     |
+
+### 1.3.4 常见编译错误处理
+
+#### 错误1: SDK路径未找到
+
+```
+错误信息: fatal error: ti/xxx.h: No such file or directory
+
+解决方法:
+1. 检查 MMWAVE_L_SDK_INSTALL_DIR 变量
+2. 确认路径使用正斜杠 /
+3. 重新配置后 Clean Project 再编译
+```
+
+#### 错误2: 编译器版本不匹配
+
+```
+错误信息: Compiler version mismatch
+
+解决方法:
+1. Window → Preferences → CCS → Build → Compilers
+2. 添加正确版本的tiarmclang
+3. 工程属性中选择正确编译器
+```
+
+## 1.4 固件烧录测试
+
+> 🔄 **当前状态**：正在烧录自己编译的固件进行验证
+
+### 1.4.1 固件文件位置
+
+**自己编译的固件**（✅ 已烧录）：
+
+```
+{工程目录}/Release/
+└── demo_in_cabin_sensing_6844_system.release.appimage
+```
+
+**预编译固件**（可选备用）：
+
+```
+C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\Automotive_InCabin_Security_and_Safety\
+  AWRL6844_InCabin_Demos\prebuilt_binaries\
+  └── demo_in_cabin_sensing_6844_system.release.appimage
+```
+
+### 1.5.2 烧录前准备
+
+> ✅ **已完成** - 硬件已在1.4节完成连接
+
+#### 硬件设置（SOP跳线）
+
+```
+⚠️ 烧录前必须设置为Flash编程模式：
+- S7: OFF（Flash模式）
+- S8: OFF（Flash模式）
+```
+
+#### 确认COM端口
+
+```powershell
+# 设备管理器中查看XDS110端口号
+# 记录 "XDS110 Class Application/User UART" 的COM号（如COM3）
+```
+
+### 1.5.3 ⭐ 方法1：SDK Visualizer烧录（首选推荐）
+
+> ✅ **已完成** - 2026-01-06 成功烧录自编译固件
+
+**启动Visualizer**：
+
+```powershell
+Start-Process "C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\visualizer\visualizer.exe"
+```
+
+**烧录步骤**：
+
+1. **切换到Flash标签页**
+2. **选择COM端口** - 自动检测或手动选择
+3. **选择设备** - AWRL6844
+4. **设置SOP开关** - 按提示切换到FLASHING MODE
+5. **选择固件** - 点击Upload选择.appimage文件
+   - **预编译固件**：`{Toolbox}/...AWRL6844_InCabin_Demos/prebuilt_binaries/demo_in_cabin_sensing_6844_system.release.appimage`
+   - **自己编译的固件**：`{工程目录}/Release/demo_in_cabin_sensing_6844_system.release.appimage`
+6. **点击FLASH** - 等待烧录完成
+7. **恢复SOP开关** - 按提示切换回FUNCTIONAL MODE
+
+**优势**：
+
+- ✅ 图形化界面，无需记忆命令
+- ✅ 自动处理SOP模式切换
+- ✅ 烧录后可直接发送配置测试
+- ✅ 内置版本检测
+
+---
+
+### 1.5.4 方法2：arprog命令行烧录（自动化场景）
+
+### 1.4.4 方法2：arprog命令行烧录（自动化场景）
+
+> 💡 **说明**：arprog_cmdline_6844.exe是底层烧录工具，被项目flash_tool.py和SDK Visualizer封装调用。
+>
+> 如需直接使用命令行（如批量烧录、CI/CD集成），可参考以下命令。
+
+#### 简单烧录（不指定偏移量）
+
+```powershell
+cd C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool
+
+.\arprog_cmdline_6844.exe -p COM3 `
+  -f1 "C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\Automotive_InCabin_Security_and_Safety\AWRL6844_InCabin_Demos\prebuilt_binaries\demo_in_cabin_sensing_6844_system.release.appimage" `
+  -s SFLASH `
+  -c
+```
+
+#### 方法2：指定偏移量烧录（⚠️ 必须加-cf参数！）
+
+```powershell
+cd C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool
+
+.\arprog_cmdline_6844.exe -p COM3 `
+  -f1 "demo_in_cabin_sensing_6844_system.release.appimage" `
+  -of1 270336 `
+  -s SFLASH `
+  -c `
+  -cf    # ⭐ 关键参数！动态创建Flash Header
+```
+
+> 🔥 **重要**：使用偏移量时**必须**加 `-cf`参数，否则会烧录失败！
+>
+> `-cf`参数作用：动态创建Flash Header，让设备知道App在0x42000位置
+
+#### 方法3：完整烧录（SBL + App）
+
+```powershell
+.\arprog_cmdline_6844.exe -p COM3 `
+  -f1 "sbl.release.appimage" `
+  -of1 8192 `
+  -f2 "demo_in_cabin_sensing_6844_system.release.appimage" `
+  -of2 270336 `
+  -s SFLASH `
+  -c `
+  -cf
+```
+
+### 1.5.5 烧录参数说明
+
+| 参数              | 说明                             | 示例                       |
+| ----------------- | -------------------------------- | -------------------------- |
+| `-p`            | COM端口                          | `-p COM3`                |
+| `-f1`           | 第一个固件文件                   | `-f1 "xxx.appimage"`     |
+| `-f2`           | 第二个固件文件（可选）           | `-f2 "app.appimage"`     |
+| `-of1`          | 第一个文件偏移量                 | `-of1 8192`（0x2000）    |
+| `-of2`          | 第二个文件偏移量                 | `-of2 270336`（0x42000） |
+| `-s`            | 目标存储类型                     | `-s SFLASH`              |
+| `-c`            | 发送break信号                    | `-c`                     |
+| **`-cf`** | ⭐**动态创建Flash Header** | `-cf`                    |
+
+### 1.5.6 烧录验证
+
+> ✅ **实际烧录结果**（2026-01-06）：自编译固件烧录成功
+
+> ✅ **实测结论**（来源：`4-测试实验结果/1.烧录偏移量实际测试结果.md`）
+>
+> | 烧录方式              | 结果    | 说明             |
+> | --------------------- | ------- | ---------------- |
+> | B组（不加偏移量）     | ✅ 成功 | 雷达数据输出正常 |
+> | A组（加偏移量270336） | ❌ 失败 | 缺少 `-cf`参数 |
+>
+> **推荐方法**：使用不加偏移量的简单烧录，或加偏移量时必须带 `-cf`参数
+
+```
+成功标志：
+✅ 显示进度条 [========================================>]
+✅ 显示 "Done Metaimage: 0"
+✅ 显示 "disconnecting device...."
+✅ 设备自动重启
+✅ 串口有CLI输出
+### 1.5.7 烧录失败处理（参考）
+
+### 1.4.6 烧录失败处理
+
+#### 错误：连接超时
+
+```
+
+错误信息: "Connect to Device Timeout"
+
+解决方法（来自TI E2E #1531816）：
+
+1. 确认SOP开关设置正确 (S7-OFF, S8-OFF)
+2. 按S2复位键
+3. 准备好命令但不执行
+4. 再次按S2复位键
+5. 立即执行命令
+
+```
+
+#### 错误：Flash Header解析失败
+
+```
+
+错误信息: "Flash Header Parse Error"
+
+解决方法：
+✅ 添加 -cf 参数
+✅ 使用正确的偏移量
+-------------------
+
+---
+
+## 1.6 雷达配置文件加载 ⭐
+
+> 🚨 **关键步骤**：没有配置文件，雷达无法启动工作！
+
+### 1.6.1 配置文件的作用
+
+**雷达工作流程**：
+
+```
+烧录固件(.appimage) → 发送配置文件(.cfg) → sensorStart → 雷达开始输出数据
+```
+
+**配置文件内容说明**：
+
+| 配置项              | 作用             | CLI命令         |
+| ------------------- | ---------------- | --------------- |
+| **Chirp配置** | 定义发射波形参数 | `profileCfg`  |
+| **帧配置**    | 定义帧结构       | `frameCfg`    |
+| **通道配置**  | TX/RX通道选择    | `channelCfg`  |
+| **CFAR配置**  | 目标检测参数     | `cfarCfg`     |
+| **跑径模式**  | CPD/SBR/入侵检测 | `runningMode` |
+
+### 1.6.2 SDK配置文件位置
+
+#### 通用配置文件
+
+| 文件                          | 路径                                                                                      | 用途                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
+| `6844_profile_4T4R_tdm.cfg` | `C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\visualizer\tmp\`                                  | SDK Visualizer默认配置 ✅ |
+| `6844_profile_4T4R_tdm.cfg` | `C:\ti\radar_toolbox_3_30_00_06\tools\mmwave_data_recorder\src\cfg\`                    | 数据采集工具配置 ✅       |
+| `xWRL6844_4T4R_tdm.cfg`     | `C:\ti\radar_toolbox_3_30_00_06\tools\Adc_Data_Capture_Tool_DCA1000_CLI\chirp_configs\` | ADC采集配置               |
+
+#### InCabin Demo专用配置
+
+| 文件                           | 路径                                                                                            | 用途              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- | ----------------- |
+| `cpd.cfg`                    | `C:\ti\radar_toolbox_3_30_00_06\tools\visualizers\AWRL6844_Incabin_GUI\src\chirpConfigs6844\` | 儿童存在检测(CPD) |
+| `sbr.cfg`                    | 同上                                                                                            | 安全带提醒(SBR)   |
+| `intrusion_detection.cfg`    | 同上                                                                                            | 入侵检测          |
+| `intrusion_detection_LP.cfg` | 同上                                                                                            | 低功耗入侵检测    |
+
+### 1.6.3 使用SDK Visualizer发送配置（通用配置测试）
+
+> ⚠️ **配置兼容性说明**（2026-01-06测试结果）
+
+**测试结果总结**：
+
+| 配置文件类型               | SDK Visualizer | InCabin专用GUI | 兼容性说明                                |
+| -------------------------- | -------------- | -------------- | ----------------------------------------- |
+| 通用配置（编号1、2）       | ⚠️ 版本警告  | N/A            | 固件标识为SDK 05.06，但可忽略警告继续使用 |
+| InCabin专用配置（编号3-7） | ❌ 设置失败    | ✅ 完全兼容    | 包含InCabin专用CLI命令，必须用专用GUI     |
+
+**问题原因**：
+
+1. **版本标识问题**：InCabin Demo源自SDK 05.06，即使用06.01编译，固件内部版本标识仍为05.06
+2. **CLI命令差异**：InCabin Demo添加了大量自定义CLI命令（如 `runningMode`、`featExtrCfg`等），SDK Visualizer不支持
+
+**✅ 推荐使用InCabin专用可视化工具**：
+
+```powershell
+Start-Process "C:\ti\radar_toolbox_3_30_00_06\tools\visualizers\AWRL6844_Incabin_GUI\src\occupancy_demo_gui.exe"
+```
+
+**专用GUI优势**：
+
+- ✅ 专为InCabin Demo设计
+- ✅ 支持所有自定义CLI命令
+- ✅ 自动加载正确的配置文件
+- ✅ 界面适配人存检测、姿态分类功能
+
+---
+
+### 1.6.4 ⭐ 使用InCabin专用GUI（推荐方法）
+
+**工具位置**：
+
+```
+C:\ti\radar_toolbox_3_30_00_06\tools\visualizers\AWRL6844_Incabin_GUI\src\occupancy_demo_gui.exe
+```
+
+**启动方法**：
+
+```powershell
+Start-Process "C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\visualizer\visualizer.exe"
+```
+
+**使用场景**：测试基本雷达功能（不使用InCabin专用功能）
+
+**注意事项**：
+
+- ⚠️ 会提示SDK版本警告（固件标识为05.06）
+- ⚠️ **可以忽略警告继续使用**
+- ⚠️ 不要加载InCabin专用配置文件（编号3-7）
+- ✅ 可以使用通用配置测试基本雷达功能
+
+**通用配置文件位置**：
+
+```
+项目临时文件：temp/awrl6844_basic_test.cfg
+```
+
+---
+
+### 1.6.6 配置文件分类总结
+
+> 📋 **基于2026-01-06实测结果**
+
+| 配置类型              | 文件示例                  | 适用工具       | 包含命令         | 测试结果            |
+| --------------------- | ------------------------- | -------------- | ---------------- | ------------------- |
+| **通用配置**    | 6844_profile_4T4R_tdm.cfg | SDK Visualizer | 标准mmWave CLI   | ⚠️ 版本警告但可用 |
+| **InCabin专用** | cpd.cfg, sbr.cfg等        | InCabin GUI    | InCabin自定义CLI | ✅ 完全兼容         |
+
+**自定义CLI命令示例**（仅InCabin GUI支持）：
+
+```
+runningMode           # 运行模式切换
+featExtrCfg           # 特征提取配置
+macroDopplerCfg       # 宏多普勒配置
+dynamicRACfarCfg      # 动态CFAR配置
+zOffsetCfg            # Z轴偏移配置
+...
+```
+
+---
+
+### 1.6.7 验证雷达数据输出
+
+> 📚 **详细参考**：`项目文档/3-固件工具/05-雷达配置参数研究/`
+
+**工具说明**：
+
+| 工具                                   | 用途                |
+| -------------------------------------- | ------------------- |
+| `radar_test_gui.py`                  | 配置文件测试GUI工具 |
+| `雷达配置文件深度分析_v2.0_Part1.md` | 配置参数详细解释    |
+| `雷达配置文件深度分析_v2.0_Part2.md` | 配置模板和最佳实践  |
+| `TI_6844_profile_4T4R_tdm.cfg`       | 标准TI配置文件样本  |
+
+**配置文件工具对照表**：
+
+| 工具                          | 用途              | 适用场景             |
+| ----------------------------- | ----------------- | -------------------- |
+| **SDK Visualizer**      | 发送配置 + 可视化 | 日常开发、快速验证   |
+| **05-雷达配置参数研究** | 参数分析 + 测试   | 配置调优、参数研究   |
+| **InCabin GUI**         | Demo专用配置      | CPD/SBR/入侵检测演示 |
+
+### 1.6.5 验证雷达数据输出
+
+**成功标志**：
+
+```
+✅ CLI端口返回 "Done" 响应
+✅ 数据端口有二进制数据输出
+✅ 可视化工具显示点云
+✅ 能检测到人员运动
+```
+
+**常见失败原因**：
+
+| 现象         | 原因              | 解决方法                         |
+| ------------ | ----------------- | -------------------------------- |
+| 配置发送失败 | 固件不匹配        | 确认固件支持该配置               |
+| 无数据输出   | 未执行sensorStart | 检查配置文件是否包含sensorStart  |
+| 波特率错误   | 数据端口设置错误  | 使用**1250000** 而非921600 |
+
+> 📝 **实测结果参考**：`项目文档/4-测试实验结果/2.雷达配置实际测试结果.md`
+
+---
+
+## 1.7 常见问题排查
+
+### 1.7.1 问题：设备无法识别
+
+```
+排查步骤：
+1. 检查USB连接
+2. 重新安装XDS110驱动
+3. 尝试不同USB端口
+4. 检查设备管理器
+```
+
+### 1.7.2 问题：烧录失败
+
+```
+排查步骤：
+1. 确认SOP跳线设置正确（S7-OFF, S8-OFF）
+2. 确认使用正确的COM端口
+3. 如使用偏移量，确认添加了 -cf 参数
+4. 按复位键后立即执行烧录命令
+5. 检查arprog_cmdline_6844.exe是否存在
+6. 尝试不加偏移量直接烧录
+```
+
+> ⚠️ **注意**：不建议使用UniFlash，请使用arprog_cmdline_6844.exe
+
+### 1.7.3 问题：配置文件发送失败
+
+```
+排查步骤：
+1. 确认固件已正确烧录
+2. 确认配置文件与固件匹配（参考固件匹配算法）
+3. 检查串口连接状态
+4. 查看错误信息，确认哪个CLI命令失败
+5. 参考 `项目文档/4-测试实验结果/2.雷达配置实际测试结果.md`
+```
+
+### 1.7.4 问题：串口无输出
+
+```
+排查步骤：
+1. 确认连接正确的COM口
+2. 检查波特率设置（数据端口必须是 **1250000**）
+3. 重启设备
+4. 检查固件是否正确烧录
+5. 检查配置文件是否发送成功
+```
+
+### 1.7.5 问题：编译找不到头文件
+
+```
+排查步骤：
+1. 检查SDK安装路径
+2. 确认路径变量配置
+3. Clean后重新编译
+4. 检查include路径设置
+```
+
+---
+
+## 1.8 完成检查清单
+
+### 开发环境检查
+
+| 序号 | 检查项                          | 路径                                 | 状态      |
+| ---- | ------------------------------- | ------------------------------------ | --------- |
+| 1    | CCS 20.4 (ccs2040) 已安装       | `C:\ti\ccs2040`                    | ✅ 已完成 |
+| 2    | MMWAVE_L_SDK_06_01_00_01 已安装 | `C:\ti\MMWAVE_L_SDK_06_01_00_01`   | ✅ 已完成 |
+| 3    | Radar Toolbox 3.30.00.06 已安装 | `C:\ti\radar_toolbox_3_30_00_06`   | ✅ 已完成 |
+| 4    | 烧录工具 已就绪                 | SDK Visualizer(推荐) + flash_tool.py | ✅ 已完成 |
+| 5    | SysConfig 1.20.0 已安装         | `C:\ti\sysconfig_1.20.0`           | ✅ 已完成 |
+| 6    | XDS110驱动 已安装               | (随CCS安装)                          | ✅ 已完成 |
+
+### 工程编译检查
+
+### 硬件验证检查
+
+> ✅ **已全部验证完成** - 详见项目测试记录
+> 🔄 **当前进度**：正在烧录自己编译的固件进行功能验证
+
+| 序号 | 检查项                       | 状态      | 验证来源                                                   |
+| ---- | ---------------------------- | --------- | ---------------------------------------------------------- |
+| 1    | EVM正确连接                  | ✅ 已完成 | `03-固件烧录测试/AWRL6844烧录测试完整报告_2025-12-19.md` |
+| 2    | 串口识别正常                 | ✅ 已完成 | COM3(烧录), COM4(数据输出), 波特率1250000                  |
+| 3    | 预编译固件烧录成功           | ✅ 已完成 | `4-测试实验结果/1.烧录偏移量实际测试结果.md`             |
+| 4    | **自编译固件烧录测试** | 🔄 进行中 | 2026-01-06，当前正在烧录验证                               |
+| 5    | CLI命令响应正常              | ✅ 已完成 | `2-开发记录/2025-12-23/2025-12-23_固件及烧录完整指南.md` |
+| 6    | 可视化工具测试正常           | ✅ 已完成 | visualizer.exe / Industrial_Visualizer.exe 均已验证        |
+
+## 📊 本章总结
+
+### ✅ 环境搭建全部完成
+
+> **验证状态**：所有检查项已在项目开发过程中完成验证
+>
+> **最新进展**（2026-01-06）：
+>
+> - ✅ 工程编译成功
+> - 🔄 自编译固件烧录测试中
+>
+> **参考文档**：
+>
+> - `项目文档/3-固件工具/03-固件烧录测试/AWRL6844烧录测试完整报告_2025-12-19.md`
+> - `项目文档/4-测试实验结果/1.烧录偏移量实际测试结果.md`
+> - `项目文档/2-开发记录/2025-12-23/2025-12-23_固件及烧录完整指南.md`
+
+### 完成输出物
+
+| 输出物         | 说明                                       | 状态      |
+| -------------- | ------------------------------------------ | --------- |
+| 开发环境       | CCS 20.4 + SDK 06.01 + Toolbox 3.30        | ✅ 已完成 |
+| 工程导入       | InCabin Demo 本地副本 + API 兼容性修复     | ✅ 已完成 |
+| 编译固件       | Release 配置编译成功，生成.appimage 文件   | ✅ 已完成 |
+| 烧录工具       | SDK Visualizer（首选）+ arprog 命令行      | ✅ 已验证 |
+| 硬件连接       | EVM 连接、COM 口识别、XDS110 驱动          | ✅ 已验证 |
+| 预编译固件测试 | B 组命令（不加偏移量）成功                 | ✅ 已验证 |
+| 自编译固件测试 | 正在烧录验证                               | 🔄 进行中 |
+| CLI 通信       | sensorStop/sensorStart/help 命令           | ✅ 已验证 |
+| 可视化工具     | visualizer.exe / Industrial_Visualizer.exe | ✅ 已验证 |
+
+### 完成输出物
+
+| 输出物     | 说明                                       | 状态      |
+| ---------- | ------------------------------------------ | --------- |
+| 开发环境   | CCS 20.4 + SDK 06.01 + Toolbox 3.30        | ✅ 已完成 |
+| 烧录工具   | arprog_cmdline_6844.exe（TI官方推荐）      | ✅ 已验证 |
+| 硬件连接   | EVM连接、COM口识别、XDS110驱动             | ✅ 已验证 |
+| 固件烧录   | B组命令（不加偏移量）成功                  | ✅ 已验证 |
+| CLI通信    | sensorStop/sensorStart/help命令            | ✅ 已验证 |
+| 可视化工具 | visualizer.exe / Industrial_Visualizer.exe | ✅ 已验证 |
+
+### 关键结论（来自实测）
+
+| 项目                   | 结论                                                  |
+| ---------------------- | ----------------------------------------------------- |
+| **推荐烧录工具** | ⭐ SDK Visualizer（首选）/ flash_tool.py（自动化）    |
+| **推荐烧录方式** | Visualizer一键烧录 或 B组命令（不加偏移量）           |
+| **数据端口**     | COM4，波特率 1250000                                  |
+| **配置端口**     | COM3，波特率 115200                                   |
+| **可用配置文件** | `6844_profile_4T4R_tdm.cfg`（SDK和Toolbox版本均可） |
+
+### 下一章预告
+
+**第2章：人存检测验证**
+
+- 分析InCabin Demo的人存检测实现
+- 验证occupancyClassifier模块
+- 理解TLV输出格式
+- 记录基础性能指标
+
+---
+
+## 📚 参考资源
+
+### ⭐ 本章推荐阅读（来自目录大纲E.3）
+
+> **必读参考**：
+
+### 工程编译检查
+
+| 序号 | 检查项                 | 状态      | 说明                                                    |
+| ---- | ---------------------- | --------- | ------------------------------------------------------- |
+| 1    | InCabin Demo工程已导入 | ✅ 已完成 | 已导入本地副本 `project-code/AWRL6844_InCabin_Demos/` |
+| 2    | 路径变量已配置         | ✅ 已完成 | Product discovery-path 已配置 SDK 和库路径              |
+| 3    | 编译无错误             | ✅ 已完成 | Release 配置编译成功                                    |
+| 4    | 生成.appimage文件      | ✅ 已完成 | 已生成并成功烧录                                        |
+
+### 硬件验证检查
+
+> ✅ **已全部验证完成** - 详见项目测试记录
+> ✅ **自编译固件烧录成功**（2026-01-06）
+
+| 序号 | 检查项                     | 状态      | 验证来源                                                   |
+
+## 📊 本章总结
+
+### ✅ 环境搭建全部完成
+
+> **验证状态**：第1章所有环节已完成验证
+>
+> **最新进展**（2026-01-06）：
+>
+> - ✅ 工程编译成功
+> - ✅ 自编译固件烧录成功
+> - ✅ 可以进入第2章人存检测验证
+>
+> **参考文档**：
+>
+> - `项目文档/3-固件工具/03-固件烧录测试/AWRL6844烧录测试完整报告_2025-12-19.md`
+> - `项目文档/4-测试实验结果/1.烧录偏移量实际测试结果.md`
+> - `项目文档/2-开发记录/2025-12-23/2025-12-23_固件及烧录完整指南.md`
+
+### 完成输出物
+
+| 输出物                   | 说明                                       | 状态      |
+| ------------------------ | ------------------------------------------ | --------- |
+| 开发环境                 | CCS 20.4 + SDK 06.01 + Toolbox 3.30        | ✅ 已完成 |
+| 工程导入                 | InCabin Demo 本地副本 + API 兼容性修复     | ✅ 已完成 |
+| 编译固件                 | Release 配置编译成功，生成.appimage 文件   | ✅ 已完成 |
+| 硬件连接                 | EVM 连接、COM 口识别、XDS110 驱动          | ✅ 已完成 |
+| 烧录工具                 | SDK Visualizer（首选）+ arprog 命令行      | ✅ 已完成 |
+| 预编译固件测试           | B 组命令（不加偏移量）成功                 | ✅ 已完成 |
+| **自编译固件烧录** | **SDK Visualizer 烧录成功**          | ✅ 已完成 |
+| CLI 通信                 | sensorStop/sensorStart/help 命令           | ✅ 已完成 |
+| 可视化工具               | visualizer.exe / Industrial_Visualizer.exe | ✅ 已完成 |

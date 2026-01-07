@@ -1,0 +1,58 @@
+{
+    "securityType": "secure",
+    "customImage": "",
+    "customImageStartAddress": "",
+    "flashIndex": "1",
+    "metaHeaderInfo": {
+        "metaImageType": "multi",
+        "pbistEnablecontrol": "0x1F01FF",
+        "sharedRamAllocationControl": "0",
+        "loggerClear": "0xDD"
+    },
+    "interimMetaHeaderFile": "../../examples/mmw_demo/mmwave_demo/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/temp/metaheader.bin",
+    "buildImages": [
+        {
+            "buildImagePath": "../../examples/mmw_demo/mmwave_demo/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/mmwave_demo_r5_img.release.rig",
+            "encryptEnable": "yes"
+        },
+        {
+            "buildImagePath": "../../tools/security/hsmrt/tifs_xwrL684x_srv_disabled/tifs_xwrL684x_srv_disabled.release.rig",
+            "encryptEnable": "yes"
+        },
+        {
+            "buildImagePath": "../../firmware/mmwave_dfp/rfsfirmware/xWRL68xx/mmwave_rfs_patch.rig",
+            "encryptEnable": "no"
+        }
+    ],
+    "imageEncryptionParam": {
+        "iv": "aabbccddeeaabbccaabbccddeeaabbcc",
+        "iter": "0",
+        "saltFile": "../security/config_keys/salt.txt",
+        "keyFile": "../security/config_keys/smek.txt"
+    },
+    "CertificateParams": {
+        "imageIntegrityOID": {
+            "shaType": "00"
+        },
+        "softwareRevisionOID": {
+            "softwareRevision": "1"
+        },
+        "keyDerivationOID": {
+            "enable": "no",
+            "saltFile": "../security/config_keys/kdsalt.txt",
+            "infoFile": "../security/config_keys/kdinfo.txt"
+        },
+        "debugOID": {
+            "enable": "yes",
+            "uidFile": "../security/config_keys/uid_zero.txt",
+            "debugType": "2"
+        },
+        "interimCertDataFile": "config/x509_config.cfg",
+        "certSigningKeyFileECDSA": "../security/config_keys/mpk_ecdsa.pem",
+        "certSigningKeyFileRSA": "../security/config_keys/smpk.pem",
+        "signingAlgo": "RSA",
+        "signedCertificateFile": "../../examples/mmw_demo/mmwave_demo/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/temp/signed_cert.bin"
+    },
+    "metaImageFile": "../../examples/mmw_demo/mmwave_demo/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/mmwave_demo.release.hs.appimage",
+    "coreImages": []
+}
