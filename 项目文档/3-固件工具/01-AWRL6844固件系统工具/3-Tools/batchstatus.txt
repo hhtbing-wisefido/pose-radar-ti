@@ -180,12 +180,12 @@ test_file
 3859021824
 SFLASH
 [Enter]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
 8192
 SFLASH
 [Enter]: Opening Comm port: COM3
 [Exit]: Opening Comm portCOM3[Exit]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
 8192
 SFLASH
 [Enter]: Opening Comm port: COM3
@@ -200,12 +200,12 @@ test_file
 3859021824
 SFLASH
 [Enter]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
 8192
 SFLASH
 [Enter]: Opening Comm port: COM3
 [Exit]: Opening Comm portCOM3[Exit]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
 8192
 SFLASH
 [Enter]: Opening Comm port: COM3
@@ -219,12 +219,12 @@ test_file
 3859021824
 SFLASH
 [Enter]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\2-HelloWorld_App\hello_world_system.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\2-HelloWorld_App\hello_world_system.release.appimage
 270336
 SFLASH
 [Enter]: Opening Comm port: COM3
 [Exit]: Opening Comm portCOM3[Exit]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\2-HelloWorld_App\hello_world_system.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\2-HelloWorld_App\hello_world_system.release.appimage
 270336
 SFLASH
 [Enter]: Opening Comm port: COM3
@@ -238,12 +238,12 @@ test_file
 3859021824
 SFLASH
 [Enter]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
 8192
 SFLASH
 [Enter]: Opening Comm port: COM3
 [Exit]: Opening Comm portCOM3[Exit]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
 8192
 SFLASH
 [Enter]: Opening Comm port: COM3
@@ -276,12 +276,12 @@ test_file
 3859021824
 SFLASH
 [Enter]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
 8192
 SFLASH
 [Enter]: Opening Comm port: COM3
 [Exit]: Opening Comm portCOM3[Exit]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage
 8192
 SFLASH
 [Enter]: Download file
@@ -319,12 +319,12 @@ test_file
 3859021824
 SFLASH
 [Enter]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\2-HelloWorld_App\hello_world_system.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\2-HelloWorld_App\hello_world_system.release.appimage
 270336
 SFLASH
 [Enter]: Opening Comm port: COM3
 [Exit]: Opening Comm portCOM3[Exit]: Download file
-D:\7.项目资料\Ti雷达项目\项目文档\3-固件工具\01-AWRL6844固件系统工具\2-HelloWorld_App\hello_world_system.release.appimage
+D:\7.project\TI_Radar_Project\项目文档\3-固件工具\01-AWRL6844固件系统工具\2-HelloWorld_App\hello_world_system.release.appimage
 270336
 SFLASH
 [Enter]: Opening Comm port: COM3

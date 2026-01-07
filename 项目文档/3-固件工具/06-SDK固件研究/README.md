@@ -148,6 +148,62 @@ A: 不烧录到Flash，每次启动通过串口发送
 
 ### Part 5: SysConfig工具深度分析 ⭐⭐⭐⭐ 🆕
 
+---
+
+### Part 13: InCabin与标准Demo数据格式对比 ⭐⭐⭐⭐⭐ 🆕
+
+**文件**: [InCabin与标准Demo数据格式对比.md](InCabin与标准Demo数据格式对比.md)
+
+**内容概要**：
+- 🔍 TLV (Type-Length-Value) 数据格式详解
+- 📊 标准mmWave Demo vs InCabin Demo TLV类型对比
+- 🎯 点云数据TLV ID差异分析（Type=1 vs Type=3001）
+- 💡 为什么InCabin使用独有数据格式
+- 🔧 SDK Visualizer vs InCabin GUI兼容性分析
+- 📚 完整数据流对比（三种组合场景）
+
+**适合人群**：
+- ✅ 使用SDK Visualizer测试InCabin固件遇到问题
+- ✅ 疑惑为什么标准Demo能用SDK Visualizer而InCabin不行
+- ✅ 需要理解雷达UART数据格式
+- ✅ 开发自定义固件需要定义TLV类型
+- ✅ 需要编写TLV解析器
+
+**核心解答**：
+```
+问题: 为什么InCabin固件在SDK Visualizer无法显示点云？
+答案: TLV Type ID不同！
+      标准Demo: Type = 1 (DETECTED_POINTS)
+      InCabin: Type = 3001 (POINT_CLOUD)
+      SDK Visualizer只认识Type=1
+
+问题: 为什么标准Demo能用SDK Visualizer？
+答案: mmwave_demo.release.appimage使用Type=1输出点云
+      SDK Visualizer设计用于标准Demo
+      两者TLV协议匹配 ✅
+
+问题: InCabin应该用什么工具测试？
+答案: InCabin GUI (occupancy_demo_gui.exe)
+      专门设计用于InCabin固件
+      识别Type=3001/3002/1041/1042
+```
+
+**关键发现**：
+- 🔴 **TLV Type ID是识别关键** - SDK Visualizer只认标准Demo的ID
+- 🔴 **InCabin使用3000+范围的Type ID** - 避免与标准Demo冲突
+- 🔴 **InCabin输出AI处理结果** - 特征(3002) + 分类(1041) + 身高(1042)
+- 🔴 **数据结构不同** - InCabin使用量化数据节省带宽
+
+**实践价值**：
+- ✅ 解释了为什么测试5次都无点云数据（工具不兼容）
+- ✅ 揭示了TI不同Demo之间的数据格式差异
+- ✅ 提供了正确的测试工具选择指南
+- ✅ 为自定义固件开发提供TLV设计参考
+
+---
+
+### Part 5: SysConfig工具深度分析 ⭐⭐⭐⭐
+
 **文件**: [Part5-SysConfig工具深度分析.md](Part5-SysConfig工具深度分析.md)
 
 **内容概要**：

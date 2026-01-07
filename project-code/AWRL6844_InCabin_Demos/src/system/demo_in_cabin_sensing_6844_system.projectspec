@@ -4,7 +4,7 @@
     <import spec="../dss/xwrL684x-evm/c66ss0_freertos/ti-c6000/demo_in_cabin_sensing_6844_dss.projectspec"/>
     <project
         name="demo_in_cabin_sensing_6844_system"
-        products="MMWAVE-L-SDK-6:06.00.05.01"
+        products="MMWAVE-L-SDK-6:06.01.00.01"
         configurations="
             Release,
             Debug,

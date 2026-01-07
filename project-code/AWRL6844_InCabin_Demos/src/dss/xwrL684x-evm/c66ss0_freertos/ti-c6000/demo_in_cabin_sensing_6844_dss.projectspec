@@ -12,7 +12,7 @@
     <project
         title="In cabin sensing Demo 6844"
         name = "demo_in_cabin_sensing_6844_dss"
-        products="sysconfig:1.23.0;MMWAVE-L-SDK-6:06.00.05.01;ti.mathlib.c66x;ti.mas.dsplib.c66x"
+        products="sysconfig:1.26.0;MMWAVE-L-SDK-6:06.01.00.01;ti.mathlib.c66x;ti.mas.dsplib.c66x"
         configurations="
             Release,
             Debug,

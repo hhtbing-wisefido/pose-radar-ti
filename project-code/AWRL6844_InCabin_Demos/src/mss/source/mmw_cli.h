@@ -54,10 +54,11 @@ extern "C" {
 #define     CLI_MAX_ARGS        40
 
 /* These defines need to move to common files. */
-#define MMWAVE_SDK_VERSION_BUILD  0
+/* Updated to match MMWAVE_L_SDK 06.01.00.01 */
+#define MMWAVE_SDK_VERSION_BUILD  1
 #define MMWAVE_SDK_VERSION_BUGFIX 0
-#define MMWAVE_SDK_VERSION_MINOR  6
-#define MMWAVE_SDK_VERSION_MAJOR  5
+#define MMWAVE_SDK_VERSION_MINOR  1
+#define MMWAVE_SDK_VERSION_MAJOR  6
 /* Set this to 1 to bypass the CLI task and send the pre-defined radarCmdString cli configuration */
 #define CLI_BYPASS 0
 /* Maximum radar cli commands to use the CLI_BYPASS feature */
