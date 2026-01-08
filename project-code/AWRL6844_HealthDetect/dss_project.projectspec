@@ -1,18 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectSpec>
+    <applicability>
+        <when>
+            <context
+                deviceFamily="C6000"
+                deviceId="TMS320C66XX.AWRL68xx"
+            />
+        </when>
+    </applicability>
+
     <project
+        title="AWRL6844 Health Detection DSS"
         name="AWRL6844_HealthDetect_DSS"
-        products="MMWAVE-L-SDK-6:06.01.00.01"
-        configurations="Release,Debug,"
-        deviceFamily="C6000"
-        deviceEndianness="little"
-        deviceId="TMS320C66XX.AWRL68xx"
-        deviceCore="C66xx_DSP"
+        products="sysconfig:1.26.0;MMWAVE-L-SDK-6:06.01.00.01"
+        configurations="
+            Release,
+            Debug,
+        "
+        connection="TIXDS110_Connection.xml"
         toolChain="TI"
         cgtVersion="8.5.0.LTS"
-        outputType="executable"
+        device="TMS320C66XX.AWRL68xx"
+        deviceCore="C66xx_DSP"
         ignoreDefaultDeviceSettings="true"
         ignoreDefaultCCSSettings="true"
+        endianness="little"
+        outputFormat="ELF"
+        outputType="executable"
         compilerBuildOptions="
             -mv6600
             --abi=eabi
@@ -26,6 +40,7 @@
             -I${PROJECT_ROOT}/src/dss
             -I${TI_SDK_ROOT}/packages
             -I${TI_SDK_ROOT}/packages/ti/alg/mmwavelib
+            -I${CG_TOOL_ROOT}/include
             -D_LITTLE_ENDIAN
             -DSOC_XWR68XX
             -DSUBSYS_DSS
@@ -63,6 +78,7 @@
         <!-- Configuration -->
         <pathVariable name="PROJECT_ROOT" path="." scope="project"/>
         <pathVariable name="TI_SDK_ROOT" path="${COM_TI_MMWAVE_L_SDK_6_INSTALL_DIR}" scope="project"/>
+        <pathVariable name="CG_TOOL_ROOT" path="${CCS_INSTALL_ROOT}/tools/compiler/ti-cgt-c6000_8.5.0.LTS" scope="project"/>
         
         <configuration name="Debug"
             compilerBuildOptions="-O0"

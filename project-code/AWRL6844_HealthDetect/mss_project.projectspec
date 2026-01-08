@@ -1,18 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectSpec>
+    <applicability>
+        <when>
+            <context
+                deviceFamily="ARM"
+                deviceId="Cortex R.AWRL68xx"
+            />
+        </when>
+    </applicability>
+
     <project
+        title="AWRL6844 Health Detection MSS"
         name="AWRL6844_HealthDetect_MSS"
-        products="MMWAVE-L-SDK-6:06.01.00.01"
-        configurations="Release,Debug,"
-        deviceFamily="ARM"
-        deviceEndianness="little"
-        deviceId="Cortex R.AWRL68xx"
-        deviceCore="Cortex_R5_0"
+        products="sysconfig:1.26.0;MMWAVE-L-SDK-6:06.01.00.01"
+        configurations="
+            Release,
+            Debug,
+        "
+        connection="TIXDS110_Connection.xml"
         toolChain="TICLANG"
         cgtVersion="4.0.4.LTS"
-        outputType="executable"
+        device="Cortex R.AWRL68xx"
+        deviceCore="Cortex_R5_0"
         ignoreDefaultDeviceSettings="true"
         ignoreDefaultCCSSettings="true"
+        endianness="little"
+        outputFormat="ELF"
+        outputType="executable"
         compilerBuildOptions="
             -mcpu=cortex-r5
             -mfloat-abi=hard
@@ -26,6 +40,11 @@
             -I${TI_SDK_ROOT}/packages
             -I${TI_SDK_ROOT}/packages/ti/control/mmwave
             -I${TI_SDK_ROOT}/packages/ti/drivers
+            -I${TI_SDK_ROOT}/packages/ti/drivers/uart
+            -I${TI_SDK_ROOT}/packages/ti/sysbios
+            -I${TI_SDK_ROOT}/packages/ti/osal
+            -I${TI_SDK_ROOT}/packages/ti/common
+            -I${TI_SDK_ROOT}/packages/ti/utils/cli
             -D_LITTLE_ENDIAN
             -DSOC_XWR68XX
             -DSUBSYS_MSS

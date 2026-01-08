@@ -31,7 +31,7 @@ META_IMG_GEN=./metaImage_creator$(EXE_EXT)
 endif
 META_IMG_CONFIG=$(CONFIG_PATH)/metaimage_cfg.$(PROFILE).json
 
-json_content:=$(shell $(CAT) $(MULTI_CORE_BOOTIMAGE_PATH)/../metaimage_cfg.$(PROFILE).json)
+json_content:=$(shell $(CAT) $(CCS_PROJECT_DIR)/src/system/config/metaimage_cfg.$(PROFILE).json)
 new_json_content:=$(subst ../../examples/empty/xwrL684x-evm/system_freertos,$(MULTI_CORE_BOOTIMAGE_PATH),$(json_content))
 
 all:
@@ -40,8 +40,8 @@ all:
 	$(MKDIR) $(TEMP_PATH)
 	$(MKDIR) $(CONFIG_PATH)
 	@echo $(new_json_content) > $(META_IMG_CONFIG)
-	$(COPY) ../../AWRL6844_HealthDetect_MSS/$(PROFILE)/AWRL6844_HealthDetect_MSS.$(PROFILE).rig $(TEMP_PATH)/health_detect_mss_img.$(PROFILE).rig
-	$(COPY) ../../AWRL6844_HealthDetect_DSS/$(PROFILE)/AWRL6844_HealthDetect_DSS.$(PROFILE).rig $(TEMP_PATH)/health_detect_dss_img.$(PROFILE).rig
+	$(COPY) $(CCS_PROJECT_DIR)/../AWRL6844_HealthDetect_MSS/$(PROFILE)/AWRL6844_HealthDetect_MSS.out $(TEMP_PATH)/health_detect_mss_img.$(PROFILE).rig
+	$(COPY) $(CCS_PROJECT_DIR)/../AWRL6844_HealthDetect_DSS/$(PROFILE)/AWRL6844_HealthDetect_DSS.out $(TEMP_PATH)/health_detect_dss_img.$(PROFILE).rig
 	cd $(META_IMG_GEN_PATH) && $(META_IMG_GEN) --complete_metaimage $(META_IMG_CONFIG)
 	$(RMDIR) $(TEMP_PATH)
 	@echo .

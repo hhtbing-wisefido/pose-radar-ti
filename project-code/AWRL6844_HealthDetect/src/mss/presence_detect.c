@@ -11,6 +11,7 @@
 #include "../common/health_detect_types.h"
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
 
 /*----------------------------------------------------------------------------*/
 /* Presence Detection Configuration                                          */

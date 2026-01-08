@@ -28,6 +28,9 @@ typedef struct HealthDetect_PointCloudFeatures
     /* 速度特征（m/s） */
     float avgVelocity;    /* 平均速度 */
     float maxVelocity;    /* 最大速度 */
+    float velocityX;      /* X轴速度分量 */
+    float velocityY;      /* Y轴速度分量 */
+    float velocityZ;      /* Z轴速度分量 */
     
     /* 点云统计 */
     uint32_t numPoints;   /* 检测到的点数 */
@@ -42,7 +45,8 @@ typedef struct HealthDetect_PointCloudFeatures
  **************************************************************************/
 typedef enum {
     PRESENCE_ABSENT = 0,    /* 无人 */
-    PRESENCE_PRESENT = 1    /* 有人 */
+    PRESENCE_PRESENT = 1,   /* 有人 */
+    PRESENCE_MOTION = 2     /* 运动中 */
 } PresenceState_e;
 
 /**************************************************************************

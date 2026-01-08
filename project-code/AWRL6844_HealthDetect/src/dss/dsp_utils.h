@@ -6,6 +6,7 @@
 #ifndef DSP_UTILS_H
 #define DSP_UTILS_H
 
+#include <c6x.h>
 #include <stdint.h>
 
 /* Cache Operations */
