@@ -21,7 +21,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stddef.h>
-#include <common/data_path.h>
+#include "common/data_path.h"
 
 /*===========================================================================*/
 /*                         Function Prototypes                                */

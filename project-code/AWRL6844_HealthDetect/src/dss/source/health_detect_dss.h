@@ -59,9 +59,9 @@
 #include <queue.h>
 
 /* Common project headers */
-#include "../../common/shared_memory.h"
-#include "../../common/data_path.h"
-#include "../../common/health_detect_types.h"
+#include "common/shared_memory.h"
+#include "common/data_path.h"
+#include "common/health_detect_types.h"
 
 #ifdef __cplusplus
 extern "C" {

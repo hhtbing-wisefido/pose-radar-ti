@@ -28,7 +28,7 @@
 /* Application Includes */
 #include <source/dpc_control.h>
 #include <source/health_detect_main.h>
-#include <common/shared_memory.h>
+#include "common/shared_memory.h"
 
 /**************************************************************************
  *************************** Local Definitions ****************************

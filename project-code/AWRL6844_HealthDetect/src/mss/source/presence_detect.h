@@ -20,8 +20,8 @@ extern "C" {
 
 #include <stdint.h>
 #include <stddef.h>
-#include <common/data_path.h>
-#include <common/health_detect_types.h>
+#include "common/data_path.h"
+#include "common/health_detect_types.h"
 
 /*===========================================================================*/
 /*                         Function Prototypes                                */

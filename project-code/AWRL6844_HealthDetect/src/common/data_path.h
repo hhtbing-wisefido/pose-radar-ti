@@ -177,6 +177,45 @@ typedef struct DPC_Config_t
 } DPC_Config_t;
 
 /*===========================================================================*/
+/*                         SubFrame Configuration                             */
+/*===========================================================================*/
+
+/**
+ * @brief SubFrame Configuration Structure
+ * Configuration parameters for each subframe
+ */
+typedef struct SubFrame_Cfg_t
+{
+    /* Antenna Configuration */
+    uint8_t     numTxAntennas;              /**< Number of TX antennas enabled */
+    uint8_t     numRxAntennas;              /**< Number of RX antennas enabled */
+    uint16_t    numVirtualAntennas;         /**< Number of virtual antennas */
+    
+    /* Range Configuration */
+    uint16_t    numRangeBins;               /**< Number of range bins */
+    uint16_t    numAdcSamples;              /**< Number of ADC samples per chirp */
+    
+    /* Doppler Configuration */
+    uint16_t    numDopplerBins;             /**< Number of Doppler bins */
+    uint16_t    numChirpsPerFrame;          /**< Total chirps per frame */
+    
+    /* Frame Timing */
+    float       framePeriodMs;              /**< Frame period in milliseconds */
+    float       chirpDurationUs;            /**< Single chirp duration in microseconds */
+    
+    /* Processing Configuration */
+    DPC_StaticConfig_t  staticCfg;          /**< Static DPC configuration */
+    DPC_DynamicConfig_t dynamicCfg;         /**< Dynamic DPC configuration */
+    
+    /* Memory Addresses */
+    void        *radarCubeAddr;             /**< Radar cube memory address */
+    uint32_t    radarCubeSize;              /**< Radar cube size in bytes */
+    
+    /* Flags */
+    uint8_t     isValid;                    /**< Configuration valid flag */
+} SubFrame_Cfg_t;
+
+/*===========================================================================*/
 /*                         Point Cloud Structures                             */
 /*===========================================================================*/
 
@@ -213,6 +252,12 @@ typedef struct PointCloud_SideInfo_t
     uint16_t    snr;                /**< Signal-to-noise ratio (0.1 dB) */
     uint16_t    noise;              /**< Noise level (0.1 dB) */
 } PointCloud_SideInfo_t;
+
+/**
+ * @brief Generic Point Cloud Point
+ * Generic point structure used for processing (alias to Cartesian)
+ */
+typedef PointCloud_Cartesian_t PointCloud_Point_t;
 
 /**
  * @brief Complete Point Cloud Output

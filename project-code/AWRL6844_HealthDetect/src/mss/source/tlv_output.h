@@ -21,9 +21,9 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 #include <drivers/uart.h>
-#include <common/data_path.h>
-#include <common/health_detect_types.h>
-#include <common/mmwave_output.h>
+#include "common/data_path.h"
+#include "common/health_detect_types.h"
+#include "common/mmwave_output.h"
 
 /*===========================================================================*/
 /*                         Function Prototypes                                */
