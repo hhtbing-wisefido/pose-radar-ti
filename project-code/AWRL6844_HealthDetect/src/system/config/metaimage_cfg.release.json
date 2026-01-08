@@ -9,14 +9,14 @@
         "sharedRamAllocationControl": "0",
         "loggerClear": "0xDD"
     },
-    "interimMetaHeaderFile": "../../examples/empty/xwrL684x-evm/system_freertos/temp/metaheader.bin",
+    "interimMetaHeaderFile": "PLACEHOLDER_PATH/temp/metaheader.bin",
     "buildImages": [
         {
-            "buildImagePath": "../../examples/empty/xwrL684x-evm/system_freertos/temp/health_detect_mss_img.release.rig",
+            "buildImagePath": "PLACEHOLDER_PATH/temp/health_detect_6844_mss_img.release.rig",
             "encryptEnable": "no"
         },
         {
-            "buildImagePath": "../../examples/empty/xwrL684x-evm/system_freertos/temp/health_detect_dss_img.release.rig",
+            "buildImagePath": "PLACEHOLDER_PATH/temp/health_detect_6844_dss_img.release.rig",
             "encryptEnable": "no"
         },
         {
@@ -48,11 +48,8 @@
             "debugType": "0"
         },
         "interimCertDataFile": "config/x509_config.cfg",
-        "certSigningKeyFileECDSA": "config_keys/mpk_ecdsa.pem",
-        "certSigningKeyFileRSA": "config_keys/mpk.pem",
-        "signingAlgo": "RSA",
-        "signedCertificateFile": "../../examples/empty/xwrL684x-evm/system_freertos/temp/signed_cert.bin"
+        "keyCert": "config_keys/keypriv.pem",
+        "keyCertPwd": ""
     },
-    "metaImageFile": "../../examples/empty/xwrL684x-evm/system_freertos/health_detect_system.release.appimage",
-    "coreImages": []
+    "finalMetaImage": "PLACEHOLDER_PATH/health_detect_6844_system.release.appimage"
 }

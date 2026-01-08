@@ -1,21 +1,33 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+    Health Detection Demo - System Project Configuration
+    
+    Reference: AWRL6844_InCabin_Demos/src/system/system.xml
+    
+    This file defines the multi-core system project that combines:
+    - MSS (Cortex-R5F): health_detect_6844_mss
+    - DSS (C66 DSP): health_detect_6844_dss
+    
+    Created: 2026-01-08
+-->
 <system>
-    <!-- MSS/R5F Project -->
-    <project configuration="@match" id="project_0" name="AWRL6844_HealthDetect_MSS">
+    <!-- MSS Project (Cortex-R5F) -->
+    <project configuration="@match" id="project_0" name="health_detect_6844_mss">
     </project>
     <core id="Cortex_R5_0" project="project_0"/>
     
-    <!-- DSS/C66x Project -->
-    <project configuration="@match" id="project_1" name="AWRL6844_HealthDetect_DSS">
+    <!-- DSS Project (C66 DSP) -->
+    <project configuration="@match" id="project_1" name="health_detect_6844_dss">
     </project>
     <core id="C66xx_DSP" project="project_1"/>
     
-    <!-- Pre-Build Steps (Optional) -->
+    <!-- Pre-build steps (none) -->
     <preBuildSteps>
     </preBuildSteps>
     
-    <!-- Post-Build Steps: Generate Multi-Core Boot Image (.appimage) -->
+    <!-- Post-build steps: Generate combined boot image -->
     <postBuildSteps>
-        <step command="$(MAKE) -C ${CCS_PROJECT_DIR} -f makefile_system_ccs_bootimage_gen OUTNAME=health_detect_system PROFILE=${ConfigName} MCU_PLUS_SDK_PATH=${MCU_PLUS_SDK_PATH} CG_TOOL_ROOT=${CG_TOOL_ROOT} CCS_INSTALL_DIR=${CCS_INSTALL_DIR} CCS_IDE_MODE=${CCS_IDE_MODE}"/>
+        <step command="$(MAKE) -C ${CCS_PROJECT_DIR} -f makefile_system_ccs_bootimage_gen OUTNAME=health_detect_6844_system PROFILE=${ConfigName} MCU_PLUS_SDK_PATH=${MCU_PLUS_SDK_PATH} CG_TOOL_ROOT=${CG_TOOL_ROOT} CCS_INSTALL_DIR=${CCS_INSTALL_DIR} CCS_IDE_MODE=${CCS_IDE_MODE}"/>
     </postBuildSteps>
+
 </system>

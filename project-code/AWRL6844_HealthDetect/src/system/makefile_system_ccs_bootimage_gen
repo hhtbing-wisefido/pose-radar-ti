@@ -1,20 +1,27 @@
 #
-# Auto generated makefile for Multi-Core Boot Image Generation
+# Auto generated makefile for Health Detection Demo System
 #
-# Variables needed (passed from CCS or command line):
+# Reference: AWRL6844_InCabin_Demos/src/system/makefile_system_ccs_bootimage_gen
+#
+# This makefile combines MSS and DSS images into a single bootable image.
+#
+
+# Below variables need to be defined outside this file or via command line
 # - MCU_PLUS_SDK_PATH
-# - PROFILE (Debug or Release)
-# - OUTNAME (health_detect_system)
+# - PROFILE
+# - OUTNAME
 # - CCS_INSTALL_DIR
 
 CCS_PATH=$(CCS_INSTALL_DIR)
 include $(MCU_PLUS_SDK_PATH)/imports.mak
 
+
 MULTI_CORE_BOOTIMAGE_PATH=$(abspath ${PROFILE})
-MULTI_CORE_BOOTIMAGE_NAME:=health_detect_system.$(PROFILE).appimage
+MULTI_CORE_BOOTIMAGE_NAME:=health_detect_6844_system.$(PROFILE).appimage
 
 CONFIG_PATH:=$(MULTI_CORE_BOOTIMAGE_PATH)/config
 TEMP_PATH:=$(MULTI_CORE_BOOTIMAGE_PATH)/temp
+
 
 #
 # Generation of multi-core boot image which can be loaded by Secondary Boot Loader (SBL)
@@ -31,23 +38,16 @@ META_IMG_GEN=./metaImage_creator$(EXE_EXT)
 endif
 META_IMG_CONFIG=$(CONFIG_PATH)/metaimage_cfg.$(PROFILE).json
 
-json_content:=$(shell $(CAT) $(CCS_PROJECT_DIR)/src/system/config/metaimage_cfg.$(PROFILE).json)
-new_json_content:=$(subst ../../examples/empty/xwrL684x-evm/system_freertos,$(MULTI_CORE_BOOTIMAGE_PATH),$(json_content))
+json_content:=$(shell $(CAT) $(MULTI_CORE_BOOTIMAGE_PATH)/../config/metaimage_cfg.$(PROFILE).json)
+new_json_content:=$(subst PLACEHOLDER_PATH,$(MULTI_CORE_BOOTIMAGE_PATH),$(json_content))
 
 all:
-	@echo .
-	@echo Creating multi-core boot image: $(MULTI_CORE_BOOTIMAGE_NAME)
 	$(MKDIR) $(TEMP_PATH)
 	$(MKDIR) $(CONFIG_PATH)
 	@echo $(new_json_content) > $(META_IMG_CONFIG)
-	$(COPY) $(CCS_PROJECT_DIR)/../AWRL6844_HealthDetect_MSS/$(PROFILE)/AWRL6844_HealthDetect_MSS.out $(TEMP_PATH)/health_detect_mss_img.$(PROFILE).rig
-	$(COPY) $(CCS_PROJECT_DIR)/../AWRL6844_HealthDetect_DSS/$(PROFILE)/AWRL6844_HealthDetect_DSS.out $(TEMP_PATH)/health_detect_dss_img.$(PROFILE).rig
+	$(COPY) ../health_detect_6844_mss/$(PROFILE)/health_detect_6844_mss_img.$(PROFILE).rig $(TEMP_PATH)/health_detect_6844_mss_img.$(PROFILE).rig
+	$(COPY) ../health_detect_6844_dss/$(PROFILE)/health_detect_6844_dss_img.$(PROFILE).rig $(TEMP_PATH)/health_detect_6844_dss_img.$(PROFILE).rig
 	cd $(META_IMG_GEN_PATH) && $(META_IMG_GEN) --complete_metaimage $(META_IMG_CONFIG)
 	$(RMDIR) $(TEMP_PATH)
-	@echo .
-	@echo Multi-core boot image created: $(MULTI_CORE_BOOTIMAGE_PATH)/$(MULTI_CORE_BOOTIMAGE_NAME)
-	@echo Done !!!
-	@echo .
-
-clean:
-	$(RMDIR) $(MULTI_CORE_BOOTIMAGE_PATH)
+	@echo  Boot multi-core image: $(MULTI_CORE_BOOTIMAGE_PATH)/$(MULTI_CORE_BOOTIMAGE_NAME) Done !!!
+	@echo  .

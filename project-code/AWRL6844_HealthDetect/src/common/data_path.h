@@ -1,129 +1,291 @@
 /**
  * @file data_path.h
- * @brief Data Path Chain (DPC) Definitions for MSS-DSS Coordination
- * 
- * This file defines DPC structures learned from mmw_demo but adapted
- * for the three-layer architecture with DSS feature extraction.
- * 
- * Reference: mmw_demo/source/dpc/dpc.c, dpc.h
- * Adapted for: Health Detection multi-core architecture
+ * @brief DPC Data Path Structures Definition
+ *
+ * Reference: AWRL6844_InCabin_Demos/src/common_mss_dss/dpc_common.h
+ * Reference: mmw_demo_SDK_reference/source/mmwave_demo.h
+ * Adapted for: Health Detection three-layer architecture
+ *
+ * RTOS: FreeRTOS (L-SDK mandatory)
+ * Note: L-SDK uses FreeRTOS, NOT TI-RTOS/BIOS
+ *
+ * Created: 2026-01-08
  */
 
 #ifndef DATA_PATH_H
 #define DATA_PATH_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
-#include <stdbool.h>
+#include <stddef.h>
 
-/*----------------------------------------------------------------------------*/
-/* DPC Configuration Structures (MSS → DSS)                                  */
-/*----------------------------------------------------------------------------*/
-
-/**
- * @brief CFAR Configuration for Range/Doppler Detection
- * Learned from: mmw_demo DPU_CFARCAProc_CfarCfg
- */
-typedef struct DPC_CfarCfg_t {
-    uint8_t  averageMode;       /* 0=CFAR-CA, 1=CFAR-CASO */
-    uint8_t  winLen;            /* Guard+Reference cells */
-    uint8_t  guardLen;          /* Guard cells */
-    uint8_t  noiseDivShift;     /* Noise threshold shift */
-    uint16_t cyclicMode;        /* 0=disabled, 1=enabled */
-    float    thresholdScale;    /* Detection threshold */
-} DPC_CfarCfg_t;
+/*===========================================================================*/
+/*                         Profile Configuration                              */
+/*===========================================================================*/
 
 /**
- * @brief DOA (Direction of Arrival) Configuration
- * Learned from: mmw_demo AOA processing
+ * @brief Profile Configuration Structure
+ * Defines chirp profile parameters
  */
-typedef struct DPC_DOACfg_t {
-    uint8_t  numVirtualAntennas; /* Virtual antenna count */
-    uint8_t  numAntAzim;         /* Azimuth antennas */
-    uint8_t  numAntElev;         /* Elevation antennas */
-    float    estResolution;      /* Angle resolution (degrees) */
-    float    gamma;              /* Peak search threshold */
-    bool     multiPeakEn;        /* Enable multi-peak detection */
-} DPC_DOACfg_t;
+typedef struct Profile_Config_t
+{
+    uint16_t    profileId;          /**< Profile identifier (0-3) */
+    float       startFreqGHz;       /**< Start frequency in GHz (60-64 for AWRL6844) */
+    float       idleTimeUs;         /**< Idle time in microseconds */
+    float       adcStartTimeUs;     /**< ADC start time in microseconds */
+    float       rampEndTimeUs;      /**< Ramp end time in microseconds */
+    float       freqSlopeConst;     /**< Frequency slope in MHz/us */
+    uint16_t    txOutPower;         /**< TX output power backoff */
+    uint16_t    txPhaseShifter;     /**< TX phase shifter config */
+    uint16_t    numAdcSamples;      /**< Number of ADC samples per chirp */
+    uint16_t    digOutSampleRate;   /**< Digital output sample rate (ksps) */
+    uint8_t     hpfCornerFreq1;     /**< HPF1 corner frequency config */
+    uint8_t     hpfCornerFreq2;     /**< HPF2 corner frequency config */
+    uint8_t     rxGain;             /**< RX gain in dB */
+} Profile_Config_t;
 
 /**
- * @brief DPC Main Configuration Structure
- * Written by MSS, read by DSS from L3 DPC_CONFIG_BASE
+ * @brief Chirp Configuration Structure
+ * Defines individual chirp parameters
  */
-typedef struct DPC_Config_t {
-    /* Frame Configuration */
-    uint32_t frameCount;         /* Current frame number */
-    uint16_t numChirpsPerFrame;
-    uint16_t numRangeBins;
-    uint16_t numDopplerBins;
-    
-    /* Detection Parameters */
-    DPC_CfarCfg_t rangeCfar;
-    DPC_CfarCfg_t dopplerCfar;
-    DPC_DOACfg_t  doaCfg;
-    
-    /* Feature Extraction Control */
-    bool     featureExtractEn;   /* Enable DSS feature extraction */
-    float    minClusterSize;     /* Minimum points for valid cluster */
-    
+typedef struct Chirp_Config_t
+{
+    uint16_t    chirpStartIdx;      /**< Start chirp index */
+    uint16_t    chirpEndIdx;        /**< End chirp index */
+    uint16_t    profileId;          /**< Associated profile ID */
+    float       startFreqVar;       /**< Start frequency variation (MHz) */
+    float       freqSlopeVar;       /**< Frequency slope variation (kHz/us) */
+    float       idleTimeVar;        /**< Idle time variation (us) */
+    float       adcStartTimeVar;    /**< ADC start time variation (us) */
+    uint8_t     txEnable;           /**< TX antenna enable mask */
+} Chirp_Config_t;
+
+/**
+ * @brief Frame Configuration Structure
+ * Defines frame timing and structure
+ */
+typedef struct Frame_Config_t
+{
+    uint16_t    numChirpsPerFrame;  /**< Number of chirps per frame */
+    uint16_t    chirpStartIdx;      /**< Starting chirp index */
+    uint16_t    chirpEndIdx;        /**< Ending chirp index */
+    uint16_t    numLoops;           /**< Number of loops per frame */
+    uint16_t    numFrames;          /**< Number of frames (0 = infinite) */
+    float       framePeriodMs;      /**< Frame period in milliseconds */
+    float       triggerDelay;       /**< Trigger delay in microseconds */
+    uint8_t     triggerSelect;      /**< Trigger selection */
+} Frame_Config_t;
+
+/*===========================================================================*/
+/*                         CFAR Configuration                                 */
+/*===========================================================================*/
+
+/**
+ * @brief CFAR Configuration Structure
+ * Constant False Alarm Rate detection parameters
+ */
+typedef struct CFAR_Config_t
+{
+    uint8_t     cfarMethod;         /**< CFAR method (CA, CASO, CAGO, OS) */
+    uint8_t     guardLen;           /**< Guard cells length */
+    uint8_t     noiseLen;           /**< Noise/training cells length */
+    float       thresholdScale;     /**< Threshold scale factor (dB) */
+    uint8_t     peakGrouping;       /**< Peak grouping enable */
+    float       sidelobeThreshold;  /**< Sidelobe threshold */
+} CFAR_Config_t;
+
+/**
+ * @brief CFAR Range Configuration
+ */
+typedef struct CFAR_Range_Config_t
+{
+    CFAR_Config_t config;           /**< CFAR parameters */
+    uint16_t    minRangeBin;        /**< Minimum range bin to search */
+    uint16_t    maxRangeBin;        /**< Maximum range bin to search */
+} CFAR_Range_Config_t;
+
+/**
+ * @brief CFAR Doppler Configuration
+ */
+typedef struct CFAR_Doppler_Config_t
+{
+    CFAR_Config_t config;           /**< CFAR parameters */
+    uint16_t    minDopplerBin;      /**< Minimum Doppler bin to search */
+    uint16_t    maxDopplerBin;      /**< Maximum Doppler bin to search */
+} CFAR_Doppler_Config_t;
+
+/*===========================================================================*/
+/*                         AOA (Angle of Arrival) Configuration               */
+/*===========================================================================*/
+
+/**
+ * @brief AOA Configuration Structure
+ * Angle of Arrival estimation parameters
+ */
+typedef struct AOA_Config_t
+{
+    uint8_t     enabled;            /**< AOA processing enable */
+    uint8_t     fftSize;            /**< AOA FFT size (log2) */
+    float       minAzimuthDeg;      /**< Minimum azimuth angle (degrees) */
+    float       maxAzimuthDeg;      /**< Maximum azimuth angle (degrees) */
+    float       minElevationDeg;    /**< Minimum elevation angle (degrees) */
+    float       maxElevationDeg;    /**< Maximum elevation angle (degrees) */
+} AOA_Config_t;
+
+/*===========================================================================*/
+/*                         DPC Configuration                                  */
+/*===========================================================================*/
+
+/**
+ * @brief DPC Static Configuration
+ * Configuration that doesn't change during runtime
+ */
+typedef struct DPC_StaticConfig_t
+{
+    Profile_Config_t    profile;        /**< Chirp profile */
+    Chirp_Config_t      chirp;          /**< Chirp configuration */
+    Frame_Config_t      frame;          /**< Frame configuration */
+    uint8_t             numTxAntennas;  /**< Number of TX antennas enabled */
+    uint8_t             numRxAntennas;  /**< Number of RX antennas enabled */
+    uint16_t            numRangeBins;   /**< Number of range bins */
+    uint16_t            numDopplerBins; /**< Number of Doppler bins */
+} DPC_StaticConfig_t;
+
+/**
+ * @brief DPC Dynamic Configuration
+ * Configuration that can change during runtime
+ */
+typedef struct DPC_DynamicConfig_t
+{
+    CFAR_Range_Config_t     cfarRangeCfg;   /**< CFAR range config */
+    CFAR_Doppler_Config_t   cfarDopplerCfg; /**< CFAR Doppler config */
+    AOA_Config_t            aoaCfg;         /**< AOA config */
+    float                   compRxChanCfg[16][2]; /**< RX channel compensation (re, im) */
+} DPC_DynamicConfig_t;
+
+/**
+ * @brief Complete DPC Configuration
+ */
+typedef struct DPC_Config_t
+{
+    DPC_StaticConfig_t      staticCfg;      /**< Static configuration */
+    DPC_DynamicConfig_t     dynamicCfg;     /**< Dynamic configuration */
+    uint8_t                 isValid;        /**< Configuration valid flag */
 } DPC_Config_t;
 
-/*----------------------------------------------------------------------------*/
-/* DPC Results (DSS → MSS)                                                   */
-/*----------------------------------------------------------------------------*/
+/*===========================================================================*/
+/*                         Point Cloud Structures                             */
+/*===========================================================================*/
 
 /**
- * @brief DPC Execution Statistics
- * Written by DSS, read by MSS from L3 DPC_RESULT_BASE
+ * @brief Point Cloud Cartesian Coordinates
+ * Single detected point in Cartesian coordinates
  */
-typedef struct DPC_Result_t {
-    uint32_t frameCount;         /* Frame number */
-    uint32_t interFrameStartTime;/* SOC_XWR68XX_DSS_CPU_CLK_CYCLES timestamp */
-    uint32_t interFrameEndTime;
-    uint32_t activeFrameTime;    /* DPC execution time (cycles) */
-    
-    /* Detection Results */
-    uint16_t numDetectedObjects; /* Point cloud count */
-    uint16_t numFeatures;        /* Feature extraction count */
-    
-    /* Error Flags */
-    uint32_t errorCode;          /* 0=success, non-zero=error */
-    
+typedef struct PointCloud_Cartesian_t
+{
+    float       x;                  /**< X coordinate in meters */
+    float       y;                  /**< Y coordinate in meters */
+    float       z;                  /**< Z coordinate in meters */
+    float       velocity;           /**< Radial velocity in m/s */
+} PointCloud_Cartesian_t;
+
+/**
+ * @brief Point Cloud Spherical Coordinates
+ * Single detected point in spherical coordinates
+ */
+typedef struct PointCloud_Spherical_t
+{
+    float       range;              /**< Range in meters */
+    float       azimuth;            /**< Azimuth angle in degrees */
+    float       elevation;          /**< Elevation angle in degrees */
+    float       velocity;           /**< Radial velocity in m/s */
+} PointCloud_Spherical_t;
+
+/**
+ * @brief Point Cloud Side Information
+ * Additional information for each detected point
+ */
+typedef struct PointCloud_SideInfo_t
+{
+    uint16_t    snr;                /**< Signal-to-noise ratio (0.1 dB) */
+    uint16_t    noise;              /**< Noise level (0.1 dB) */
+} PointCloud_SideInfo_t;
+
+/**
+ * @brief Complete Point Cloud Output
+ */
+typedef struct PointCloud_Output_t
+{
+    uint32_t                numDetectedPoints;  /**< Number of detected points */
+    PointCloud_Cartesian_t  *points;            /**< Array of detected points */
+    PointCloud_SideInfo_t   *sideInfo;          /**< Array of side information */
+} PointCloud_Output_t;
+
+/*===========================================================================*/
+/*                         DPC Result Structures                              */
+/*===========================================================================*/
+
+/**
+ * @brief DPC Processing Statistics
+ */
+typedef struct DPC_Stats_t
+{
+    uint32_t    frameStartTimeUs;       /**< Frame start timestamp (us) */
+    uint32_t    framePeriodUs;          /**< Measured frame period (us) */
+    uint32_t    chirpingTimeUs;         /**< Total chirping time (us) */
+    uint32_t    activeTimeUs;           /**< Total active processing time (us) */
+    uint32_t    interFrameTimeUs;       /**< Inter-frame processing time (us) */
+    uint32_t    transmitTimeUs;         /**< Data transmission time (us) */
+} DPC_Stats_t;
+
+/**
+ * @brief DPC Execute Result
+ * Output from DPC processing
+ */
+typedef struct DPC_Result_t
+{
+    uint32_t                frameNum;           /**< Current frame number */
+    PointCloud_Output_t     pointCloud;         /**< Point cloud output */
+    uint16_t                *rangeProfile;      /**< Range profile data */
+    uint16_t                rangeProfileSize;   /**< Range profile size */
+    DPC_Stats_t             stats;              /**< Processing statistics */
+    int32_t                 errorCode;          /**< Error code (0 = success) */
 } DPC_Result_t;
 
-/*----------------------------------------------------------------------------*/
-/* Point Cloud Structure (DSS → MSS)                                         */
-/*----------------------------------------------------------------------------*/
+/*===========================================================================*/
+/*                         Derived Parameters                                 */
+/*===========================================================================*/
 
 /**
- * @brief Single Detected Object in Cartesian Coordinates
- * Reference: DPIF_PointCloudCartesian from mmw_demo
+ * @brief Calculate range resolution in meters
+ * @param bandwidth_MHz Chirp bandwidth in MHz
+ * @return Range resolution in meters
  */
-typedef struct DPC_PointCloudCartesian_t {
-    float x;                     /* Range (meters) - forward */
-    float y;                     /* Azimuth (meters) - left/right */
-    float z;                     /* Elevation (meters) - up/down */
-    float velocity;              /* Doppler velocity (m/s) */
-} DPC_PointCloudCartesian_t;
+static inline float DataPath_getRangeResolution(float bandwidth_MHz)
+{
+    /* c / (2 * BW) where c = 3e8 m/s */
+    return (3.0e8f / (2.0f * bandwidth_MHz * 1.0e6f));
+}
 
 /**
- * @brief Point Cloud Array in L3 Shared RAM
- * Section: .point_cloud
+ * @brief Calculate velocity resolution in m/s
+ * @param wavelength_m Wavelength in meters
+ * @param numChirps Number of chirps per frame
+ * @param framePeriod_s Frame period in seconds
+ * @return Velocity resolution in m/s
  */
-typedef struct DPC_PointCloud_t {
-    uint32_t numPoints;          /* Valid point count */
-    DPC_PointCloudCartesian_t points[256]; /* Up to 256 objects */
-} DPC_PointCloud_t;
+static inline float DataPath_getVelocityResolution(float wavelength_m, 
+                                                    uint16_t numChirps, 
+                                                    float framePeriod_s)
+{
+    return (wavelength_m / (2.0f * numChirps * framePeriod_s));
+}
 
-/*----------------------------------------------------------------------------*/
-/* DPC State Machine                                                         */
-/*----------------------------------------------------------------------------*/
-
-typedef enum {
-    DPC_STATE_IDLE = 0,
-    DPC_STATE_CONFIG,
-    DPC_STATE_RUNNING,
-    DPC_STATE_STOPPED,
-    DPC_STATE_ERROR
-} DPC_State_e;
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* DATA_PATH_H */
