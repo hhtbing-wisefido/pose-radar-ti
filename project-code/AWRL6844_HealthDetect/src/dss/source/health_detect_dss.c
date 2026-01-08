@@ -111,7 +111,7 @@ uint8_t gDssL1ScratchMem[DSS_L1_SCRATCH_SIZE];
  **************************************************************************/
 
 /** @brief Global DSS MCB instance */
-HealthDSS_MCB_t gHealthDssMCB = {0};
+HealthDSS_MCB_t gHealthDssMCB;
 
 /** @brief DPC Task Handle */
 TaskHandle_t gDssDpcTask;
@@ -615,9 +615,11 @@ void health_detect_dss(void *args)
         }
     }
     
-    /* Should never reach here */
+    /* Note: Code below is intentionally unreachable - kept for shutdown sequence reference */
+#if 0
     SemaphoreP_pend(&gHealthDssMCB.initCompleteSem, SystemP_WAIT_FOREVER);
     
     Board_driversClose();
     Drivers_close();
+#endif
 }

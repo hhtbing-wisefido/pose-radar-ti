@@ -255,9 +255,27 @@ typedef struct PointCloud_SideInfo_t
 
 /**
  * @brief Generic Point Cloud Point
- * Generic point structure used for processing (alias to Cartesian)
+ * Complete point structure with both Cartesian and Spherical coordinates plus SNR
+ * Used for feature extraction and health detection processing
  */
-typedef PointCloud_Cartesian_t PointCloud_Point_t;
+typedef struct PointCloud_Point_t
+{
+    /* Cartesian Coordinates */
+    float       x;                  /**< X coordinate in meters */
+    float       y;                  /**< Y coordinate in meters */
+    float       z;                  /**< Z coordinate in meters */
+    
+    /* Spherical Coordinates */
+    float       range;              /**< Range in meters */
+    float       azimuth;            /**< Azimuth angle in radians */
+    float       elevation;          /**< Elevation angle in radians */
+    
+    /* Velocity */
+    float       velocity;           /**< Radial velocity in m/s */
+    
+    /* Quality */
+    float       snr;                /**< Signal-to-noise ratio in dB */
+} PointCloud_Point_t;
 
 /**
  * @brief Complete Point Cloud Output

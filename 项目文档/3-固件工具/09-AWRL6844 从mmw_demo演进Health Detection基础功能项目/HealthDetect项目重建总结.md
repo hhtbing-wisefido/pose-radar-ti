@@ -840,6 +840,118 @@ projectspec 中的配置：
 > - 必须使用与 `targetDirectory` 配置一致的路径
 > - 统一使用 `"common/xxx.h"` 格式最可靠
 
+### 问题10: DSS编译错误 - `PointCloud_Point_t` 缺少球坐标和SNR字段
+
+**日期**: 2026-01-08
+
+**错误信息**：
+
+```
+"../feature_extract.c", line 254: error #137: struct "PointCloud_Cartesian_t" has no field "range"
+"../feature_extract.c", line 255: error #137: struct "PointCloud_Cartesian_t" has no field "snr"
+"../feature_extract.c", line 273: error #137: struct "PointCloud_Cartesian_t" has no field "azimuth"
+"../feature_extract.c", line 274: error #137: struct "PointCloud_Cartesian_t" has no field "elevation"
+```
+
+**原因**：
+
+- `PointCloud_Point_t` 被定义为 `PointCloud_Cartesian_t` 的别名
+- `PointCloud_Cartesian_t` 只有 `x`, `y`, `z`, `velocity` 四个字段
+- `feature_extract.c` 需要访问 `range`, `azimuth`, `elevation`, `snr` 字段
+
+**解决方案**：将 `PointCloud_Point_t` 改为完整的结构体定义
+
+**修改文件**: `src/common/data_path.h`
+
+```c
+/**
+ * @brief Generic Point Cloud Point
+ * Complete point structure with both Cartesian and Spherical coordinates plus SNR
+ * Used for feature extraction and health detection processing
+ */
+typedef struct PointCloud_Point_t
+{
+    /* Cartesian Coordinates */
+    float       x;                  /**< X coordinate in meters */
+    float       y;                  /**< Y coordinate in meters */
+    float       z;                  /**< Z coordinate in meters */
+    
+    /* Spherical Coordinates */
+    float       range;              /**< Range in meters */
+    float       azimuth;            /**< Azimuth angle in radians */
+    float       elevation;          /**< Elevation angle in radians */
+    
+    /* Velocity */
+    float       velocity;           /**< Radial velocity in m/s */
+    
+    /* Quality */
+    float       snr;                /**< Signal-to-noise ratio in dB */
+} PointCloud_Point_t;
+```
+
+**设计说明**：
+
+- 包含笛卡尔坐标 (x, y, z) 用于质心计算
+- 包含球坐标 (range, azimuth, elevation) 用于特征提取
+- 包含 SNR 用于质量过滤
+- 这是一个完整的点云点结构，适合健康检测处理
+
+### 问题11: DSS编译错误 - 枚举类型初始化和不可达代码
+
+**日期**: 2026-01-08
+
+**错误信息**：
+
+```
+"../health_detect_dss.c", line 114: error #190-D: enumerated type mixed with another type
+"../health_detect_dss.c", line 619: error #112-D: statement is unreachable
+```
+
+**原因分析**：
+
+1. **枚举类型混用**：`HealthDSS_MCB_t gHealthDssMCB = {0};` 中，第一个成员 `currentState` 是枚举类型 `HealthDSS_State_e`，用 `0` 初始化会产生警告（在 `--emit_warnings_as_errors` 模式下变成错误）
+
+2. **不可达代码**：`while(1)` 循环后的代码永远不会执行
+
+**解决方案**：
+
+1. **移除 `= {0}` 初始化器**：依赖 `HealthDSS_init()` 函数中的 `memset()` 来初始化
+
+```c
+/* 错误 */
+HealthDSS_MCB_t gHealthDssMCB = {0};
+
+/* 正确 */
+HealthDSS_MCB_t gHealthDssMCB;
+```
+
+2. **用 `#if 0` 包裹不可达代码**：
+
+```c
+while (1)
+{
+    if (xQueueReceive(gHealthDssMCB.eventQueue, &msg, portMAX_DELAY) == pdPASS)
+    {
+        HealthDSS_handleMessage(&msg);
+    }
+}
+
+/* Note: Code below is intentionally unreachable - kept for shutdown sequence reference */
+#if 0
+    SemaphoreP_pend(&gHealthDssMCB.initCompleteSem, SystemP_WAIT_FOREVER);
+    Board_driversClose();
+    Drivers_close();
+#endif
+```
+
+**关键教训**：
+
+> ⚠️ **TI C6000 编译器对类型检查非常严格！**
+> 
+> - 枚举类型不能用整数 `0` 初始化（会产生 #190-D 警告）
+> - 使用 `--emit_warnings_as_errors` 时，所有警告都会变成错误
+> - 不可达代码会产生 #112-D 警告
+
 ---
 
 ## 📋 下一步：编译验证
@@ -887,7 +999,9 @@ projectspec 中的配置：
 | README文档            | ✅ 完成   | 各层+主README                  |
 | **类型定义修复** | ✅ 完成   | 添加 `SubFrame_Cfg_t`、`PointCloud_Point_t` (2026-01-08) |
 | **Include路径修复** | ✅ 完成 | 统一使用 `"common/xxx.h"` 格式 (2026-01-08) |
-| **CCS编译验证** | ⏳ 待进行 | 需重新导入项目后编译验证       |
+| **PointCloud_Point_t完善** | ✅ 完成 | 添加球坐标和SNR字段 (2026-01-08) |
+| **枚举初始化修复** | ✅ 完成 | 移除 `= {0}` 和不可达代码 (2026-01-08) |
+| **CCS编译验证** | ⏳ 进行中 | DSS编译中，需重新验证       |
 
 ---
 
