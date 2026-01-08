@@ -7,8 +7,8 @@
 #define TLV_OUTPUT_H
 
 #include <stdint.h>
-#include "../common/data_path.h"
-#include "../common/health_detect_types.h"
+#include <data_path.h>
+#include <health_detect_types.h>
 
 /* TLV Output API */
 int32_t TLV_Output_init(uint32_t uartInstance);

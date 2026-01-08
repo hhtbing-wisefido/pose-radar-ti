@@ -1,0 +1,39 @@
+/**
+ *  @file system.syscfg
+ *  @brief SysConfig System Configuration
+ * 
+ *  TI SysConfig tool configuration for AWRL6844
+ *  Configures: UART, GPIO, Clock, IPC
+ * 
+ *  Reference: mmw_demo/system.syscfg
+ *  Created: 2026-01-08
+ */
+
+/* Use SDK AWRL6844 SoC */
+scripting.addModule("/ti/board", {}, false);
+scripting.addModule("/ti/drivers/GPIO", {}, false);
+scripting.addModule("/ti/drivers/UART", {}, false);
+scripting.addModule("/ti/drivers/I2C", {}, false);
+
+/* GPIO Configuration */
+var gpio = scripting.addModule("/ti/drivers/GPIO");
+
+/* UART0 - CLI Interface */
+var uart0 = scripting.addModule("/ti/drivers/UART", {}, false);
+var uart0_inst = uart0.addInstance();
+uart0_inst.$name = "CONFIG_UART0";
+uart0_inst.baudRate = 115200;
+
+/* UART1 - Data Output */
+var uart1 = uart0.addInstance();
+uart1.$name = "CONFIG_UART1";
+uart1.baudRate = 921600;
+
+/* IPC Configuration for MSS-DSS Communication */
+var ipc = scripting.addModule("/ti/drivers/IPC", {}, false);
+var ipc_inst = ipc.addInstance();
+ipc_inst.$name = "CONFIG_IPC";
+
+/* Note: Actual SysConfig content depends on SDK version */
+/* This is a placeholder showing the general structure */
+/* In CCS, use SysConfig GUI to configure these modules */

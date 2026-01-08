@@ -8,16 +8,18 @@
  */
 
 #include "health_detect_main.h"
-#include "../common/shared_memory.h"
-#include "../common/data_path.h"
-#include "../common/health_detect_types.h"
-#include "../common/mmwave_output.h"
+#include <shared_memory.h>
+#include <data_path.h>
+#include <health_detect_types.h>
+#include <mmwave_output.h>
 
-/* TI SDK includes - learned from mmw_demo */
-#include <ti/sysbios/BIOS.h>
-#include <ti/sysbios/knl/Task.h>
-#include <ti/sysbios/knl/Semaphore.h>
-#include <xdc/runtime/System.h>
+/* TI SDK includes - FreeRTOS (L-SDK) */
+#include <FreeRTOS.h>
+#include <task.h>
+#include <semphr.h>
+#include <kernel/dpl/DebugP.h>
+#include <kernel/dpl/SemaphoreP.h>
+#include <drivers/uart.h>
 
 /*----------------------------------------------------------------------------*/
 /* Global Application Context                                                */

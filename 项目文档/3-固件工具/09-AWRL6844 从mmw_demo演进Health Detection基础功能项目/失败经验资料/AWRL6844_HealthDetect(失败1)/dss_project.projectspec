@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectSpec>
+    <applicability>
+        <when>
+            <context
+                deviceFamily="C6000"
+                deviceId="TMS320C66XX.AWRL68xx"
+            />
+        </when>
+    </applicability>
+
+    <project
+        title="AWRL6844 Health Detection DSS"
+        name="AWRL6844_HealthDetect_DSS"
+        products="sysconfig:1.26.0;MMWAVE-L-SDK-6:06.01.00.01"
+        configurations="
+            Release,
+            Debug,
+        "
+        connection="TIXDS110_Connection.xml"
+        toolChain="TI"
+        cgtVersion="8.5.0.LTS"
+        device="TMS320C66XX.AWRL68xx"
+        deviceCore="C66xx_DSP"
+        ignoreDefaultDeviceSettings="true"
+        ignoreDefaultCCSSettings="true"
+        endianness="little"
+        outputFormat="ELF"
+        outputType="executable"
+        compilerBuildOptions="
+            -mv6600
+            --abi=eabi
+            -g
+            --c99
+            -q
+            -mo
+            --mem_model:const=data
+            --mem_model:data=far
+            -I${PROJECT_ROOT}/src/common
+            -I${PROJECT_ROOT}/src/dss
+            -I${TI_SDK_ROOT}/source
+            -I${TI_SDK_ROOT}/source/alg/gtrack
+            -I${TI_SDK_ROOT}/../dsplib_c66x_3_4_0_0/packages
+            -I${TI_SDK_ROOT}/../mathlib_c66x_3_1_2_1/packages
+            -I${CG_TOOL_ROOT}/include
+            -D_LITTLE_ENDIAN
+            -DSOC_XWR68XX
+            -DSUBSYS_DSS
+            -DHEALTH_DETECT_VERSION=1.0.0
+        "
+        linkerBuildOptions="
+            -m=AWRL6844_HealthDetect_DSS.map
+            -i${TI_SDK_ROOT}/../dsplib_c66x_3_4_0_0/packages/ti/dsplib/lib
+            -i${TI_SDK_ROOT}/../mathlib_c66x_3_1_2_1/packages/ti/mathlib/lib
+            -i${TI_SDK_ROOT}/source/alg/gtrack/lib
+            --reread_libs
+            --ram_model
+        "
+        postBuildStep=""
+        description="AWRL6844 Health Detection - DSS/C66x Algorithm Layer">
+
+        <!-- Source Files - DSS Algorithm Layer -->
+        <file path="src/dss/dss_main.c" targetDirectory="src/dss"/>
+        <file path="src/dss/feature_extract.c" targetDirectory="src/dss"/>
+        <file path="src/dss/dsp_utils.c" targetDirectory="src/dss"/>
+
+        <!-- Header Files - DSS -->
+        <file path="src/dss/dss_main.h" targetDirectory="src/dss"/>
+        <file path="src/dss/feature_extract.h" targetDirectory="src/dss"/>
+        <file path="src/dss/dsp_utils.h" targetDirectory="src/dss"/>
+
+        <!-- Common Interface Layer -->
+        <file path="src/common/shared_memory.h" targetDirectory="src/common"/>
+        <file path="src/common/data_path.h" targetDirectory="src/common"/>
+        <file path="src/common/health_detect_types.h" targetDirectory="src/common"/>
+
+        <!-- Linker Command File -->
+        <file path="src/system/linker_dss.cmd" targetDirectory="src/system"/>
+        <file path="src/system/shared_memory.ld" targetDirectory="src/system"/>
+
+        <!-- Configuration -->
+        <pathVariable name="PROJECT_ROOT" path="." scope="project"/>
+        <pathVariable name="TI_SDK_ROOT" path="${COM_TI_MMWAVE_L_SDK_6_INSTALL_DIR}" scope="project"/>
+        <pathVariable name="CG_TOOL_ROOT" path="${CCS_INSTALL_ROOT}/tools/compiler/ti-cgt-c6000_8.5.0.LTS" scope="project"/>
+        
+        <configuration name="Debug"
+            compilerBuildOptions="-O0"
+            linkerBuildOptions=""/>
+            
+        <configuration name="Release"
+            compilerBuildOptions="-O2"
+            linkerBuildOptions=""/>
+    </project>
+</projectSpec>

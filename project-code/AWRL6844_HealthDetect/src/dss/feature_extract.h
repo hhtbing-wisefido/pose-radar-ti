@@ -10,7 +10,7 @@
 #define FEATURE_EXTRACT_H
 
 #include <stdint.h>
-#include "common/health_detect_types.h"
+#include <health_detect_types.h>
 
 /**************************************************************************
  * 特征提取主函数

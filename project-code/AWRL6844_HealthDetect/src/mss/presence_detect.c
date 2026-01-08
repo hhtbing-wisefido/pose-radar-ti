@@ -1,251 +1,189 @@
 /**
  * @file presence_detect.c
- * @brief Presence Detection Module - High-Level Feature Analysis
+ * @brief Presence Detection Module Implementation
  * 
- * Analyzes features from DSS to determine presence state.
- * Uses clustering, motion tracking, and temporal filtering.
+ * 🆕 Health Detect project new feature
+ * Analyzes point cloud to detect target presence and basic motion
+ * 
+ * Algorithm:
+ * 1. Filter points within detection zone (range min/max)
+ * 2. Count valid points
+ * 3. If points >= threshold, presence = true
+ * 4. Analyze velocity to determine motion state
+ * 
+ * Reference: mmw_demo point cloud processing
+ * RTOS: FreeRTOS (L-SDK mandatory)
+ * Created: 2026-01-08
  */
 
-#include "presence_detect.h"
-#include "../common/shared_memory.h"
-#include "../common/health_detect_types.h"
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include <stdbool.h>
 
-/*----------------------------------------------------------------------------*/
-/* Presence Detection Configuration                                          */
-/*----------------------------------------------------------------------------*/
+#include <kernel/dpl/DebugP.h>
 
-#define PRESENCE_TIMEOUT_FRAMES     50  /* 50 frames @ 10fps = 5 seconds */
-#define MOTION_VELOCITY_THRESHOLD   0.1f /* m/s */
-#define MIN_POINTS_FOR_PRESENCE     3
+#include "presence_detect.h"
 
-/*----------------------------------------------------------------------------*/
-/* Module State                                                              */
-/*----------------------------------------------------------------------------*/
+/*===========================================================================
+ * Local Variables
+ *===========================================================================*/
 
-typedef struct {
-    PresenceState_e currentState;
-    uint32_t lastMotionFrame;
-    uint32_t lastPresenceFrame;
-    uint32_t consecutiveAbsentFrames;
-    
-    /* Feature history for temporal filtering */
-    float lastCenterX;
-    float lastCenterY;
-    float lastCenterZ;
-    
-} PresenceDetect_State_t;
+static PresenceDetect_Config_t gConfig;
+static uint16_t gPresenceHoldCounter = 0;
+static uint8_t gPreviousPresenceState = 0;
 
-static PresenceDetect_State_t gPresenceState = {
-    .currentState = PRESENCE_ABSENT,
-    .lastMotionFrame = 0,
-    .lastPresenceFrame = 0,
-    .consecutiveAbsentFrames = 0,
+/*===========================================================================
+ * Default Configuration
+ *===========================================================================*/
+
+static const PresenceDetect_Config_t gDefaultConfig = {
+    .minPointsForPresence = 5,         /* At least 5 points */
+    .rangeMin_m = 0.5f,                /* Ignore points closer than 0.5m */
+    .rangeMax_m = 3.0f,                /* Ignore points further than 3m */
+    .velocityThreshold_mps = 0.1f,     /* 10 cm/s motion threshold */
+    .presenceHoldFrames = 10           /* Hold presence for 10 frames */
 };
 
-/*----------------------------------------------------------------------------*/
-/* Private Function Declarations                                             */
-/*----------------------------------------------------------------------------*/
+/*===========================================================================
+ * Implementation
+ *===========================================================================*/
 
-static bool PresenceDetect_hasSignificantMotion(
-    const HealthDetect_PointCloudFeatures_t* features);
-    
-static float PresenceDetect_calculateDistance3D(
-    float x1, float y1, float z1,
-    float x2, float y2, float z2);
-
-/*----------------------------------------------------------------------------*/
-/* Public API Implementation                                                 */
-/*----------------------------------------------------------------------------*/
+/**
+ * @brief Get default configuration
+ */
+void PresenceDetect_getDefaultConfig(PresenceDetect_Config_t* config)
+{
+    if (config != NULL)
+    {
+        memcpy(config, &gDefaultConfig, sizeof(PresenceDetect_Config_t));
+    }
+}
 
 /**
  * @brief Initialize presence detection module
  */
-int32_t PresenceDetect_init(void)
+int32_t PresenceDetect_init(const PresenceDetect_Config_t* config)
 {
-    memset(&gPresenceState, 0, sizeof(gPresenceState));
-    gPresenceState.currentState = PRESENCE_ABSENT;
+    if (config == NULL)
+    {
+        memcpy(&gConfig, &gDefaultConfig, sizeof(PresenceDetect_Config_t));
+    }
+    else
+    {
+        memcpy(&gConfig, config, sizeof(PresenceDetect_Config_t));
+    }
     
+    gPresenceHoldCounter = 0;
+    gPreviousPresenceState = 0;
+    
+    DebugP_log("PresenceDetect: Initialized (range=%.1f-%.1fm)\r\n",
+               gConfig.rangeMin_m, gConfig.rangeMax_m);
     return 0;
 }
 
 /**
- * @brief Process frame features and update presence state
- * 
- * @param features Feature data from DSS (in L3 RAM)
- * @param frameNum Current frame number
- * @return Updated presence state
+ * @brief Update configuration at runtime
  */
-PresenceState_e PresenceDetect_processFrame(
-    const HealthDetect_PointCloudFeatures_t* features,
-    uint32_t frameNum)
+int32_t PresenceDetect_setConfig(const PresenceDetect_Config_t* config)
 {
-    if (features == NULL) {
-        return gPresenceState.currentState;
+    if (config == NULL)
+    {
+        return -1;
+    }
+    memcpy(&gConfig, config, sizeof(PresenceDetect_Config_t));
+    return 0;
+}
+
+/**
+ * @brief Process point cloud for presence detection
+ */
+int32_t PresenceDetect_process(
+    const HealthDetect_PointCloud_t* pointCloud,
+    uint16_t numPoints,
+    PresenceDetect_Result_t* result)
+{
+    uint16_t pointsInZone = 0;
+    float sumRange = 0.0f;
+    float sumVelocity = 0.0f;
+    uint16_t movingPoints = 0;
+    
+    if (result == NULL)
+    {
+        return -1;
     }
     
-    /* Check if valid features exist */
-    bool hasValidFeatures = (features->numPoints >= MIN_POINTS_FOR_PRESENCE);
+    /* Clear result */
+    memset(result, 0, sizeof(PresenceDetect_Result_t));
     
-    /* State Machine */
-    switch (gPresenceState.currentState) {
-        case PRESENCE_ABSENT:
-            if (hasValidFeatures) {
-                /* Transition to PRESENT */
-                gPresenceState.currentState = PRESENCE_PRESENT;
-                gPresenceState.lastPresenceFrame = frameNum;
-                gPresenceState.consecutiveAbsentFrames = 0;
-                
-                /* Record initial position */
-                gPresenceState.lastCenterX = features->centerX;
-                gPresenceState.lastCenterY = features->centerY;
-                gPresenceState.lastCenterZ = features->centerZ;
-            }
-            break;
+    /* If no points, check hold counter */
+    if (pointCloud == NULL || numPoints == 0)
+    {
+        if (gPresenceHoldCounter > 0)
+        {
+            gPresenceHoldCounter--;
+            result->isPresent = gPreviousPresenceState;
+        }
+        return 0;
+    }
+    
+    /* Analyze each point */
+    for (uint16_t i = 0; i < numPoints; i++)
+    {
+        float range = pointCloud[i].range_m;
+        float velocity = pointCloud[i].velocity_mps;
+        
+        /* Check if point is in detection zone */
+        if (range >= gConfig.rangeMin_m && range <= gConfig.rangeMax_m)
+        {
+            pointsInZone++;
+            sumRange += range;
+            sumVelocity += velocity;
             
-        case PRESENCE_PRESENT:
-            if (hasValidFeatures) {
-                /* Check for motion */
-                if (PresenceDetect_hasSignificantMotion(features)) {
-                    /* Transition to MOTION */
-                    gPresenceState.currentState = PRESENCE_MOTION;
-                    gPresenceState.lastMotionFrame = frameNum;
-                }
-                
-                gPresenceState.lastPresenceFrame = frameNum;
-                gPresenceState.consecutiveAbsentFrames = 0;
-                
-                /* Update last position */
-                gPresenceState.lastCenterX = features->centerX;
-                gPresenceState.lastCenterY = features->centerY;
-                gPresenceState.lastCenterZ = features->centerZ;
-            } else {
-                /* No features detected */
-                gPresenceState.consecutiveAbsentFrames++;
-                
-                if (gPresenceState.consecutiveAbsentFrames > PRESENCE_TIMEOUT_FRAMES) {
-                    /* Timeout - return to ABSENT */
-                    gPresenceState.currentState = PRESENCE_ABSENT;
-                }
+            /* Check if point is moving */
+            if (fabsf(velocity) > gConfig.velocityThreshold_mps)
+            {
+                movingPoints++;
             }
-            break;
-            
-        case PRESENCE_MOTION:
-            if (hasValidFeatures) {
-                if (!PresenceDetect_hasSignificantMotion(features)) {
-                    /* Motion stopped - return to PRESENT */
-                    gPresenceState.currentState = PRESENCE_PRESENT;
-                } else {
-                    /* Continue tracking motion */
-                    gPresenceState.lastMotionFrame = frameNum;
-                }
-                
-                gPresenceState.lastPresenceFrame = frameNum;
-                gPresenceState.consecutiveAbsentFrames = 0;
-                
-                /* Update position */
-                gPresenceState.lastCenterX = features->centerX;
-                gPresenceState.lastCenterY = features->centerY;
-                gPresenceState.lastCenterZ = features->centerZ;
-            } else {
-                /* Lost tracking */
-                gPresenceState.consecutiveAbsentFrames++;
-                
-                if (gPresenceState.consecutiveAbsentFrames > PRESENCE_TIMEOUT_FRAMES) {
-                    gPresenceState.currentState = PRESENCE_ABSENT;
-                } else {
-                    /* Brief occlusion - stay in MOTION */
-                }
-            }
-            break;
+        }
     }
     
-    return gPresenceState.currentState;
-}
-
-/**
- * @brief Get current presence state
- */
-PresenceState_e PresenceDetect_getState(void)
-{
-    return gPresenceState.currentState;
-}
-
-/**
- * @brief Get time since last motion (frames)
- */
-uint32_t PresenceDetect_getTimeSinceMotion(uint32_t currentFrame)
-{
-    if (gPresenceState.lastMotionFrame == 0) {
-        return 0xFFFFFFFF; /* Never detected */
+    /* Fill result */
+    result->numPointsInZone = pointsInZone;
+    
+    if (pointsInZone > 0)
+    {
+        result->avgRange_m = sumRange / (float)pointsInZone;
+        result->avgVelocity_mps = sumVelocity / (float)pointsInZone;
     }
     
-    return currentFrame - gPresenceState.lastMotionFrame;
-}
-
-/**
- * @brief Reset presence detection state
- */
-void PresenceDetect_reset(void)
-{
-    gPresenceState.currentState = PRESENCE_ABSENT;
-    gPresenceState.lastMotionFrame = 0;
-    gPresenceState.lastPresenceFrame = 0;
-    gPresenceState.consecutiveAbsentFrames = 0;
-}
-
-/*----------------------------------------------------------------------------*/
-/* Private Helper Functions                                                  */
-/*----------------------------------------------------------------------------*/
-
-/**
- * @brief Check if features indicate significant motion
- * 
- * Criteria:
- * - Velocity magnitude > threshold
- * - OR position change > threshold
- */
-static bool PresenceDetect_hasSignificantMotion(
-    const HealthDetect_PointCloudFeatures_t* features)
-{
-    /* Check velocity magnitude */
-    float velocityMag = sqrtf(
-        features->velocityX * features->velocityX +
-        features->velocityY * features->velocityY +
-        features->velocityZ * features->velocityZ
-    );
-    
-    if (velocityMag > MOTION_VELOCITY_THRESHOLD) {
-        return true;
+    /* Determine presence state */
+    if (pointsInZone >= gConfig.minPointsForPresence)
+    {
+        result->isPresent = 1;
+        gPresenceHoldCounter = gConfig.presenceHoldFrames;
+    }
+    else if (gPresenceHoldCounter > 0)
+    {
+        gPresenceHoldCounter--;
+        result->isPresent = gPreviousPresenceState;
+    }
+    else
+    {
+        result->isPresent = 0;
     }
     
-    /* Check position change */
-    float positionChange = PresenceDetect_calculateDistance3D(
-        features->centerX, features->centerY, features->centerZ,
-        gPresenceState.lastCenterX, 
-        gPresenceState.lastCenterY,
-        gPresenceState.lastCenterZ
-    );
-    
-    if (positionChange > 0.2f) { /* 20cm threshold */
-        return true;
+    /* Determine motion state */
+    if (result->isPresent && movingPoints > 0)
+    {
+        result->isMoving = 1;
+    }
+    else
+    {
+        result->isMoving = 0;
     }
     
-    return false;
-}
-
-/**
- * @brief Calculate 3D Euclidean distance
- */
-static float PresenceDetect_calculateDistance3D(
-    float x1, float y1, float z1,
-    float x2, float y2, float z2)
-{
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float dz = z2 - z1;
+    /* Save state for next frame */
+    gPreviousPresenceState = result->isPresent;
     
-    return sqrtf(dx*dx + dy*dy + dz*dz);
+    return 0;
 }

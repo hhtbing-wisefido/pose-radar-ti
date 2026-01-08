@@ -8,8 +8,8 @@
  */
 
 #include "radar_control.h"
-#include <ti/control/mmwave/mmwave.h>
-#include <ti/sysbios/knl/Semaphore.h>
+#include <control/mmwave/mmwave.h>
+#include <semphr.h>
 
 /*----------------------------------------------------------------------------*/
 /* Radar Configuration                                                       */

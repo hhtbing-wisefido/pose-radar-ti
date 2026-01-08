@@ -6,7 +6,7 @@
  */
 
 #include "feature_extract.h"
-#include "common/shared_memory.h"
+#include <shared_memory.h>
 #include <string.h>
 #include <math.h>
 

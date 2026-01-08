@@ -16,7 +16,7 @@
 #define DSS_MAIN_H
 
 #include <stdint.h>
-#include "common/health_detect_types.h"
+#include <health_detect_types.h>
 
 /**************************************************************************
  * DSS主函数

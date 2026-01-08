@@ -8,8 +8,8 @@
  */
 
 #include "dpc_control.h"
-#include "../common/shared_memory.h"
-#include "../common/data_path.h"
+#include <shared_memory.h>
+#include <data_path.h>
 
 /*----------------------------------------------------------------------------*/
 /* DPC Control Functions                                                     */

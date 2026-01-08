@@ -8,10 +8,10 @@
  */
 
 #include "tlv_output.h"
-#include "../common/mmwave_output.h"
-#include "../common/data_path.h"
-#include "../common/health_detect_types.h"
-#include <ti/drivers/uart/UART.h>
+#include <mmwave_output.h>
+#include <data_path.h>
+#include <health_detect_types.h>
+#include <drivers/uart.h>
 #include <string.h>
 
 /*----------------------------------------------------------------------------*/
