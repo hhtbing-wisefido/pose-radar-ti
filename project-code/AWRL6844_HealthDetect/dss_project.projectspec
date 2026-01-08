@@ -2,14 +2,26 @@
 <projectSpec>
     <project
         name="AWRL6844_HealthDetect_DSS"
+        products="MMWAVE-L-SDK-6:06.01.00.01"
+        configurations="Release,Debug,"
         deviceFamily="C6000"
         deviceEndianness="little"
-        deviceId="AWR6843.C674X"
-        cgtVersion="8.3.12"
+        deviceId="TMS320C66XX.AWRL68xx"
+        deviceCore="C66xx_DSP"
+        toolChain="TI"
+        cgtVersion="8.5.0.LTS"
         outputType="executable"
+        ignoreDefaultDeviceSettings="true"
+        ignoreDefaultCCSSettings="true"
         compilerBuildOptions="
-            -mv6740 --abi=eabi
-            -O3 -g --display_error_number
+            -mv6600
+            --abi=eabi
+            -g
+            --c99
+            -q
+            -mo
+            --mem_model:const=data
+            --mem_model:data=far
             -I${PROJECT_ROOT}/src/common
             -I${PROJECT_ROOT}/src/dss
             -I${TI_SDK_ROOT}/packages
@@ -20,12 +32,11 @@
             -DHEALTH_DETECT_VERSION=1.0.0
         "
         linkerBuildOptions="
-            -m AWRL6844_HealthDetect_DSS.map
+            -m=AWRL6844_HealthDetect_DSS.map
             -i${TI_SDK_ROOT}/packages/ti/alg/mmwavelib/lib
             -i${TI_SDK_ROOT}/packages/ti/utils/mathutils/lib
-            --reread_libs --warn_sections
-            --display_error_number --rom_model
-            -heap 0x8000 -stack 0x2000
+            --reread_libs
+            --ram_model
         "
         postBuildStep=""
         description="AWRL6844 Health Detection - DSS/C66x Algorithm Layer">
@@ -51,14 +62,14 @@
 
         <!-- Configuration -->
         <pathVariable name="PROJECT_ROOT" path="." scope="project"/>
-        <pathVariable name="TI_SDK_ROOT" path="C:/ti/mmwave_sdk_03_06_02_00_00" scope="project"/>
+        <pathVariable name="TI_SDK_ROOT" path="${COM_TI_MMWAVE_L_SDK_6_INSTALL_DIR}" scope="project"/>
         
         <configuration name="Debug"
-            compilerBuildOptions="-g -O0"
+            compilerBuildOptions="-O0"
             linkerBuildOptions=""/>
             
         <configuration name="Release"
-            compilerBuildOptions="-O3 -DNDEBUG"
-            linkerBuildOptions="--opt_level=3"/>
+            compilerBuildOptions="-O2"
+            linkerBuildOptions=""/>
     </project>
 </projectSpec>

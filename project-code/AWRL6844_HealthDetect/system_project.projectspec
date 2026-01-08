@@ -6,7 +6,6 @@
     
     <project
         name="AWRL6844_HealthDetect_System"
-        products="MMWAVE-L-SDK-6:06.01.00.01"
         configurations="
             Release,
             Debug,
