@@ -1430,14 +1430,14 @@ ROMS
 
 ---
 
-## ?? ±àÒë´íÎóĞŞ¸´¼ÇÂ¼ (2026-01-09)
+## ğŸ“ ç¼–è¯‘é”™è¯¯ä¿®å¤è®°å½• (2026-01-09)
 
-### ÎÊÌâ9: MSS radar_control.c API½á¹¹Ìå×Ö¶Î²»Æ¥Åä
+### é—®é¢˜9: MSS radar_control.c APIç»“æ„ä½“å­—æ®µä¸åŒ¹é…
 
-**´íÎóÈÕÆÚ**: 2026-01-09  
-**´íÎóÎ»ÖÃ**: `src/mss/source/radar_control.c:235-254`
+**é”™è¯¯æ—¥æœŸ**: 2026-01-09  
+**é”™è¯¯ä½ç½®**: `src/mss/source/radar_control.c:235-254`
 
-**´íÎóĞÅÏ¢**:
+**é”™è¯¯ä¿¡æ¯**:
 ```
 ../radar_control.c:235:30: error: no member named 'startFreqGHz' in 'struct MMWave_ProfileComCfg_t'
 ../radar_control.c:236:30: error: no member named 'digOutSampleRateMHz' in 'struct MMWave_ProfileComCfg_t'
@@ -1450,21 +1450,21 @@ ROMS
 ../radar_control.c:254:33: error: no member named 'channelCfg' in 'struct HealthDetect_CliCfg_t'
 ```
 
-**Ô­Òò·ÖÎö**:
+**åŸå› åˆ†æ**:
 
-1. **SDK½á¹¹Ìå×Ö¶ÎÓë´úÂë²»Æ¥Åä**£ºL-SDK 6.xµÄ`MMWave_ProfileComCfg_t`ºÍ`MMWave_ProfileTimeCfg_t`×Ö¶ÎÃû³ÆÓë´úÂëÖĞÊ¹ÓÃµÄ²»Ò»ÖÂ¡£
+1. **SDKç»“æ„ä½“å­—æ®µä¸ä»£ç ä¸åŒ¹é…**ï¼šL-SDK 6.xçš„`MMWave_ProfileComCfg_t`å’Œ`MMWave_ProfileTimeCfg_t`å­—æ®µåç§°ä¸ä»£ç ä¸­ä½¿ç”¨çš„ä¸ä¸€è‡´ã€‚
 
-2. **Êµ¼ÊSDK½á¹¹Ìå¶¨Òå**£¨`C:\ti\MMWAVE_L_SDK_06_01_00_01\source\control\mmwave\mmwave.h`£©£º
+2. **å®é™…SDKç»“æ„ä½“å®šä¹‰**ï¼ˆ`C:\ti\MMWAVE_L_SDK_06_01_00_01\source\control\mmwave\mmwave.h`ï¼‰ï¼š
    
    **MMWave_ProfileComCfg_t**:
    ```c
    typedef struct MMWave_ProfileComCfg_t
    {
-       uint8_t   digOutputSampRate;        // ²»ÊÇ digOutSampleRateMHz
+       uint8_t   digOutputSampRate;        // ä¸æ˜¯ digOutSampleRateMHz
        uint8_t   digOutputBitsSel;
        uint8_t   dfeFirSel;
-       uint16_t  numOfAdcSamples;          // ²»ÊÇ numAdcSamples
-       float     chirpRampEndTimeus;       // ÔÚÕâÀï²»ÊÇstartFreqGHz
+       uint16_t  numOfAdcSamples;          // ä¸æ˜¯ numAdcSamples
+       float     chirpRampEndTimeus;       // åœ¨è¿™é‡Œä¸æ˜¯startFreqGHz
        uint8_t   chirpRxHpfSel;
        uint8_t   chirpTxMimoPatSel;
    } MMWave_ProfileComCfg;
@@ -1474,19 +1474,19 @@ ROMS
    ```c
    typedef struct MMWave_ProfileTimeCfg_t
    {
-       float     chirpIdleTimeus;          // ²»ÊÇ idleTimeus
-       uint16_t  chirpAdcStartTime;        // ²»ÊÇ adcStartTimeus
+       float     chirpIdleTimeus;          // ä¸æ˜¯ idleTimeus
+       uint16_t  chirpAdcStartTime;        // ä¸æ˜¯ adcStartTimeus
        float     chirpTxStartTimeus;
-       float     chirpSlope;               // ²»ÊÇ freqSlopeConst
-       float     startFreqGHz;             // ÔÚProfileTimeCfgÖĞ
+       float     chirpSlope;               // ä¸æ˜¯ freqSlopeConst
+       float     startFreqGHz;             // åœ¨ProfileTimeCfgä¸­
    } MMWave_ProfileTimeCfg;
    ```
 
-3. **CliCfg½á¹¹ÌåÎÊÌâ**£º`HealthDetect_CliCfg_t`ÖĞÃ»ÓĞ`channelCfg`³ÉÔ±£¬Ó¦¸ÃÊ¹ÓÃ`rxChannelEn`ºÍ`txChannelEn`¡£
+3. **CliCfgç»“æ„ä½“é—®é¢˜**ï¼š`HealthDetect_CliCfg_t`ä¸­æ²¡æœ‰`channelCfg`æˆå‘˜ï¼Œåº”è¯¥ä½¿ç”¨`rxChannelEn`å’Œ`txChannelEn`ã€‚
 
-**½â¾ö·½°¸**:
+**è§£å†³æ–¹æ¡ˆ**:
 
-ĞŞ¸Ä`radar_control.c`ÖĞµÄ×Ö¶ÎÓ³Éä£¬Ê¹ÆäÓëSDKÊµ¼Ê½á¹¹ÌåÒ»ÖÂ£º
+ä¿®æ”¹`radar_control.c`ä¸­çš„å­—æ®µæ˜ å°„ï¼Œä½¿å…¶ä¸SDKå®é™…ç»“æ„ä½“ä¸€è‡´ï¼š
 
 ```c
 /* Configure profile common parameters - match SDK struct fields */
@@ -1510,62 +1510,62 @@ gMmWaveCfg.txEnbl = cliCfg->chirpCfg.txEnable;
 gMmWaveCfg.rxEnbl = cliCfg->rxChannelEn;
 ```
 
-**¹Ø¼üĞŞ¸´µã**:
-1. ? `startFreqGHz` ÒÆµ½ `profileTimeCfg` ÖĞ
-2. ? `digOutSampleRateMHz`  `digOutputSampRate` (uint8_t)
-3. ? `numAdcSamples`  `numOfAdcSamples`
-4. ? `idleTimeus`  `chirpIdleTimeus`
-5. ? `adcStartTimeus`  `chirpAdcStartTime` (uint16_t)
-6. ? `rampEndTimeus`  `chirpRampEndTimeus`
-7. ? `freqSlopeConst`  `chirpSlope`
-8. ? `channelCfg.rxChannelEn`  `rxChannelEn`
+**å…³é”®ä¿®å¤ç‚¹**:
+1. âœ… `startFreqGHz` ç§»åˆ° `profileTimeCfg` ä¸­
+2. âœ… `digOutSampleRateMHz` â†’ `digOutputSampRate` (uint8_t)
+3. âœ… `numAdcSamples` â†’ `numOfAdcSamples`
+4. âœ… `idleTimeus` â†’ `chirpIdleTimeus`
+5. âœ… `adcStartTimeus` â†’ `chirpAdcStartTime` (uint16_t)
+6. âœ… `rampEndTimeus` â†’ `chirpRampEndTimeus`
+7. âœ… `freqSlopeConst` â†’ `chirpSlope`
+8. âœ… `channelCfg.rxChannelEn` â†’ `rxChannelEn`
 
-**×´Ì¬**: ? ÒÑĞŞ¸´ (2026-01-09)
+**çŠ¶æ€**: âœ… å·²ä¿®å¤ (2026-01-09)
 
 ---
 
-### ±àÒëÎÊÌâ»ã×Ü±í (¸üĞÂ)
+### ç¼–è¯‘é—®é¢˜æ±‡æ€»è¡¨ (æ›´æ–°)
 
-| ÎÊÌâ±àºÅ | ´íÎóÀàĞÍ | Ô­Òò | ½â¾ö·½°¸ | ×´Ì¬ |
+| é—®é¢˜ç¼–å· | é”™è¯¯ç±»å‹ | åŸå›  | è§£å†³æ–¹æ¡ˆ | çŠ¶æ€ |
 |---------|---------|------|---------|------|
-| ÎÊÌâ6 | DSS post-buildÊ§°Ü | È±ÉÙ `memory_hex.cmd` | ´´½¨DSSµÄmemory_hex.cmd | ? ÒÑĞŞ¸´ |
-| ÎÊÌâ7 | System post-buildÊ§°Ü | MSSÎ´±àÒë | °´ÕıÈ·Ë³Ğò±àÒëMSSDSSSystem | ? ´ıÑéÖ¤ |
-| ÎÊÌâ8 | ConfigÎÄ¼şÃû | ´óĞ¡Ğ´ÎÊÌâ | Windows¼æÈİ£¬ÎŞĞèĞŞ¸Ä | ? ÒÑÈ·ÈÏ |
-| ÎÊÌâ9 | MSS API½á¹¹Ìå×Ö¶Î²»Æ¥Åä | SDK½á¹¹Ìå×Ö¶ÎÃû³ÆÓë´úÂë²»Ò»ÖÂ | ĞŞÕıradar_control.c×Ö¶ÎÓ³Éä | ? ÒÑĞŞ¸´ |
+| é—®é¢˜6 | DSS post-buildå¤±è´¥ | ç¼ºå°‘ `memory_hex.cmd` | åˆ›å»ºDSSçš„memory_hex.cmd | âœ… å·²ä¿®å¤ |
+| é—®é¢˜7 | System post-buildå¤±è´¥ | MSSæœªç¼–è¯‘ | æŒ‰æ­£ç¡®é¡ºåºç¼–è¯‘MSSâ†’DSSâ†’System | â³ å¾…éªŒè¯ |
+| é—®é¢˜8 | Configæ–‡ä»¶å | å¤§å°å†™é—®é¢˜ | Windowså…¼å®¹ï¼Œæ— éœ€ä¿®æ”¹ | âœ… å·²ç¡®è®¤ |
+| é—®é¢˜9 | MSS APIç»“æ„ä½“å­—æ®µä¸åŒ¹é… | SDKç»“æ„ä½“å­—æ®µåç§°ä¸ä»£ç ä¸ä¸€è‡´ | ä¿®æ­£radar_control.cå­—æ®µæ˜ å°„ | âœ… å·²ä¿®å¤ |
 
 ---
 
-### ÏÂÒ»²½²Ù×÷Ö¸ÄÏ (¸üĞÂ)
+### ä¸‹ä¸€æ­¥æ“ä½œæŒ‡å— (æ›´æ–°)
 
-**ÇëÓÃ»§ÔÚCCSÖĞÖ´ĞĞÒÔÏÂ²½Öè**£º
+**è¯·ç”¨æˆ·åœ¨CCSä¸­æ‰§è¡Œä»¥ä¸‹æ­¥éª¤**ï¼š
 
-1. **Ë¢ĞÂÏîÄ¿**
+1. **åˆ·æ–°é¡¹ç›®**
    ```
-   ÔÚCCSÖĞÓÒ¼üµã»÷¸÷ÏîÄ¿  Refresh
-   È·±£ĞŞ¸´ºóµÄ´úÂë±»Ê¶±ğ
-   ```
-
-2. **CleanËùÓĞÏîÄ¿**
-   ```
-   Project  Clean...  Ñ¡ÔñËùÓĞhealth_detectÏîÄ¿  Clean
+   åœ¨CCSä¸­å³é”®ç‚¹å‡»å„é¡¹ç›® â†’ Refresh
+   ç¡®ä¿ä¿®å¤åçš„ä»£ç è¢«è¯†åˆ«
    ```
 
-3. **°´Ë³Ğò±àÒë**
+2. **Cleanæ‰€æœ‰é¡¹ç›®**
    ```
-   Step 1: ±àÒë health_detect_6844_mss (ÓÒ¼ü  Build Project)
-         Ô¤ÆÚ£º9¸ö±àÒë´íÎóÒÑĞŞ¸´£¬MSSÓ¦±àÒë³É¹¦
-   Step 2: ±àÒë health_detect_6844_dss (ÓÒ¼ü  Build Project)
-         Ô¤ÆÚ£ºDSSÓ¦±àÒë³É¹¦
-   Step 3: ±àÒë health_detect_6844_system (ÓÒ¼ü  Build Project)
-         Ô¤ÆÚ£ºSystemÓ¦ÄÜÕÒµ½.rigÎÄ¼ş²¢Éú³É.appimage
+   Project â†’ Clean... â†’ é€‰æ‹©æ‰€æœ‰health_detecté¡¹ç›® â†’ Clean
    ```
 
-4. **ÑéÖ¤Êä³ö**
+3. **æŒ‰é¡ºåºç¼–è¯‘**
    ```
-   ¼ì²éÒÔÏÂÎÄ¼şÊÇ·ñÉú³É£º
+   Step 1: ç¼–è¯‘ health_detect_6844_mss (å³é”® â†’ Build Project)
+         é¢„æœŸï¼š9ä¸ªç¼–è¯‘é”™è¯¯å·²ä¿®å¤ï¼ŒMSSåº”ç¼–è¯‘æˆåŠŸ
+   Step 2: ç¼–è¯‘ health_detect_6844_dss (å³é”® â†’ Build Project)
+         é¢„æœŸï¼šDSSåº”ç¼–è¯‘æˆåŠŸ
+   Step 3: ç¼–è¯‘ health_detect_6844_system (å³é”® â†’ Build Project)
+         é¢„æœŸï¼šSystemåº”èƒ½æ‰¾åˆ°.rigæ–‡ä»¶å¹¶ç”Ÿæˆ.appimage
+   ```
+
+4. **éªŒè¯è¾“å‡º**
+   ```
+   æ£€æŸ¥ä»¥ä¸‹æ–‡ä»¶æ˜¯å¦ç”Ÿæˆï¼š
    - health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig
    - health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig
    - health_detect_6844_system/Release/health_detect_6844_system.Release.appimage
    ```
 
-**Èç¹ûÈÔÓĞ±àÒë´íÎó£¬ÇëÌá¹©ÍêÕû´íÎóĞÅÏ¢ÒÔ±ã½øÒ»²½Õï¶Ï¡£**
+**å¦‚æœä»æœ‰ç¼–è¯‘é”™è¯¯ï¼Œè¯·æä¾›å®Œæ•´é”™è¯¯ä¿¡æ¯ä»¥ä¾¿è¿›ä¸€æ­¥è¯Šæ–­ã€‚**
