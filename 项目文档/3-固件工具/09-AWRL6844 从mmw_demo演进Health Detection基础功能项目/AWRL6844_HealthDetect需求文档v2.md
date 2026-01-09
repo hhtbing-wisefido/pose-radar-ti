@@ -10,27 +10,27 @@
 ## 🔴🔴🔴 最高优先级：SDK Visualizer兼容性要求（2026-01-09新增）
 
 > ⭐ **来源**: [AWRL6844雷达健康检测-02-方案确认.md](../08-AWRL6844雷达健康检测实现方案/AWRL6844雷达健康检测-02-方案确认.md)
-> 
+>
 > **核心原则**: 最终固件**必须能被SDK Visualizer识别和控制**
 
 ### 🔴 强制要求1：TLV数据格式必须兼容标准Demo
 
-| 要求 | 说明 |
-|-----|------|
-| **点云必须Type=1** | 使用标准`MMWDEMO_OUTPUT_MSG_DETECTED_POINTS`格式 |
-| **扩展从Type=1000开始** | 健康检测专用TLV避开官方范围 |
-| **禁止使用Type=3001** | InCabin私有格式，SDK Visualizer不兼容 |
+| 要求                          | 说明                                                |
+| ----------------------------- | --------------------------------------------------- |
+| **点云必须Type=1**      | 使用标准 `MMWDEMO_OUTPUT_MSG_DETECTED_POINTS`格式 |
+| **扩展从Type=1000开始** | 健康检测专用TLV避开官方范围                         |
+| **禁止使用Type=3001**   | InCabin私有格式，SDK Visualizer不兼容               |
 
 ### 🔴 强制要求2：CLI必须使用标准mmwave_demo框架
 
 **问题34发现（2026-01-09）**：自定义简化CLI与SDK Visualizer不兼容！
 
-| ❌ 错误做法（当前） | ✅ 正确做法（必须修改） |
-|-------------------|----------------------|
-| 自定义简化cli.c | 使用mmw_demo的mmw_cli.c框架 |
-| 自定义banner格式 | 使用标准`MMW Demo XX.XX.XX.XX`格式 |
-| 自定义prompt | 使用`mmwDemo:/>`格式 |
-| 无mmWaveExtension | 设置`enableMMWaveExtension = 1U` |
+| ❌ 错误做法（当前） | ✅ 正确做法（必须修改）               |
+| ------------------- | ------------------------------------- |
+| 自定义简化cli.c     | 使用mmw_demo的mmw_cli.c框架           |
+| 自定义banner格式    | 使用标准 `MMW Demo XX.XX.XX.XX`格式 |
+| 自定义prompt        | 使用 `mmwDemo:/>`格式               |
+| 无mmWaveExtension   | 设置 `enableMMWaveExtension = 1U`   |
 
 **必须包含的CLI_Cfg配置**：
 
@@ -48,6 +48,7 @@ CLI_open(&cliCfg);
 ```
 
 **为什么重要**：
+
 - SDK Visualizer通过CLI发送配置命令
 - 它期望标准mmwave_demo的响应格式
 - 自定义CLI格式会导致"Error in Setting up device"
@@ -78,14 +79,15 @@ sensorStart
 
 **强制要求**:
 
-| 文件路径 | 必须使用的文件名 | ❌ 错误的文件名 |
-|---------|-----------------|----------------|
+| 文件路径                | 必须使用的文件名               | ❌ 错误的文件名                 |
+| ----------------------- | ------------------------------ | ------------------------------- |
 | `src/mss/.../config/` | `metaimage_cfg.Release.json` | ~~metaimage_cfg.release.json~~ |
-| `src/mss/.../config/` | `metaimage_cfg.Debug.json` | ~~metaimage_cfg.debug.json~~ |
-| `src/system/config/` | `metaimage_cfg.Release.json` | ~~metaimage_cfg.release.json~~ |
-| `src/system/config/` | `metaimage_cfg.Debug.json` | ~~metaimage_cfg.debug.json~~ |
+| `src/mss/.../config/` | `metaimage_cfg.Debug.json`   | ~~metaimage_cfg.debug.json~~   |
+| `src/system/config/`  | `metaimage_cfg.Release.json` | ~~metaimage_cfg.release.json~~ |
+| `src/system/config/`  | `metaimage_cfg.Debug.json`   | ~~metaimage_cfg.debug.json~~   |
 
 **验证命令**:
+
 ```powershell
 # 检查MSS配置文件
 Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config"
@@ -96,7 +98,7 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\
 # 必须显示: metaimage_cfg.Release.json (大写R)
 ```
 
-**为什么InCabin_Demos使用小写？**  
+**为什么InCabin_Demos使用小写？**
 InCabin_Demos的文件名也是小写，但他们可能使用了不同的构建方式或有额外的大小写转换逻辑。我们的项目直接使用makefile，必须严格匹配CCS的PROFILE大小写。
 
 ---
@@ -518,7 +520,7 @@ AWRL6844_HealthDetect/
 
 **核心原则**：
 
-> ❌ **绝对禁止**修改 `C:\Users\Administrator\workspace_ccstheia\` 中的任何文件来修复编译错误！  
+> ❌ **绝对禁止**修改 `C:\Users\Administrator\workspace_ccstheia\` 中的任何文件来修复编译错误！
 > ✅ **必须修改**项目源代码 `project-code\AWRL6844_HealthDetect\`！
 
 **原因**：
@@ -551,6 +553,7 @@ AWRL6844_HealthDetect/
 - [ ] 是否已在两个文档中记录修复内容？
 
 **相关文档**：
+
 - 所有编译问题修复 → 必须记录在 `HealthDetect项目重建总结.md`
 - 所有项目配置要求 → 必须更新在本文档（需求文档v2.md）
 
@@ -609,7 +612,7 @@ CCS操作：
 
 #### 工作原理
 
-CCS通过`<import>`标签实现自动依赖编译：
+CCS通过 `<import>`标签实现自动依赖编译：
 
 ```xml
 <!-- system.projectspec -->
@@ -654,13 +657,13 @@ CCS自动：
 
 #### 项目配置检查清单
 
-| 检查项 | 要求 | 验证方法 |
-|-------|------|---------|
-| system.projectspec有`<import>`标签 | 引用MSS和DSS | 查看XML文件 |
-| `<import>`路径正确 | 相对路径可解析 | 路径存在 |
-| system.xml项目名匹配 | 与MSS/DSS项目名一致 | 对比名称 |
-| 导入方式正确 | 只从system导入 | 3个项目同时出现 |
-| Dependencies设置 | System依赖MSS/DSS | Project Properties |
+| 检查项                                | 要求                | 验证方法           |
+| ------------------------------------- | ------------------- | ------------------ |
+| system.projectspec有 `<import>`标签 | 引用MSS和DSS        | 查看XML文件        |
+| `<import>`路径正确                  | 相对路径可解析      | 路径存在           |
+| system.xml项目名匹配                  | 与MSS/DSS项目名一致 | 对比名称           |
+| 导入方式正确                          | 只从system导入      | 3个项目同时出现    |
+| Dependencies设置                      | System依赖MSS/DSS   | Project Properties |
 
 **🔴 重要说明**：
 
@@ -713,6 +716,7 @@ health_detect_system.release.appimage
 #### 1.1 硬件准备
 
 **SOP跳线设置**：
+
 ```
 烧录模式: S7-OFF, S8-OFF  ← Flash编程模式
 运行模式: S7-OFF, S8-ON   ← 功能运行模式（注意S7仍为OFF）
@@ -721,6 +725,7 @@ health_detect_system.release.appimage
 > 📎 **详细说明**：参见[Part16-AWRL6844固件正确烧录方式完整指南](../06-SDK固件研究/Part16-AWRL6844固件正确烧录方式完整指南.md)
 
 **COM端口确认**：
+
 ```powershell
 # 设备管理器查看端口
 # CLI端口: COMx（如COM3）- 用于命令/配置
@@ -783,11 +788,11 @@ cd C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool
 
 #### 2.2 标准配置文件位置
 
-| 配置文件 | 路径 | 说明 |
-|---------|------|------|
-| **profile_4T4R_tdm.cfg** | `mmw_demo_SDK_reference/profiles/` | ✅ 推荐，4TX 4RX TDM模式 |
-| **6844_profile_4T4R_tdm.cfg** | `MMWAVE_L_SDK/.../visualizer/tmp/` | SDK Visualizer默认 |
-| **健康检测专用配置** | `AWRL6844_HealthDetect/cfg/` | 项目自定义配置（待开发） |
+| 配置文件                            | 路径                                 | 说明                     |
+| ----------------------------------- | ------------------------------------ | ------------------------ |
+| **profile_4T4R_tdm.cfg**      | `mmw_demo_SDK_reference/profiles/` | ✅ 推荐，4TX 4RX TDM模式 |
+| **6844_profile_4T4R_tdm.cfg** | `MMWAVE_L_SDK/.../visualizer/tmp/` | SDK Visualizer默认       |
+| **健康检测专用配置**          | `AWRL6844_HealthDetect/cfg/`       | 项目自定义配置（待开发） |
 
 #### 2.3 标准配置文件关键参数
 
@@ -808,6 +813,7 @@ sensorStart 0 0 0 0               % 启动雷达
 > 📎 **详细安装信息**：参见[附录E-设备安装配置信息](../08-AWRL6844雷达健康检测实现方案/AWRL6844雷达健康检测-附录E-设备安装配置信息.md)
 
 **实际安装参数**：
+
 ```
 雷达位置: 墙面壁挂安装
 离地高度: 1.78m
@@ -816,6 +822,7 @@ sensorStart 0 0 0 0               % 启动雷达
 ```
 
 **配置文件中的位置参数**（如需自定义）：
+
 ```properties
 % 传感器位置配置（InCabin格式，标准mmw_demo不需要）
 sensorPosition 0 0 1.78 0 -40
@@ -826,7 +833,7 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 % 格式：zoneId subZoneId xMin xMax yMin yMax zMin zMax
 ```
 
-> ⚠️ **注意**：`sensorPosition`和`cuboidDef`是InCabin专用CLI命令，标准mmw_demo固件**不识别**！
+> ⚠️ **注意**：`sensorPosition`和 `cuboidDef`是InCabin专用CLI命令，标准mmw_demo固件**不识别**！
 > 如需区域定义功能，需要在HealthDetect固件中实现这些CLI命令。
 
 #### 2.5 使用SDK Visualizer发送配置
@@ -867,6 +874,7 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 #### 3.1 CLI端口验证
 
 **连接参数**：
+
 ```
 端口: CLI端口（如COM3）
 波特率: 115200
@@ -874,6 +882,7 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 ```
 
 **验证命令响应**：
+
 ```
 发送: help
 预期: 显示可用命令列表
@@ -900,17 +909,18 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 
 #### 3.3 功能验证测试场景
 
-| 测试场景 | 预期结果 | 验证标志 |
-|---------|---------|---------|
-| **静态环境** | 无点云或极少静态点 | ✅ 无虚警 |
-| **人员走动** | 检测到移动点云 | ✅ 能跟踪 |
-| **人员静止** | 点云稳定 | ✅ 位置准确 |
-| **手部摆动** | 检测到小目标 | ✅ 灵敏度正常 |
-| **多人场景** | 多个点云簇 | ✅ 可区分 |
+| 测试场景           | 预期结果           | 验证标志      |
+| ------------------ | ------------------ | ------------- |
+| **静态环境** | 无点云或极少静态点 | ✅ 无虚警     |
+| **人员走动** | 检测到移动点云     | ✅ 能跟踪     |
+| **人员静止** | 点云稳定           | ✅ 位置准确   |
+| **手部摆动** | 检测到小目标       | ✅ 灵敏度正常 |
+| **多人场景** | 多个点云簇         | ✅ 可区分     |
 
 #### 3.4 TLV数据格式验证
 
 **验证点云数据使用标准格式**：
+
 ```
 点云TLV: Type = 1 (MMWDEMO_OUTPUT_MSG_DETECTED_POINTS)
          ✅ SDK Visualizer能正常显示
@@ -925,18 +935,18 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 
 ### 4. 验证完成检查清单
 
-| 类别 | 检查项 | 状态 |
-|------|--------|------|
-| **烧录** | 固件烧录成功（进度100%） | ⬜ |
-| **烧录** | SOP已恢复运行模式 | ⬜ |
-| **烧录** | 串口有启动信息 | ⬜ |
-| **配置** | 配置文件发送成功 | ⬜ |
-| **配置** | 所有CLI命令返回Done | ⬜ |
-| **配置** | sensorStart执行成功 | ⬜ |
-| **验证** | CLI命令响应正常 | ⬜ |
-| **验证** | 数据端口有输出 | ⬜ |
-| **验证** | Visualizer显示点云 | ⬜ |
-| **验证** | 能检测到人员运动 | ⬜ |
+| 类别           | 检查项                   | 状态 |
+| -------------- | ------------------------ | ---- |
+| **烧录** | 固件烧录成功（进度100%） | ⬜   |
+| **烧录** | SOP已恢复运行模式        | ⬜   |
+| **烧录** | 串口有启动信息           | ⬜   |
+| **配置** | 配置文件发送成功         | ⬜   |
+| **配置** | 所有CLI命令返回Done      | ⬜   |
+| **配置** | sensorStart执行成功      | ⬜   |
+| **验证** | CLI命令响应正常          | ⬜   |
+| **验证** | 数据端口有输出           | ⬜   |
+| **验证** | Visualizer显示点云       | ⬜   |
+| **验证** | 能检测到人员运动         | ⬜   |
 
 **✅ 所有检查项通过后，固件验证完成！**
 
@@ -998,12 +1008,12 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 
 > 📎 以下文档位于 `项目文档/3-固件工具/06-SDK固件研究/`
 
-| 文档 | 内容 | 推荐程度 |
-| ---- | ---- | -------- |
-| [Part10-MMWAVE_L_SDK深度解析](../06-SDK固件研究/Part10-MMWAVE_L_SDK深度解析.md) | SDK完整架构、目录结构、组件分析 | ⭐⭐⭐⭐ |
-| [Part13-SDK对比与RTOS深度解析](../06-SDK固件研究/Part13-SDK对比与RTOS深度解析.md) | L-SDK vs 标准SDK对比、FreeRTOS vs BIOS详解 | ⭐⭐⭐⭐⭐ |
-| [Part14-TLV数据格式与工具兼容性完整指南](../06-SDK固件研究/Part14-TLV数据格式与工具兼容性完整指南.md) | TLV格式详解、工具兼容性分析 | ⭐⭐⭐⭐⭐ |
-| [Part3-SDK与固件关系及工作流程](../06-SDK固件研究/Part3-SDK与固件关系及工作流程.md) | SDK与固件关系、编译流程 | ⭐⭐⭐ |
+| 文档                                                                                               | 内容                                       | 推荐程度   |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------ | ---------- |
+| [Part10-MMWAVE_L_SDK深度解析](../06-SDK固件研究/Part10-MMWAVE_L_SDK深度解析.md)                       | SDK完整架构、目录结构、组件分析            | ⭐⭐⭐⭐   |
+| [Part13-SDK对比与RTOS深度解析](../06-SDK固件研究/Part13-SDK对比与RTOS深度解析.md)                     | L-SDK vs 标准SDK对比、FreeRTOS vs BIOS详解 | ⭐⭐⭐⭐⭐ |
+| [Part14-TLV数据格式与工具兼容性完整指南](../06-SDK固件研究/Part14-TLV数据格式与工具兼容性完整指南.md) | TLV格式详解、工具兼容性分析                | ⭐⭐⭐⭐⭐ |
+| [Part3-SDK与固件关系及工作流程](../06-SDK固件研究/Part3-SDK与固件关系及工作流程.md)                   | SDK与固件关系、编译流程                    | ⭐⭐⭐     |
 
 ### 失败经验资料
 
@@ -1048,12 +1058,12 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 
 ### 快速参考表
 
-| 数据类型 | 标准mmWave Demo | InCabin Demo | HealthDetect选择 |
-|---------|----------------|--------------|------------------|
-| **点云数据** | Type = 1 | Type = 3001 | **Type = 1** ✅ |
-| **Range Profile** | Type = 2 | Type = 2 | **Type = 2** ✅ |
-| **Stats统计** | Type = 6 | Type = 6 | **Type = 6** ✅ |
-| **健康检测扩展** | ❌ 无 | ❌ 无 | **Type = 1000+** ✅ |
+| 数据类型                | 标准mmWave Demo | InCabin Demo | HealthDetect选择          |
+| ----------------------- | --------------- | ------------ | ------------------------- |
+| **点云数据**      | Type = 1        | Type = 3001  | **Type = 1** ✅     |
+| **Range Profile** | Type = 2        | Type = 2     | **Type = 2** ✅     |
+| **Stats统计**     | Type = 6        | Type = 6     | **Type = 6** ✅     |
+| **健康检测扩展**  | ❌ 无           | ❌ 无        | **Type = 1000+** ✅ |
 
 ### 扩展TLV设计（从1000开始）
 
@@ -1068,11 +1078,11 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 
 ### 设计原则
 
-| 原则 | 说明 | 结果 |
-|-----|------|------|
+| 原则                      | 说明                  | 结果                   |
+| ------------------------- | --------------------- | ---------------------- |
 | **核心TLV完全兼容** | Type 1-12使用标准格式 | SDK Visualizer正常显示 |
-| **扩展TLV不冲突** | Type 1000+自定义 | SDK Visualizer安全忽略 |
-| **点云必须Type=1** | 最关键的兼容性要求 | 官方工具可用 |
+| **扩展TLV不冲突**   | Type 1000+自定义      | SDK Visualizer安全忽略 |
+| **点云必须Type=1**  | 最关键的兼容性要求    | 官方工具可用           |
 
 ---
 

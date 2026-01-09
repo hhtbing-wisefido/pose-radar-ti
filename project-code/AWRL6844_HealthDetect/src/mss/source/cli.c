@@ -41,10 +41,6 @@
 /** @brief CLI output buffer size */
 #define CLI_OUTPUT_BUF_SIZE         (512U)
 
-/** @brief APLL frequency definitions */
-#define APLL_FREQ_396MHZ            (396U)
-#define APLL_FREQ_400MHZ            (400U)
-
 /**************************************************************************
  *************************** Local Variables ******************************
  **************************************************************************/
@@ -349,8 +345,8 @@ static int32_t CLI_cmdChannelCfg(int32_t argc, char *argv[])
         return -1;
     }
 
-    gHealthDetectMCB.cliCfg.rxChannelEn = (uint8_t)atoi(argv[1]);
-    gHealthDetectMCB.cliCfg.txChannelEn = (uint8_t)atoi(argv[2]);
+    gHealthDetectMCB.cliCfg.rxChannelEn = (uint16_t)atoi(argv[1]);
+    gHealthDetectMCB.cliCfg.txChannelEn = (uint16_t)atoi(argv[2]);
     /* argv[3] is cascading, not used in single-chip */
 
     return 0;

@@ -3,11 +3,12 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-AWRL6844--EVM-red?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/SDK-MMWAVE__L__SDK%2006.01-blue?style=flat-square" alt="SDK">
-  <img src="https://img.shields.io/badge/Language-Python%20%7C%20C-green?style=flat-square" alt="Language">
+  <img src="https://img.shields.io/badge/Language-C%20%7C%20Python-green?style=flat-square" alt="Language">
+  <img src="https://img.shields.io/badge/IDE-CCS%2020.x-orange?style=flat-square" alt="IDE">
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License">
 </p>
 
-基于 **TI AWRL6844-EVM** 毫米波雷达评估板的固件开发与应用研究项目。
+基于 **TI AWRL6844-EVM** 毫米波雷达评估板的固件开发与健康检测应用研究项目。
 
 ---
 
@@ -15,57 +16,263 @@
 
 - 🔧 **固件烧录系统** - 实现可靠的固件烧录与管理工具
 - 📊 **雷达配置研究** - 深入理解雷达参数配置与调优
-- 🚶 **跌倒检测应用** - 基于毫米波雷达的人体跌倒检测算法研究
-- 📚 **SDK深度研究** - TI mmWave SDK架构与开发指南
+- 💓 **健康检测应用** - 基于毫米波雷达的呼吸/心跳检测算法研究
+- 🚶 **跌倒检测应用** - 人体跌倒检测算法迁移与实现
+- 📚 **SDK深度研究** - TI mmWave SDK架构与开发指南（16 Parts系列文档）
 
 ---
 
-## 📁 项目结构
+## 📁 项目结构（详细目录树）
 
 ```
-Ti雷达项目/
-├── 📂 项目文档/                    # 项目核心文档
-│   ├── 1-需求与设计/              # 需求分析、设计文档
-│   ├── 2-开发记录/                # 日常开发日志
-│   ├── 3-固件工具/                # 固件开发相关文档
-│   │   ├── 01-AWRL6844固件系统工具/
-│   │   ├── 02-固件智能管理系统/
-│   │   ├── 03-固件烧录测试/
-│   │   ├── 04-烧录进度条测试研究/
-│   │   ├── 05-雷达配置参数研究/
-│   │   ├── 06-SDK固件研究/        # ⭐ SDK深度研究 (12 Parts)
-│   │   ├── 07-跌倒检测研究/
-│   │   └── 08-跌倒检测xWRL6432迁移AWRL6844方案研究/
-│   └── 4-测试实验结果/            # 测试数据与结果
+TI_Radar_Project/
 │
-├── 📂 知识库/                      # ⚠️ 本地技术资料库 (不包含在Git仓库)
+├── 📂 project-code/                           # 🔥 项目源代码
+│   │
+│   ├── 📂 AWRL6844_HealthDetect/              # ⭐ 健康检测固件项目 (2026-01-09)
+│   │   ├── README.md                          # 项目说明
+│   │   ├── 📂 profiles/                       # 配置文件
+│   │   │   ├── health_detect_standard.cfg    # L-SDK标准格式配置
+│   │   │   └── README.md
+│   │   └── 📂 src/                           # 源代码（三层架构）
+│   │       ├── 📂 common/                    # Layer 1: 共享接口层
+│   │       │   ├── data_path.h               # DPC数据路径定义
+│   │       │   ├── health_detect_types.h     # 健康检测类型定义
+│   │       │   ├── mmwave_output.h           # TLV输出格式定义
+│   │       │   └── shared_memory.h           # 共享内存映射
+│   │       │
+│   │       ├── 📂 mss/                       # Layer 2: MSS应用层 (R5F核心)
+│   │       │   ├── 📂 source/
+│   │       │   │   ├── cli.c/h               # CLI命令处理
+│   │       │   │   ├── dpc_control.c/h       # DPC控制
+│   │       │   │   ├── health_detect_main.c/h # 主程序
+│   │       │   │   ├── presence_detect.c/h   # 存在检测
+│   │       │   │   ├── radar_control.c/h     # 雷达控制
+│   │       │   │   └── tlv_output.c/h        # TLV数据输出
+│   │       │   └── 📂 xwrL684x-evm/
+│   │       │       └── *.projectspec         # MSS CCS项目配置
+│   │       │
+│   │       ├── 📂 dss/                       # Layer 3: DSS算法层 (C66x核心)
+│   │       │   ├── 📂 source/
+│   │       │   │   ├── dsp_utils.c/h         # DSP工具函数
+│   │       │   │   ├── feature_extract.c/h   # 特征提取
+│   │       │   │   └── health_detect_dss.c/h # DSS主程序
+│   │       │   └── 📂 xwrL684x-evm/
+│   │       │       └── *.projectspec         # DSS CCS项目配置
+│   │       │
+│   │       └── 📂 system/                    # Layer 0: 系统配置层
+│   │           ├── 📂 config/
+│   │           │   ├── metaimage_cfg.Release.json
+│   │           │   └── metaimage_cfg.Debug.json
+│   │           ├── health_detect_6844_system.projectspec
+│   │           ├── makefile_system_ccs_bootimage_gen
+│   │           ├── shared_memory.ld          # 共享内存链接脚本
+│   │           └── system.xml                # 系统描述文件
+│   │
+│   ├── 📂 AWRL6844_InCabin_Demos/            # InCabin参考项目
+│   │   └── ...                               # TI InCabin Demo源码
+│   │
+│   └── 📂 mmw_demo_SDK_reference/            # SDK mmw_demo参考
+│       └── ...                               # 标准mmw_demo源码
 │
-├── 📂 project-code/               # 项目代码
-├── 📂 Keys/                       # 密钥文件
-├── 📂 Output/                     # 输出文件
-├── 📂 SHA/                        # 校验文件
-├── 📂 temp/                       # 临时文件
-└── 📂 .venv/                      # Python虚拟环境
+├── 📂 项目文档/                               # 📚 项目核心文档
+│   │
+│   ├── 📂 1-需求与设计/                       # 需求分析、设计文档
+│   │   ├── 01-AWRL6844固件系统工具提示词.md
+│   │   ├── 06.雷达配置参数研究提示词.md
+│   │   ├── 07-跌倒检测研究提示词.md
+│   │   ├── 08-AWRL6844雷达健康检测实现方案.md
+│   │   ├── AWRL6844_HealthDetect提示词.md    # ⭐ HealthDetect需求文档
+│   │   ├── sdk 编译流程.md
+│   │   ├── 寻找TI 固件项目规律.md
+│   │   ├── 烧录APP一行启动命令.md
+│   │   └── 雷达配置文件相关提示词.md
+│   │
+│   ├── 📂 2-开发记录/                         # 日常开发日志
+│   │   ├── README.md
+│   │   ├── 2025-12-23/                       # 按日期组织
+│   │   ├── 2025-12-24/
+│   │   ├── 2025-12-29/
+│   │   ├── 2026-01-05/
+│   │   ├── 2026-01-06/
+│   │   ├── 2026-01-07/
+│   │   ├── 2026-01-08/
+│   │   └── 2026-01-09/                       # 最新开发记录
+│   │
+│   ├── 📂 3-固件工具/                         # 🔥 固件开发核心文档
+│   │   ├── README.md
+│   │   │
+│   │   ├── 📂 01-AWRL6844固件系统工具/        # Flash布局、SBL引导
+│   │   │   ├── Flash布局说明.md
+│   │   │   ├── 操作指南.md
+│   │   │   ├── 支持雷达配置读取的固件列表.md
+│   │   │   ├── 1-SBL_Bootloader/
+│   │   │   ├── 2-HelloWorld_App/
+│   │   │   ├── 3-Tools/
+│   │   │   ├── 4-Generated/
+│   │   │   └── 5-Scripts/
+│   │   │
+│   │   ├── 📂 02-固件智能管理系统/            # 固件匹配算法
+│   │   │   ├── 应用固件与SBL固件匹配算法.md
+│   │   │   ├── 应用固件与雷达配置文件匹配算法.md
+│   │   │   └── v4.0实施TODO清单.md
+│   │   │
+│   │   ├── 📂 03-固件烧录测试/                # 烧录测试记录
+│   │   │   ├── App烧录成功记录/
+│   │   │   ├── SBL烧录成功记录/
+│   │   │   ├── arprog vs UniFlash对比.md
+│   │   │   └── Python脚本BUG分析.md
+│   │   │
+│   │   ├── 📂 04-烧录进度条测试研究/          # 进度条问题分析
+│   │   │   └── SBL烧录0秒问题分析.md
+│   │   │
+│   │   ├── 📂 05-雷达配置参数研究/            # ⭐⭐ 配置深度研究 (46万+字符)
+│   │   │   ├── 雷达配置文件深度分析_v2.0_Part1.md  # 284KB
+│   │   │   ├── 雷达配置文件深度分析_v2.0_Part2.md  # 172KB
+│   │   │   ├── 雷达配置文件深度分析_v1.0_简版.md
+│   │   │   └── GUI工具使用说明.md
+│   │   │
+│   │   ├── 📂 06-SDK固件研究/                 # ⭐⭐⭐ SDK 16 Parts系列 (60万+字符)
+│   │   │   ├── README.md
+│   │   │   ├── Part1-SDK基础概念与三目录详解.md
+│   │   │   ├── Part2-固件校验方法完整指南.md
+│   │   │   ├── Part3-SDK与固件关系及工作流程.md
+│   │   │   ├── Part4-实践案例与常见问题.md
+│   │   │   ├── Part5-SysConfig工具深度分析.md
+│   │   │   ├── Part6-硬件设计文件与SDK关系分析.md
+│   │   │   ├── Part7-Radar Academy学习资源与SDK关系.md
+│   │   │   ├── Part8-Radar Toolbox工具链与应用实例.md
+│   │   │   ├── Part9-跌倒检测完整实现与深度学习.md
+│   │   │   ├── Part10-MMWAVE_L_SDK深度解析.md        # 87KB
+│   │   │   ├── Part11-mmWave Studio深度解析.md       # 107KB
+│   │   │   ├── Part12-arprog与UniFlash烧录工具深度对比.md
+│   │   │   ├── Part13-SDK对比与RTOS深度解析.md
+│   │   │   ├── Part14-TLV数据格式与工具兼容性完整指南.md
+│   │   │   ├── Part15-CCS System项目自动依赖编译机制.md
+│   │   │   └── Part16-AWRL6844固件正确烧录方式完整指南.md
+│   │   │
+│   │   ├── 📂 07-跌倒检测研究/                # 跌倒检测迁移研究
+│   │   │   ├── Migration_索引与快速指南.md
+│   │   │   ├── Migration_深度总结_Part1.md
+│   │   │   ├── Migration_深度总结_Part2.md
+│   │   │   ├── Migration_深度总结_Part3.md
+│   │   │   └── 跌倒检测汇总资料/
+│   │   │
+│   │   ├── 📂 08-AWRL6844雷达健康检测实现方案/  # 健康检测方案
+│   │   │   └── ...
+│   │   │
+│   │   └── 📂 09-AWRL6844 从mmw_demo演进Health Detection基础功能项目/
+│   │       └── HealthDetect项目重建总结.md   # ⭐ 3100+行完整记录
+│   │
+│   └── 📂 4-测试实验结果/                     # 测试数据与结果
+│       ├── 1.烧录偏移量实际测试结果.md
+│       ├── 2.雷达配置实际测试结果.md
+│       └── test_config_fixed-*.cfg
+│
+├── 📂 知识库/                                 # ⚠️ 本地资料库 (不包含在Git)
+│   ├── 雷达模块/                              # TI SDK、IDE、工具
+│   │   ├── IDE/
+│   │   ├── MMWAVE-STUDIO-XWRL68XX/
+│   │   ├── RADAR-TOOLBOX/
+│   │   ├── UniFlash 闪存编程工具/
+│   │   ├── 技术文档/
+│   │   └── 设计文件/
+│   ├── 知识库PDF转机器可读文件/                # PDF转Markdown
+│   ├── C_ti_link/                            # TI Link文档
+│   ├── Pose_And_Fall_Detection/              # 姿态与跌倒检测
+│   └── Refer_data_LEE/                       # 参考资料
+│
+├── 📂 .github/                               # GitHub配置
+│   └── 📂 instructions/                      # AI编程助手规则
+│       ├── directory-management.instructions.md
+│       ├── emoji-style.instructions.md
+│       ├── file-operations.instructions.md
+│       ├── file-reading.instructions.md
+│       ├── git-operations.instructions.md
+│       └── naming-conventions.instructions.md
+│
+├── 📂 .vscode/                               # VS Code配置
+├── 📂 .cursor/                               # Cursor AI配置
+├── 📂 .windsurf/                             # Windsurf配置
+├── 📂 temp/                                  # 临时文件
+├── 📂 .venv/                                 # Python虚拟环境
+│
+├── README.md                                 # 本文件
+└── .gitignore                                # Git忽略配置
 ```
+
+---
+
+## 🔥 核心项目：AWRL6844_HealthDetect
+
+### 项目概述
+
+基于 TI MMWAVE_L_SDK 06.01 的健康检测固件项目，从 `mmw_demo` 演进而来，实现呼吸/心跳检测功能。
+
+### 技术架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     AWRL6844_HealthDetect                   │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 0: System (系统配置层)                               │
+│  ├── system.xml, shared_memory.ld                          │
+│  ├── metaimage_cfg.Release.json                            │
+│  └── makefile_system_ccs_bootimage_gen                     │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 1: Common (共享接口层)                               │
+│  ├── data_path.h      - DPC数据路径                        │
+│  ├── mmwave_output.h  - TLV格式定义                        │
+│  ├── shared_memory.h  - 内存映射                           │
+│  └── health_detect_types.h - 类型定义                      │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 2: MSS (应用层 - R5F)      │  Layer 3: DSS (算法层 - C66x) │
+│  ├── health_detect_main.c/h      │  ├── health_detect_dss.c/h  │
+│  ├── cli.c/h (命令行)            │  ├── feature_extract.c/h    │
+│  ├── radar_control.c/h           │  └── dsp_utils.c/h          │
+│  ├── dpc_control.c/h             │                              │
+│  ├── presence_detect.c/h         │                              │
+│  └── tlv_output.c/h              │                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 开发进度
+
+| 阶段 | 状态 | 说明 |
+|------|------|------|
+| ✅ 架构设计 | 完成 | 三层架构确定 |
+| ✅ 代码框架 | 完成 | 所有源文件创建 |
+| ✅ CCS项目配置 | 完成 | MSS/DSS/System项目 |
+| ✅ 编译验证 | 完成 | 生成.appimage成功 |
+| ✅ 烧录验证 | 完成 | 固件烧录成功 |
+| 🔄 CLI框架重构 | 进行中 | 需对齐SDK标准CLI |
+| ❌ 功能验证 | 待完成 | sensorStart待修复 |
+
+> 📋 详细记录：`项目文档/3-固件工具/09-.../HealthDetect项目重建总结.md` (3100+行)
 
 ---
 
 ## 🛠️ 技术栈
 
 ### 硬件平台
-| 组件 | 型号/版本 |
+
+| 组件 | 型号/规格 |
 |------|----------|
 | **雷达芯片** | AWRL6844 (4TX 4RX, 60GHz) |
 | **评估板** | AWRL6844-EVM |
-| **应用场景** | InCabin 车内监测 |
+| **CPU核心** | R5F (MSS) + C66x (DSS) |
+| **Flash** | 2MB QSPI Flash |
+| **应用场景** | InCabin 车内监测 / 健康检测 |
 
 ### 软件工具
+
 | 工具 | 版本 | 用途 |
 |------|------|------|
 | **MMWAVE_L_SDK** | 06.01.00.01 | TI毫米波SDK |
 | **Radar Toolbox** | 3.30.00.06 | 雷达应用示例 |
 | **Code Composer Studio** | 20.x | IDE开发环境 |
-| **arprog_cmdline** | - | 固件烧录工具 ⭐ |
+| **arprog_cmdline** | SDK内置 | ⭐ 固件烧录工具 |
+| **SDK Visualizer** | - | 雷达可视化工具 |
 | **Python** | 3.13+ | 辅助脚本 |
 
 ---
@@ -76,16 +283,22 @@ Ti雷达项目/
 
 ```powershell
 # 激活Python虚拟环境
-& D:/7.项目资料/Ti雷达项目/.venv/Scripts/Activate.ps1
+& D:/7.project/TI_Radar_Project/.venv/Scripts/Activate.ps1
 ```
 
 ### 2. 固件烧录（一行命令）
 
 ```powershell
-# 烧录 InCabin Demo 固件
-& "C:\ti\mmwave_l_sdk_06_01_00_01\tools\arprog_cmdline\arprog_cmdline.exe" `
+# 烧录 HealthDetect 固件
+& "C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\arprog_cmdline\arprog_cmdline.exe" `
   -p COM5 -d xWRL6844 -a ES1 `
-  -f "C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\Automotive\xWRL6844_in_cabin_radar\prebuilt_binaries\6844_in_cabin_radar_appimage_xip.appimage" `
+  -f "path\to\health_detect_6844_system.Release.appimage" `
+  -o 0xA0000 -s 921600 -r
+
+# 或烧录 InCabin Demo 固件
+& "C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\arprog_cmdline\arprog_cmdline.exe" `
+  -p COM5 -d xWRL6844 -a ES1 `
+  -f "C:\ti\radar_toolbox_3_30_00_06\...\6844_in_cabin_radar_appimage_xip.appimage" `
   -o 0xA0000 -s 921600 -r
 ```
 
@@ -93,83 +306,16 @@ Ti雷达项目/
 
 | 资源 | 路径 |
 |------|------|
-| **SDK根目录** | `C:\ti\mmwave_l_sdk_06_01_00_01\` |
+| **SDK根目录** | `C:\ti\MMWAVE_L_SDK_06_01_00_01\` |
 | **Radar Toolbox** | `C:\ti\radar_toolbox_3_30_00_06\` |
 | **烧录工具** | `...\tools\arprog_cmdline\arprog_cmdline.exe` |
-| **InCabin固件** | `...\Automotive\xWRL6844_in_cabin_radar\` |
+| **HealthDetect源码** | `project-code\AWRL6844_HealthDetect\src\` |
 
 ---
 
-## 🔧 固件工具文档 (3-固件工具/)
+## 📚 文档体系
 
-本项目的核心技术文档，包含 **8大模块**、**55+文档**、**120万+字符** 的深度研究内容。
-
-### 📦 模块总览
-
-| 编号 | 模块名称 | 文档数 | 主要内容 |
-|------|---------|--------|---------|
-| 01 | AWRL6844固件系统工具 | 10 | Flash布局、SBL引导、烧录工具 |
-| 02 | 固件智能管理系统 | 7 | 固件匹配算法、自动化管理 |
-| 03 | 固件烧录测试 | 5 | 烧录记录、工具对比、BUG分析 |
-| 04 | 烧录进度条测试研究 | 2 | 进度条实现、0秒问题分析 |
-| 05 | 雷达配置参数研究 | 8 | 配置文件深度分析 (46万+字符) |
-| 06 | SDK固件研究 ⭐ | 13 | SDK架构12 Parts系列 (50万+字符) |
-| 07 | 跌倒检测研究 | 6 | 算法迁移、芯片对比分析 |
-| 08 | xWRL6432→AWRL6844迁移 | 1 | 迁移方案规划大纲 |
-
----
-
-### 📚 模块详细介绍
-
-#### 01-AWRL6844固件系统工具
-完整的固件开发工具链文档。
-
-```
-├── Flash布局说明.md          # Flash分区与偏移量详解
-├── 操作指南.md              # 完整操作流程
-├── 支持雷达配置读取的固件列表.md
-├── 1-SBL_Bootloader/       # 二级引导加载器
-├── 2-HelloWorld_App/       # 应用固件示例
-├── 3-Tools/                # 烧录工具说明
-├── 4-Generated/            # 生成的固件文件
-└── 5-Scripts/              # Python自动化脚本
-```
-
-#### 02-固件智能管理系统
-固件与配置文件的智能匹配系统。
-
-| 文档 | 描述 | 大小 |
-|------|------|------|
-| 应用固件与SBL固件匹配算法.md | SBL匹配逻辑 | 18KB |
-| 应用固件与雷达配置文件匹配算法.md | 配置匹配核心算法 | **53KB** |
-| v4.0实施TODO清单.md | 版本迭代计划 | 16KB |
-
-#### 03-固件烧录测试
-烧录工具对比与测试记录。
-
-- ✅ **App烧录成功记录** - 应用固件烧录验证
-- ✅ **SBL烧录成功记录** - 引导固件烧录验证
-- ⭐ **arprog vs UniFlash对比** - 基于TI E2E论坛的深度对比
-- 🔧 **Python脚本BUG分析** - 进度条显示问题排查
-
-#### 04-烧录进度条测试研究
-深入分析烧录过程的技术问题。
-
-- **SBL烧录0秒问题分析** - 21KB深度分析报告
-- 串口通信时序研究
-
-#### 05-雷达配置参数研究 ⭐⭐
-**最大模块** - 雷达配置文件的完整研究。
-
-| 文档 | 描述 | 大小 |
-|------|------|------|
-| 雷达配置文件深度分析_v2.0_Part1.md | Chirp/Frame参数详解 | **284KB** |
-| 雷达配置文件深度分析_v2.0_Part2.md | 高级配置与调优 | **172KB** |
-| 雷达配置文件深度分析_v1.0_简版.md | 快速参考版 | 26KB |
-| GUI工具使用说明.md | 可视化配置工具 | 8KB |
-
-#### 06-SDK固件研究 ⭐⭐⭐
-**核心模块** - TI mmWave SDK完整研究系列。
+### 🔥 SDK固件研究系列 (16 Parts)
 
 | Part | 主题 | 大小 |
 |------|------|------|
@@ -185,55 +331,45 @@ Ti雷达项目/
 | Part10 | MMWAVE_L_SDK深度解析 | **87KB** |
 | Part11 | mmWave Studio深度解析 | **107KB** |
 | Part12 | arprog与UniFlash烧录工具对比 | 15KB |
+| Part13 | SDK对比与RTOS深度解析 | - |
+| Part14 | TLV数据格式与工具兼容性完整指南 | - |
+| Part15 | CCS System项目自动依赖编译机制 | - |
+| Part16 | AWRL6844固件正确烧录方式完整指南 | - |
 
-**总计**: 12 Parts, **520KB+** 技术文档
-
-#### 07-跌倒检测研究
-xWRL6432到AWRL6844的算法迁移研究。
-
-```
-├── Migration_索引与快速指南.md     # 19KB 快速入门
-├── Migration_深度总结_Part1.md    # 芯片差异分析
-├── Migration_深度总结_Part2.md    # 软件架构对比
-├── Migration_深度总结_Part3.md    # 迁移实施步骤
-└── 跌倒检测汇总资料/              # 参考资料集合
-```
-
-#### 08-跌倒检测xWRL6432迁移AWRL6844方案研究
-迁移实施的规划大纲，5大阶段实施计划。
-
----
-
-## 📖 核心文档
-
-### SDK固件研究系列 (12 Parts)
-
-| Part | 主题 | 行数 |
-|------|------|------|
-| Part1 | SDK完整目录树分析 | 2000+ |
-| Part2 | 固件文件类型详解 | 1500+ |
-| Part3 | 驱动层架构 | 1200+ |
-| Part4 | 平台层架构 | 1000+ |
-| Part5 | 应用层架构 | 1100+ |
-| Part6 | 构建系统分析 | 800+ |
-| Part7 | 示例工程分析 | 1300+ |
-| Part8 | Radar Toolbox分析 | 1500+ |
-| Part9 | SDK核心API分析 | 1200+ |
-| Part10 | 配置文件格式详解 | 1800+ |
-| Part11 | 调试与烧录指南 | 1000+ |
-| Part12 | arprog vs UniFlash对比 | 500+ |
+**总计**: 16 Parts, **600KB+** 技术文档
 
 > 📍 位置: `项目文档/3-固件工具/06-SDK固件研究/`
+
+### 📊 模块总览
+
+| 编号 | 模块名称 | 文档数 | 主要内容 |
+|------|---------|--------|---------|
+| 01 | AWRL6844固件系统工具 | 10+ | Flash布局、SBL引导、烧录工具 |
+| 02 | 固件智能管理系统 | 7 | 固件匹配算法、自动化管理 |
+| 03 | 固件烧录测试 | 5 | 烧录记录、工具对比、BUG分析 |
+| 04 | 烧录进度条测试研究 | 2 | 进度条实现、0秒问题分析 |
+| 05 | 雷达配置参数研究 | 8 | 配置文件深度分析 (46万+字符) |
+| 06 | SDK固件研究 ⭐ | 16 | SDK架构16 Parts系列 (60万+字符) |
+| 07 | 跌倒检测研究 | 6 | 算法迁移、芯片对比分析 |
+| 08 | 健康检测实现方案 | - | 呼吸/心跳检测方案 |
+| 09 | HealthDetect项目重建 | 1 | **3100+行** 完整记录 |
 
 ---
 
 ## 🔬 研究方向
 
-### 当前进行中
+### 已完成
 
 - [x] ✅ 固件烧录工具链研究 (arprog_cmdline)
-- [x] ✅ SDK架构深度分析 (12 Parts 完成)
+- [x] ✅ SDK架构深度分析 (16 Parts 完成)
 - [x] ✅ 烧录工具对比研究 (arprog vs UniFlash)
+- [x] ✅ HealthDetect固件架构设计与编译
+- [x] ✅ L-SDK 6.x API适配与FreeRTOS移植
+
+### 进行中
+
+- [ ] 🔄 CLI框架对齐SDK标准 (enableMMWaveExtension = 1U)
+- [ ] 🔄 sensorStart启动流程完善
 - [ ] 🔄 跌倒检测算法迁移 (xWRL6432 → AWRL6844)
 
 ### 技术挑战
@@ -242,7 +378,8 @@ xWRL6432到AWRL6844的算法迁移研究。
 |------|------|---------|
 | UniFlash烧录失败 | ✅ 已解决 | 使用 arprog_cmdline |
 | 固件偏移量配置 | ✅ 已验证 | 0xA0000 (XIP模式) |
-| 跌倒检测移植 | 🔄 进行中 | 基于InCabin Demo开发 |
+| BIOS→FreeRTOS移植 | ✅ 已解决 | 使用xTaskCreateStatic等 |
+| CLI框架不兼容 | 🔄 进行中 | 重构为SDK标准CLI |
 
 ---
 
@@ -250,13 +387,16 @@ xWRL6432到AWRL6844的算法迁移研究。
 
 本项目使用统一的AI辅助开发规范：
 
-- 📝 **文件操作规范** - 先查后建，明确位置
-- 📂 **目录管理规范** - 严格控制目录结构
-- 🏷️ **命名规范** - 清晰、具体、无歧义
-- 🔄 **Git操作规范** - 选择性添加，禁止批量
-- 📚 **文档规范** - Emoji风格，索引同步
+| 规范 | 说明 |
+|------|------|
+| 📝 **文件操作规范** | 先查后建，明确位置 |
+| 📂 **目录管理规范** | 严格控制目录结构 |
+| 🏷️ **命名规范** | 清晰、具体、无歧义 |
+| 🔄 **Git操作规范** | 选择性添加，禁止批量 |
+| 📚 **文档规范** | Emoji风格，索引同步 |
+| 📖 **文件读取规范** | 禁止推测，必须read_file |
 
-> 详见 `.cursor/rules/` 或 `.github/instructions/`
+> 详见 `.github/instructions/`
 
 ---
 
@@ -279,12 +419,19 @@ xWRL6432到AWRL6844的算法迁移研究。
 ## ⚠️ 注意事项
 
 ### 知识库目录
+
 `知识库/` 目录包含本地技术资料（TI SDK、PDF文档、参考代码等），由于体积较大且为只读参考资料，**不包含在Git仓库中**。
 
 如需完整知识库，请自行从TI官网下载：
 - [MMWAVE_L_SDK](https://www.ti.com/tool/MMWAVE-L-SDK)
 - [Radar Toolbox](https://www.ti.com/tool/RADAR-TOOLBOX)
 - [Code Composer Studio](https://www.ti.com/tool/CCSTUDIO)
+
+### 重要提示
+
+> ⚠️ **烧录工具选择**: AWRL6844请使用 `arprog_cmdline`，不要使用 UniFlash（兼容性问题）
+> 
+> 📋 详见: `项目文档/3-固件工具/06-SDK固件研究/Part16-AWRL6844固件正确烧录方式完整指南.md`
 
 ---
 
@@ -297,4 +444,6 @@ xWRL6432到AWRL6844的算法迁移研究。
 
 <p align="center">
   <sub>🔧 Built with ❤️ for TI mmWave Radar Development</sub>
+  <br>
+  <sub>📅 最后更新: 2026-01-09</sub>
 </p>

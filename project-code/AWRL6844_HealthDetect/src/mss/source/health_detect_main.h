@@ -127,8 +127,8 @@ typedef struct HealthDetect_CliCfg_t
     DetectionZone_t         zones[HEALTH_DETECT_MAX_ZONES]; /**< Detection zones */
 
     /* Channel Configuration */
-    uint8_t                 rxChannelEn;        /**< RX channel enable mask */
-    uint8_t                 txChannelEn;        /**< TX channel enable mask */
+    uint16_t                rxChannelEn;        /**< RX channel enable mask */
+    uint16_t                txChannelEn;        /**< TX channel enable mask */
 
     /* Antenna Configuration */
     uint8_t                 numTxAntennas;      /**< Number of TX antennas */
