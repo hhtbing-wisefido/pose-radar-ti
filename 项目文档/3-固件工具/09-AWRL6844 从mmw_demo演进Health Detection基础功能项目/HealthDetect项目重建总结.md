@@ -1673,6 +1673,88 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*\Re
 
 ---
 
+### 问题26: System metaimage配置文件未复制到config子目录（2026-01-09）
+
+**错误信息**:
+```
+[229]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/../config/metaimage_cfg.Release.json': No such file or directory
+[244]json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+```
+
+**问题分析**:
+
+1. **现象**：MSS和DSS都成功编译并生成了.rig文件
+   - 第122行：MSS生成 `health_detect_6844_mss_img.Release.rig`
+   - 第222行：DSS生成 `health_detect_6844_dss_img.Release.rig`
+
+2. **System post-build失败原因**：
+   - makefile需要从`config/metaimage_cfg.Release.json`读取配置
+   - 但文件被CCS复制到了根目录，不在config子目录
+
+3. **workspace目录结构检查**：
+   ```
+   C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\
+   ├── metaimage_cfg.Debug.json      ← 在根目录！错误！
+   ├── metaimage_cfg.Release.json    ← 在根目录！错误！
+   ├── makefile_system_ccs_bootimage_gen
+   └── system.xml
+   
+   应该是：
+   └── config/
+       ├── metaimage_cfg.Debug.json    ← 应该在这里
+       └── metaimage_cfg.Release.json  ← 应该在这里
+   ```
+
+4. **根本原因**：CCS的`.projectspec`中`action="copy"`默认会**扁平化**路径
+   - 源路径 `config/metaimage_cfg.Release.json` 
+   - 复制后变成 `metaimage_cfg.Release.json`（丢失了config目录）
+   - 需要使用 `targetDirectory="config"` 属性保持目录结构
+
+**正确的解决方案**:
+
+修改System的`.projectspec`，添加`targetDirectory`属性：
+```xml
+<!-- 修改前 -->
+<file path="config/metaimage_cfg.Debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+<file path="config/metaimage_cfg.Release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+
+<!-- 修改后 -->
+<file path="config/metaimage_cfg.Debug.json" targetDirectory="config" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+<file path="config/metaimage_cfg.Release.json" targetDirectory="config" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+```
+
+**验证步骤**:
+```powershell
+# 1. 删除workspace中的System项目
+Remove-Item -Recurse -Force "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system"
+
+# 2. 在CCS中重新导入System项目
+# Project -> Import CCS Projects -> 选择health_detect_6844_system.projectspec
+
+# 3. 验证文件被复制到config子目录
+Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\config"
+# 应该显示：metaimage_cfg.Debug.json, metaimage_cfg.Release.json
+
+# 4. 重新Build System项目
+```
+
+**CCS .projectspec文件属性说明**:
+
+| 属性 | 作用 | 示例 |
+|-----|------|-----|
+| `path` | 源文件相对路径 | `config/file.json` |
+| `targetDirectory` | 目标目录名 | `config` |
+| `action="copy"` | 复制文件到workspace | - |
+| `excludeFromBuild="true"` | 不参与编译 | - |
+
+**为什么InCabin_Demos能工作？**
+
+需要重新检查InCabin_Demos的workspace结构。可能InCabin_Demos也有同样问题，或者SDK版本不同导致行为差异。
+
+**状态**: ✅ 已修复（2026-01-09） - 添加targetDirectory属性保持config目录结构
+
+---
+
 ## 📊 编译问题汇总表
 
 > 💡 **说明**: 以下是所有23个编译问题的汇总表，便于快速查看问题类型和解决方案。
@@ -1699,11 +1781,12 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*\Re
 | 问题18 | API结构体字段不匹配 | 字段名称错误 | 修正字段映射 | ✅ 已修复 |
 | 问题19 | MSS API字段不匹配 | CCS workspace文件旧版本 | 在CCS中手动修复 | ✅ 已修复 |
 | 问题20 | DSS post-build失败回归 | memory_hex.cmd缺失 | 复制到workspace | ✅ 已修复 |
-| 问题21 | System .rig文件缺失 | MSS/DSS未生成 | 按顺序编译 | ⏳ 待验证 |
+| 问题21 | System .rig文件缺失 | MSS/DSS未生成 | 按顺序编译 | ✅ 已验证 |
 | 问题22 | CCS工作区缺少构建配置文件 | 导入项目未含配置文件 | 复制memory_hex.cmd和metaimage配置 | ⚠️ 临时方案 |
 | 问题23 | metaimage配置文件大小写不匹配 | Release vs release | 重命名为大写PROFILE | ⚠️ 不完整 |
 | 问题24 | .projectspec缺少构建配置文件引用 | 未在.projectspec声明 | 添加file引用并设置action="copy" | ✅ 已修复 |
 | 问题25 | System .projectspec metaimage大小写 | release vs Release | 修改.projectspec使用大写 | ✅ 已修复 |
+| 问题26 | System metaimage未复制到config目录 | CCS扁平化路径 | 添加targetDirectory="config" | ✅ 已修复 |
 
 ---
 
@@ -1720,8 +1803,8 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*\Re
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **25** |
-| **待处理问题** | **1 (问题21)** |
+| **修复的编译问题** | **26** |
+| **待处理问题** | **0** |
 
 ### ✅ 完成状态
 
