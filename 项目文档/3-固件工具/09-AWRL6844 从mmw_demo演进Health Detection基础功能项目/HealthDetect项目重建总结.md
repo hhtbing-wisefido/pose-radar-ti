@@ -1,4 +1,4 @@
-# 📋 AWRL6844 Health Detect 项目重建总结
+﻿# 📋 AWRL6844 Health Detect 项目重建总结
 
 **日期**: 2026-01-08
 **最后更新**: 2026-01-09 (DSS memory_hex.cmd添加)
@@ -1282,290 +1282,159 @@ MMWave_stop(gMmwMssMCB.ctrlHandle, ...)
 
 ---
 
-## 🆕 编译问题修复记录 (2026-01-09)
 
-### 问题6: DSS post-build 失败 - memory_hex.cmd 缺失
+### 问题15: DSS post-build 失败 - memory_hex.cmd 缺失 (2026-01-09)
 
-**错误信息**：
-
+**错误信息**:
 ```
 /cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
 gmake[3]: Target 'all' not remade because of errors.
-gmake[2]: [makefile:160: post-build] Error 2 (ignored)
 ```
 
-**原因**：DSS项目的 `makefile_ccs_bootimage_gen` 需要 `memory_hex.cmd` 文件来生成hex文件和.rig镜像，但该文件不存在。
+**原因**: DSS项目的post-build步骤需要`memory_hex.cmd`文件
 
-**解决方案**：创建 `memory_hex.cmd` 文件
+**解决方案**: 从InCabin_Demos复制`memory_hex.cmd`到DSS项目
 
-**文件位置**：`src/dss/xwrL684x-evm/c66ss0_freertos/ti-c6000/memory_hex.cmd`
-
-**文件内容**：
-```bat
-/*----------------------------------------------------------------------------*/
-/* memory_hex.cmd                                                             */
-/*                                                                            */
-/* (c) Texas Instruments 2024, All rights reserved.                           */
-/*                                                                            */
-/* Health Detection Demo - DSS (C66 DSP) Hex Generation Memory Map            */
-/* Reference: AWRL6844_InCabin_Demos/src/dss/.../memory_hex.cmd               */
-/*----------------------------------------------------------------------------*/
-
-ROMS
-{
-    ROW1        : org = 0x00800000     len = 0x00060000     romwidth=32
-    files = { temp/health_detect_dss_l2.hex }
-    ROW2        : org = 0x44000000     len = 0x000003CE     romwidth=32
-    files = { temp/health_detect_mailbox_hsm.hex }
-    ROW3        : org = 0x44000400     len = 0x000003CE     romwidth=32
-    files = { temp/health_detect_mailbox_r5f.hex }
-    ROW4        : org = 0x88000000     len = 0x00200000     romwidth=32
-    files = { temp/health_detect_dss_l3.hex }
-    ROW5        : org = 0xC02E8000     len = 0x00004000     romwidth=32
-    files = { temp/health_detect_user_shm_mem.hex }
-    ROW6        : org = 0xC02EC000     len = 0x00004000     romwidth=32
-    files = { temp/health_detect_log_shm_mem.hex }
-    ROW7        : org = 0xC5000200     len = 0x00001C80     romwidth=32
-    files = { temp/health_detect_rtos_nortos_ipc_shm_mem.hex }
-}
-```
-
-**状态**：✅ 已修复（2026-01-09）
+**状态**: ✅ 已修复
 
 ---
 
-### 问题7: System post-build 失败 - MSS .rig 文件不存在
+### 问题16: System post-build 失败 - MSS .rig 文件不存在 (2026-01-09)
 
-**错误信息**：
-
+**错误信息**:
 ```
 /cygwin/cp: cannot stat '../health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig': No such file or directory
 ```
 
-**原因**：System项目的makefile需要MSS和DSS的 `.rig` 镜像文件，但MSS项目未编译。
+**原因**: MSS编译失败导致.rig文件未生成，System项目无法找到
 
-**解决方案**：**必须按正确顺序编译所有项目**
+**解决方案**: 修复MSS编译错误后按顺序编译MSSDSSSystem
 
-**正确的编译顺序**：
-```
-1. 编译 MSS 项目 (health_detect_6844_mss) → 生成 health_detect_6844_mss_img.Release.rig
-2. 编译 DSS 项目 (health_detect_6844_dss) → 生成 health_detect_6844_dss_img.Release.rig
-3. 编译 System 项目 (health_detect_6844_system) → 合并生成 .appimage
-```
-
-**CCS操作步骤**：
-```
-1. 在Project Explorer中选择 health_detect_6844_mss 项目
-2. 右键 → Build Project
-3. 等待编译完成，确认生成 .rig 文件
-4. 选择 health_detect_6844_dss 项目
-5. 右键 → Build Project
-6. 等待编译完成，确认生成 .rig 文件
-7. 选择 health_detect_6844_system 项目
-8. 右键 → Build Project
-9. 验证输出 health_detect_6844_system.Release.appimage
-```
-
-**状态**：⏳ 需用户按顺序编译
+**状态**: ⏳ 待MSS编译成功后验证
 
 ---
 
-### 问题8: Config文件名大小写问题 (可能)
+### 问题17: Config文件名大小写问题 (2026-01-09)
 
-**错误信息**：
-
+**错误信息**:
 ```
 /cygwin/cat: 'C:/.../config/metaimage_cfg.Release.json': No such file or directory
 ```
 
-**原因**：makefile使用 `$(PROFILE)` 变量（值为 `Release`），但config目录中的文件名是小写 `release`。
+**原因**: makefile使用`Release`但文件名是`release`（小写）
 
-**说明**：Windows文件系统不区分大小写，所以这个错误通常不会发生。如果在Linux/Mac上编译会有问题。
+**解决方案**: Windows文件系统不区分大小写，无需修改
 
-**解决方案**：确保文件名与makefile期望一致（已有 `metaimage_cfg.release.json`）
-
-**状态**：✅ 无需修改（Windows兼容）
+**状态**: ✅ 已确认兼容
 
 ---
 
-### 编译问题汇总表
-
-| 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
-|---------|---------|------|---------|------|
-| 问题6 | DSS post-build失败 | 缺少 `memory_hex.cmd` | 创建DSS的memory_hex.cmd | ✅ 已修复 |
-| 问题7 | System post-build失败 | MSS未编译 | 按正确顺序编译MSS→DSS→System | ⏳ 待验证 |
-| 问题8 | Config文件名 | 大小写问题 | Windows兼容，无需修改 | ✅ 已确认 |
-
----
-
-### 下一步操作指南
-
-**请用户在CCS中执行以下步骤**：
-
-1. **刷新项目**
-   ```
-   在CCS中右键点击各项目 → Refresh
-   确保新创建的 memory_hex.cmd 文件被识别
-   ```
-
-2. **Clean所有项目**
-   ```
-   Project → Clean... → 选择所有health_detect项目 → Clean
-   ```
-
-3. **按顺序编译**
-   ```
-   Step 1: 编译 health_detect_6844_mss (右键 → Build Project)
-   Step 2: 编译 health_detect_6844_dss (右键 → Build Project)
-   Step 3: 编译 health_detect_6844_system (右键 → Build Project)
-   ```
-
-4. **验证输出**
-   ```
-   检查以下文件是否生成：
-   - health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig
-   - health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig
-   - health_detect_6844_system/Release/health_detect_6844_system.Release.appimage
-   ```
-
----
-
-## 📝 编译错误修复记录 (2026-01-09)
-
-### 问题9: MSS radar_control.c API结构体字段不匹配
-
-**错误日期**: 2026-01-09  
-**错误位置**: `src/mss/source/radar_control.c:235-254`
+### 问题18: MSS radar_control.c API结构体字段不匹配 (2026-01-09)
 
 **错误信息**:
 ```
-../radar_control.c:235:30: error: no member named 'startFreqGHz' in 'struct MMWave_ProfileComCfg_t'
-../radar_control.c:236:30: error: no member named 'digOutSampleRateMHz' in 'struct MMWave_ProfileComCfg_t'
-../radar_control.c:237:30: error: no member named 'numAdcSamples' in 'struct MMWave_ProfileComCfg_t'; did you mean 'numOfAdcSamples'?
-../radar_control.c:238:30: error: no member named 'rxGain' in 'struct MMWave_ProfileComCfg_t'
-../radar_control.c:241:31: error: no member named 'idleTimeus' in 'struct MMWave_ProfileTimeCfg_t'
-../radar_control.c:242:31: error: no member named 'adcStartTimeus' in 'struct MMWave_ProfileTimeCfg_t'
-../radar_control.c:243:31: error: no member named 'rampEndTimeus' in 'struct MMWave_ProfileTimeCfg_t'
-../radar_control.c:244:31: error: no member named 'freqSlopeConst' in 'struct MMWave_ProfileTimeCfg_t'
-../radar_control.c:254:33: error: no member named 'channelCfg' in 'struct HealthDetect_CliCfg_t'
+error: no member named 'startFreqGHz' in 'struct MMWave_ProfileComCfg_t'
+error: no member named 'digOutSampleRateMHz' in 'struct MMWave_ProfileComCfg_t'
+error: no member named 'numAdcSamples' in 'struct MMWave_ProfileComCfg_t'
+error: no member named 'channelCfg' in 'struct HealthDetect_CliCfg_t'
+... (共9个错误)
 ```
 
-**原因分析**:
+**原因**: L-SDK 6.x的`MMWave_ProfileComCfg_t`和`MMWave_ProfileTimeCfg_t`字段名称与代码不一致
 
-1. **SDK结构体字段与代码不匹配**：L-SDK 6.x的`MMWave_ProfileComCfg_t`和`MMWave_ProfileTimeCfg_t`字段名称与代码中使用的不一致。
-
-2. **实际SDK结构体定义**（`C:\ti\MMWAVE_L_SDK_06_01_00_01\source\control\mmwave\mmwave.h`）：
-   
-   **MMWave_ProfileComCfg_t**:
-   ```c
-   typedef struct MMWave_ProfileComCfg_t
-   {
-       uint8_t   digOutputSampRate;        // 不是 digOutSampleRateMHz
-       uint8_t   digOutputBitsSel;
-       uint8_t   dfeFirSel;
-       uint16_t  numOfAdcSamples;          // 不是 numAdcSamples
-       float     chirpRampEndTimeus;       // 在这里不是startFreqGHz
-       uint8_t   chirpRxHpfSel;
-       uint8_t   chirpTxMimoPatSel;
-   } MMWave_ProfileComCfg;
-   ```
-
-   **MMWave_ProfileTimeCfg_t**:
-   ```c
-   typedef struct MMWave_ProfileTimeCfg_t
-   {
-       float     chirpIdleTimeus;          // 不是 idleTimeus
-       uint16_t  chirpAdcStartTime;        // 不是 adcStartTimeus
-       float     chirpTxStartTimeus;
-       float     chirpSlope;               // 不是 freqSlopeConst
-       float     startFreqGHz;             // 在ProfileTimeCfg中
-   } MMWave_ProfileTimeCfg;
-   ```
-
-3. **CliCfg结构体问题**：`HealthDetect_CliCfg_t`中没有`channelCfg`成员，应该使用`rxChannelEn`和`txChannelEn`。
-
-**解决方案**:
-
-修改`radar_control.c`中的字段映射，使其与SDK实际结构体一致：
-
+**SDK实际结构体**:
 ```c
-/* Configure profile common parameters - match SDK struct fields */
-gMmWaveCfg.profileComCfg.digOutputSampRate = (uint8_t)(cliCfg->profileCfg.digOutSampleRate / 1000);
-gMmWaveCfg.profileComCfg.numOfAdcSamples = cliCfg->profileCfg.numAdcSamples;
-gMmWaveCfg.profileComCfg.digOutputBitsSel = 0; /* 0: 16-bit, 2: 14-bit */
-gMmWaveCfg.profileComCfg.dfeFirSel = 0;
-gMmWaveCfg.profileComCfg.chirpRampEndTimeus = cliCfg->profileCfg.rampEndTimeUs;
-gMmWaveCfg.profileComCfg.chirpRxHpfSel = 0;
-gMmWaveCfg.profileComCfg.chirpTxMimoPatSel = 0;
+typedef struct MMWave_ProfileComCfg_t {
+    uint8_t   digOutputSampRate;        // 不是 digOutSampleRateMHz
+    uint16_t  numOfAdcSamples;          // 不是 numAdcSamples
+    float     chirpRampEndTimeus;
+} MMWave_ProfileComCfg;
 
-/* Configure profile timing parameters - match SDK struct fields */
-gMmWaveCfg.profileTimeCfg.chirpIdleTimeus = cliCfg->profileCfg.idleTimeUs;
-gMmWaveCfg.profileTimeCfg.chirpAdcStartTime = (uint16_t)cliCfg->profileCfg.adcStartTimeUs;
-gMmWaveCfg.profileTimeCfg.chirpTxStartTimeus = 0.0f;
-gMmWaveCfg.profileTimeCfg.chirpSlope = cliCfg->profileCfg.freqSlopeConst;
-gMmWaveCfg.profileTimeCfg.startFreqGHz = cliCfg->profileCfg.startFreqGHz;
-
-/* Configure TX/RX enable - use fields from CliCfg */
-gMmWaveCfg.txEnbl = cliCfg->chirpCfg.txEnable;
-gMmWaveCfg.rxEnbl = cliCfg->rxChannelEn;
+typedef struct MMWave_ProfileTimeCfg_t {
+    float     chirpIdleTimeus;          // 不是 idleTimeus
+    uint16_t  chirpAdcStartTime;        // 不是 adcStartTimeus
+    float     chirpSlope;               // 不是 freqSlopeConst
+    float     startFreqGHz;             // 在ProfileTimeCfg中
+} MMWave_ProfileTimeCfg;
 ```
 
-**关键修复点**:
-1. ✅ `startFreqGHz` 移到 `profileTimeCfg` 中
-2. ✅ `digOutSampleRateMHz` → `digOutputSampRate` (uint8_t)
-3. ✅ `numAdcSamples` → `numOfAdcSamples`
-4. ✅ `idleTimeus` → `chirpIdleTimeus`
-5. ✅ `adcStartTimeus` → `chirpAdcStartTime` (uint16_t)
-6. ✅ `rampEndTimeus` → `chirpRampEndTimeus`
-7. ✅ `freqSlopeConst` → `chirpSlope`
-8. ✅ `channelCfg.rxChannelEn` → `rxChannelEn`
+**解决方案**: 修正`radar_control.c`中的字段映射
+- `startFreqGHz` 移到 `profileTimeCfg`
+- `digOutSampleRateMHz`  `digOutputSampRate` (uint8_t)
+- `numAdcSamples`  `numOfAdcSamples`
+- `idleTimeus`  `chirpIdleTimeus`
+- `channelCfg.rxChannelEn`  `rxChannelEn`
 
-**状态**: ✅ 已修复 (2026-01-09)
+**状态**: ✅ 已修复
 
 ---
 
-### 编译问题汇总表 (更新)
+## 📊 编译问题汇总表
 
 | 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
 |---------|---------|------|---------|------|
-| 问题6 | DSS post-build失败 | 缺少 `memory_hex.cmd` | 创建DSS的memory_hex.cmd | ✅ 已修复 |
-| 问题7 | System post-build失败 | MSS未编译 | 按正确顺序编译MSS→DSS→System | ⏳ 待验证 |
-| 问题8 | Config文件名 | 大小写问题 | Windows兼容，无需修改 | ✅ 已确认 |
-| 问题9 | MSS API结构体字段不匹配 | SDK结构体字段名称与代码不一致 | 修正radar_control.c字段映射 | ✅ 已修复 |
+| 问题1 | System no input files | 未配置源文件 | 添加system.xml | ✅ 已修复 |
+| 问题2 | DSS找不到头文件 | include路径配置 | 配置正确路径 | ✅ 已修复 |
+| 问题3 | system.xml缺失 | 文件未创建 | 创建system.xml | ✅ 已修复 |
+| 问题4 | big endian not supported | 字节序配置错误 | 改为little endian | ✅ 已修复 |
+| 问题5 | include路径丢失 | 编译选项未生效 | 重新配置 | ✅ 已修复 |
+| 问题6 | SDK_INSTALL_DIR无法解析 | 变量未定义 | 手动配置路径 | ✅ 已修复 |
+| 问题7 | 找不到本地头文件 | 相对路径错误 | 修正include路径 | ✅ 已修复 |
+| 问题8 | 类型未定义 | 缺少类型定义 | 添加SubFrame_Cfg_t等 | ✅ 已修复 |
+| 问题9 | include路径风格不一致 | 路径格式混乱 | 统一为common/xxx.h | ✅ 已修复 |
+| 问题10 | PointCloud_Point_t字段缺失 | 结构体不完整 | 添加球坐标和SNR | ✅ 已修复 |
+| 问题11 | 枚举初始化错误 | 语法不符合C99 | 移除= {0} | ✅ 已修复 |
+| 问题12-14 | L-SDK 6.x API不兼容 | API完全不同 | 重写UART/MMWave代码 | ✅ 已修复 |
+| 问题15 | DSS post-build失败 | 缺少memory_hex.cmd | 复制文件 | ✅ 已修复 |
+| 问题16 | System post-build失败 | MSS未编译 | 按顺序编译 | ⏳ 待验证 |
+| 问题17 | Config文件名大小写 | 文件名不一致 | Windows兼容 | ✅ 已确认 |
+| 问题18 | API结构体字段不匹配 | 字段名称错误 | 修正字段映射 | ✅ 已修复 |
 
 ---
 
-### 下一步操作指南 (更新)
+## 🎯 下一步操作指南
 
-**请用户在CCS中执行以下步骤**：
+**请用户在CCS中执行以下步骤**:
 
-1. **刷新项目**
-   ```
-   在CCS中右键点击各项目 → Refresh
-   确保修复后的代码被识别
-   ```
+### 1. 刷新项目
+```
+在CCS中右键点击各项目  Refresh
+确保所有修复后的代码被识别
+```
 
-2. **Clean所有项目**
-   ```
-   Project → Clean... → 选择所有health_detect项目 → Clean
-   ```
+### 2. Clean所有项目
+```
+Project  Clean...  选择所有health_detect项目  Clean
+```
 
-3. **按顺序编译**
-   ```
-   Step 1: 编译 health_detect_6844_mss (右键 → Build Project)
-         预期：9个编译错误已修复，MSS应编译成功
-   Step 2: 编译 health_detect_6844_dss (右键 → Build Project)
-         预期：DSS应编译成功
-   Step 3: 编译 health_detect_6844_system (右键 → Build Project)
-         预期：System应能找到.rig文件并生成.appimage
-   ```
+### 3. 按顺序编译
+```
+Step 1: 编译 health_detect_6844_mss (右键  Build Project)
+      预期: 问题18已修复，MSS应编译成功
 
-4. **验证输出**
-   ```
-   检查以下文件是否生成：
-   - health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig
-   - health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig
-   - health_detect_6844_system/Release/health_detect_6844_system.Release.appimage
-   ```
+Step 2: 编译 health_detect_6844_dss (右键  Build Project)
+      预期: 问题15已修复，DSS应编译成功
 
-**如果仍有编译错误，请提供完整错误信息以便进一步诊断。**
+Step 3: 编译 health_detect_6844_system (右键  Build Project)
+      预期: System应能找到.rig文件并生成.appimage
+```
+
+### 4. 验证输出
+```
+检查以下文件是否生成:
+- health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig
+- health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig
+- health_detect_6844_system/Release/health_detect_6844_system.Release.appimage
+```
+
+### 5. 如果仍有编译错误
+请提供**完整错误信息**以便进一步诊断，包括:
+- 错误日志的完整输出
+- 错误发生的文件和行号
+- 编译器版本信息
+
+---
+
+> 📌 **最后更新**: 2026-01-09  
+> ✅ 已修复18个编译问题  
+> ⏳ 待验证CCS编译通过
