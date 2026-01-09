@@ -501,10 +501,10 @@ CCS操作：
 └─ Build DSS Project → health_detect_dss.out
 
 烧录：
-└─ UniFlash分别烧录两个.out文件
+└─ CCS调试器直接加载.out文件（开发调试用）
 
 优点：✅ 开发快、调试方便
-缺点：⚠️ 版本可能不一致、烧录两次
+缺点：⚠️ 版本可能不一致、需要调试器连接
 适用：开发调试 ✅（仅作为辅助手段）
 ```
 
@@ -523,7 +523,8 @@ CCS操作：
     └─ 打包成 .appimage (单文件包含所有)
 
 烧录：
-└─ UniFlash一次烧录 .appimage
+└─ SDK Visualizer 或 arprog_cmdline_6844 烧录 .appimage
+   ⚠️ 不要使用UniFlash（AWRL6844兼容性差）
 
 优点：✅ 一次烧录、版本一致、完整发布
 缺点：⚠️ 打包稍慢（可接受）
@@ -648,11 +649,13 @@ health_detect_system.release.appimage
 
 #### 1.1 硬件准备
 
-**SOP跳线设置（烧录模式）**：
+**SOP跳线设置**：
 ```
-烧录模式: S7-OFF, S8-OFF
-运行模式: S7-ON, S8-ON
+烧录模式: S7-OFF, S8-OFF  ← Flash编程模式
+运行模式: S7-OFF, S8-ON   ← 功能运行模式（注意S7仍为OFF）
 ```
+
+> 📎 **详细说明**：参见[Part16-AWRL6844固件正确烧录方式完整指南](../06-SDK固件研究/Part16-AWRL6844固件正确烧录方式完整指南.md)
 
 **COM端口确认**：
 ```powershell
@@ -677,7 +680,7 @@ health_detect_system.release.appimage
 
 步骤5: 点击 FLASH 按钮，等待进度条到100%
 
-步骤6: 恢复SOP跳线为运行模式（S7-ON, S8-ON）
+步骤6: 恢复SOP跳线为运行模式（S7-OFF, S8-ON）
        按S2复位键
 ```
 

@@ -20,7 +20,7 @@
 
 ## 📂 文档结构
 
-本研究分为**15个部分**，由浅入深，循序渐进：
+本研究分为**16个部分**，由浅入深，循序渐进：
 
 ### Part 1: SDK基础概念与三目录详解 ⭐⭐⭐
 
@@ -249,6 +249,57 @@ A: 不烧录到Flash，每次启动通过串口发送
 **官方文档引用**：
 - `C:\ti\MMWAVE_L_SDK_06_01_00_01\docs\api_guide_xwrL684x\BUILD_GUIDE.html`
 - "This automatically builds all referenced core projects"
+
+---
+
+### Part 16: AWRL6844固件正确烧录方式完整指南 ⭐⭐⭐⭐⭐ 🆕
+
+**文件**: [Part16-AWRL6844固件正确烧录方式完整指南.md](Part16-AWRL6844固件正确烧录方式完整指南.md)
+
+**内容概要**：
+- 🔍 为什么不使用UniFlash（4大根本原因）
+- 📊 TI E2E论坛真实失败案例分析（3个典型案例）
+- 🎯 正确的烧录工具选择（SDK Visualizer / arprog_cmdline_6844）
+- 🔧 SDK Visualizer完整烧录指南（GUI步骤）
+- 🔧 arprog_cmdline_6844完整烧录指南（CLI命令）
+- 📍 Flash布局与偏移量详解（0x2000/0x42000）
+- 💡 项目flash_tool.py使用指南
+- ⚠️ 常见问题与故障排查
+
+**适合人群**：
+- ✅ 需要烧录固件到AWRL6844
+- ✅ 疑惑为什么UniFlash不工作
+- ✅ 选择正确的烧录工具
+- ✅ 烧录过程遇到问题需要排查
+- ✅ 开发生产烧录自动化脚本
+
+**核心解答**：
+```
+问题: 为什么不使用UniFlash？
+答案: 4大根本原因：
+      1. 设计定位：通用工具 vs 专用工具
+      2. Flash布局：不支持6844特殊分区结构
+      3. 官方态度：TI工程师从不推荐（统计0次）
+      4. 实际表现：E2E论坛多个失败案例，项目0%成功率
+
+问题: 应该使用什么工具？
+答案: ⭐ SDK Visualizer（开发调试）
+      ⭐ arprog_cmdline_6844（生产/自动化）
+
+问题: 偏移量烧录为什么失败？
+答案: 使用偏移量时必须加 -cf 参数！
+      -cf = 动态创建Flash Header
+
+TI工程师建议（#1513519）:
+"I would recommend using the arprog_cmdline_6844 tool"
+```
+
+**E2E论坛证据**：
+- 案例1 (#1469046): UniFlash失败，最终用SDK Visualizer成功
+- 案例2 (#1531816): TI工程师推荐arprog解决烧录错误
+- 案例3 (#1513519): TI工程师明确推荐arprog，提供完整命令
+
+**证据级别**: ⭐⭐⭐⭐⭐ (TI E2E官方论坛 + TI工程师明确推荐 + 项目实测验证)
 
 ---
 
@@ -813,6 +864,16 @@ mmwave_studio = RF测试工具（测试 + 标定 + 数据采集）
 | 2025-12-25 | v3.0 | 🎉 新增Part8-11（Radar Toolbox、跌倒检测、MMWAVE_L_SDK、mmWave Studio深度解析） |
 | 2025-12-25 | v3.1 | ✅ PDF转换完成，所有推测内容已用实际文件验证 |
 | 2025-12-29 | v4.0 | 🎉 新增Part12（arprog与UniFlash烧录工具深度对比，基于TI E2E官方论坛） |
+| 2026-01-09 | v5.0 | 🎉 新增Part16（AWRL6844固件正确烧录方式完整指南） |
+
+**v5.0重大更新**：
+- ✨ **Part16**: AWRL6844固件正确烧录方式完整指南
+  - 为什么不使用UniFlash（4大根本原因）
+  - TI E2E论坛真实失败案例（3个典型案例）
+  - 正确烧录工具选择（SDK Visualizer / arprog_cmdline_6844）
+  - Flash布局与偏移量详解（0x2000/0x42000）
+  - 完整参考资料来源索引
+  - 证据级别：⭐⭐⭐⭐⭐
 
 **v4.0重大更新**：
 - ✨ **Part12**: arprog与UniFlash烧录工具深度对比（545行）
@@ -931,6 +992,7 @@ arprog_cmdline_6844.exe -p COM3 \
 - 📡 [Part10 - MMWAVE_L_SDK深度解析](Part10-MMWAVE_L_SDK深度解析.md) ⭐ 固件开发
 - 📊 [Part11 - mmWave Studio深度解析](Part11-mmWave%20Studio深度解析.md) ⭐ RF测试
 - 🔧 [Part12 - arprog与UniFlash烧录工具对比](Part12-arprog与UniFlash烧录工具深度对比.md) ⭐ 烧录工具
+- 🔥 [Part16 - AWRL6844固件正确烧录方式完整指南](Part16-AWRL6844固件正确烧录方式完整指南.md) ⭐ 烧录实战
 
 **核心问题直达**：
 - ❓ [SDK是什么？](Part1-SDK基础概念与三目录详解.md#11-什么是sdk)
@@ -941,12 +1003,14 @@ arprog_cmdline_6844.exe -p COM3 \
 - ❓ [如何开发跌倒检测？](Part9-跌倒检测完整实现与深度学习.md#第七章实战部署指南)
 - ❓ [如何修改固件？](Part10-MMWAVE_L_SDK深度解析.md#第三章示例项目深度分析)
 - ❓ [如何使用测试工具？](Part11-mmWave%20Studio深度解析.md#第二章主要组件详解)
+- ❓ [为什么不用UniFlash？](Part16-AWRL6844固件正确烧录方式完整指南.md#2-为什么不使用uniflash)
+- ❓ [正确的烧录方式？](Part16-AWRL6844固件正确烧录方式完整指南.md#3-正确的烧录工具选择)
 - ❓ [烧录工具如何选？](Part12-arprog与UniFlash烧录工具深度对比.md#核心结论)
 - ❓ [UniFlash为什么失败？](Part12-arprog与UniFlash烧录工具深度对比.md#e2e论坛真实案例分析)
 
 ---
 
-**最后更新**：2025-12-29  
+**最后更新**：2026-01-09  
 **文档作者**：项目开发团队  
-**文档状态**：✅ 完整且经过验证（v4.0）  
-**文档规模**：12个Part，16,000+行，PDF已全部转换
+**文档状态**：✅ 完整且经过验证（v5.0）  
+**文档规模**：16个Part，18,000+行，PDF已全部转换
