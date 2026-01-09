@@ -19,6 +19,7 @@
 ```
 
 **为什么禁止？**
+
 1. 用户每次编译前会**删除workspace中的项目**
 2. 然后从 `project-code\AWRL6844_HealthDetect` **重新导入**
 3. workspace中的修改会**完全丢失**
@@ -811,27 +812,27 @@ typedef struct SubFrame_Cfg_t
     uint8_t     numTxAntennas;              /**< Number of TX antennas enabled */
     uint8_t     numRxAntennas;              /**< Number of RX antennas enabled */
     uint16_t    numVirtualAntennas;         /**< Number of virtual antennas */
-    
+  
     /* Range Configuration */
     uint16_t    numRangeBins;               /**< Number of range bins */
     uint16_t    numAdcSamples;              /**< Number of ADC samples per chirp */
-    
+  
     /* Doppler Configuration */
     uint16_t    numDopplerBins;             /**< Number of Doppler bins */
     uint16_t    numChirpsPerFrame;          /**< Total chirps per frame */
-    
+  
     /* Frame Timing */
     float       framePeriodMs;              /**< Frame period in milliseconds */
     float       chirpDurationUs;            /**< Single chirp duration in microseconds */
-    
+  
     /* Processing Configuration */
     DPC_StaticConfig_t  staticCfg;          /**< Static DPC configuration */
     DPC_DynamicConfig_t dynamicCfg;         /**< Dynamic DPC configuration */
-    
+  
     /* Memory Addresses */
     void        *radarCubeAddr;             /**< Radar cube memory address */
     uint32_t    radarCubeSize;              /**< Radar cube size in bytes */
-    
+  
     /* Flags */
     uint8_t     isValid;                    /**< Configuration valid flag */
 } SubFrame_Cfg_t;
@@ -848,6 +849,7 @@ typedef PointCloud_Cartesian_t PointCloud_Point_t;
 ```
 
 **添加位置**：
+
 - `SubFrame_Cfg_t` 在 `DPC_Config_t` 之后添加
 - `PointCloud_Point_t` 在 `PointCloud_SideInfo_t` 之后、`PointCloud_Output_t` 之前添加
 
@@ -884,6 +886,7 @@ projectspec 中的配置：
 ```
 
 因此：
+
 - 源文件使用 `#include "../../common/data_path.h"` → ❌ 错误（相对路径在复制后无效）
 - 源文件使用 `#include <common/data_path.h>` → ⚠️ 可能有问题（需要 include path 正确配置）
 - 源文件使用 `#include "common/data_path.h"` → ✅ 正确（项目根目录下有 common/ 子目录）
@@ -892,20 +895,20 @@ projectspec 中的配置：
 
 **修改的文件列表**：
 
-| 文件 | 修改前 | 修改后 |
-|------|--------|--------|
-| `src/dss/source/feature_extract.h` | `<common/data_path.h>` | `"common/data_path.h"` |
-| `src/dss/source/health_detect_dss.h` | `"../../common/data_path.h"` | `"common/data_path.h"` |
-| `src/mss/source/health_detect_main.h` | `<common/data_path.h>` | `"common/data_path.h"` |
-| `src/mss/source/dpc_control.h` | `<common/data_path.h>` | `"common/data_path.h"` |
-| `src/mss/source/dpc_control.c` | `<common/shared_memory.h>` | `"common/shared_memory.h"` |
-| `src/mss/source/presence_detect.h` | `<common/...>` | `"common/..."` |
-| `src/mss/source/tlv_output.h` | `<common/...>` | `"common/..."` |
+| 文件                                    | 修改前                         | 修改后                       |
+| --------------------------------------- | ------------------------------ | ---------------------------- |
+| `src/dss/source/feature_extract.h`    | `<common/data_path.h>`       | `"common/data_path.h"`     |
+| `src/dss/source/health_detect_dss.h`  | `"../../common/data_path.h"` | `"common/data_path.h"`     |
+| `src/mss/source/health_detect_main.h` | `<common/data_path.h>`       | `"common/data_path.h"`     |
+| `src/mss/source/dpc_control.h`        | `<common/data_path.h>`       | `"common/data_path.h"`     |
+| `src/mss/source/dpc_control.c`        | `<common/shared_memory.h>`   | `"common/shared_memory.h"` |
+| `src/mss/source/presence_detect.h`    | `<common/...>`               | `"common/..."`             |
+| `src/mss/source/tlv_output.h`         | `<common/...>`               | `"common/..."`             |
 
 **关键教训**：
 
 > ⚠️ **使用 `action="copy"` 时，必须考虑复制后的目录结构！**
-> 
+>
 > - 源文件中的相对路径 `"../../common/xxx.h"` 在复制后会失效
 > - 必须使用与 `targetDirectory` 配置一致的路径
 > - 统一使用 `"common/xxx.h"` 格式最可靠
@@ -945,15 +948,15 @@ typedef struct PointCloud_Point_t
     float       x;                  /**< X coordinate in meters */
     float       y;                  /**< Y coordinate in meters */
     float       z;                  /**< Z coordinate in meters */
-    
+  
     /* Spherical Coordinates */
     float       range;              /**< Range in meters */
     float       azimuth;            /**< Azimuth angle in radians */
     float       elevation;          /**< Elevation angle in radians */
-    
+  
     /* Velocity */
     float       velocity;           /**< Radial velocity in m/s */
-    
+  
     /* Quality */
     float       snr;                /**< Signal-to-noise ratio in dB */
 } PointCloud_Point_t;
@@ -980,7 +983,6 @@ typedef struct PointCloud_Point_t
 **原因分析**：
 
 1. **枚举类型混用**：`HealthDSS_MCB_t gHealthDssMCB = {0};` 中，第一个成员 `currentState` 是枚举类型 `HealthDSS_State_e`，用 `0` 初始化会产生警告（在 `--emit_warnings_as_errors` 模式下变成错误）
-
 2. **不可达代码**：`while(1)` 循环后的代码永远不会执行
 
 **解决方案**：
@@ -1017,7 +1019,7 @@ while (1)
 **关键教训**：
 
 > ⚠️ **TI C6000 编译器对类型检查非常严格！**
-> 
+>
 > - 枚举类型不能用整数 `0` 初始化（会产生 #190-D 警告）
 > - 使用 `--emit_warnings_as_errors` 时，所有警告都会变成错误
 > - 不可达代码会产生 #112-D 警告
@@ -1046,14 +1048,14 @@ while (1)
 
 MSS代码使用了**错误的SDK API风格**，导致大规模编译失败：
 
-| 问题类型 | 错误用法 | L-SDK 6.x正确用法 |
-|---------|---------|------------------|
-| UART读取 | `UART_read(handle, buf, len, NULL)` 4参数 | `UART_read(handle, &trans)` 2参数 |
-| UART写入 | `UART_write(handle, buf, len, NULL)` 4参数 | `UART_write(handle, &trans)` 2参数 |
-| strtok_r | 不支持 | 改用 `strtok()` |
-| L3_MSS_SIZE | 未包含头文件 | `#include <common/shared_memory.h>` |
-| MMWave_init | 使用eventFxn/errorFxn回调 | 无回调，只有InitCfg和errCode |
-| MMWave_open | `MMWave_open(handle, OpenCfg)` 2参数 | `MMWave_open(handle, MMWave_Cfg*, errCode)` 3参数 |
+| 问题类型    | 错误用法                                     | L-SDK 6.x正确用法                                   |
+| ----------- | -------------------------------------------- | --------------------------------------------------- |
+| UART读取    | `UART_read(handle, buf, len, NULL)` 4参数  | `UART_read(handle, &trans)` 2参数                 |
+| UART写入    | `UART_write(handle, buf, len, NULL)` 4参数 | `UART_write(handle, &trans)` 2参数                |
+| strtok_r    | 不支持                                       | 改用 `strtok()`                                   |
+| L3_MSS_SIZE | 未包含头文件                                 | `#include <common/shared_memory.h>`               |
+| MMWave_init | 使用eventFxn/errorFxn回调                    | 无回调，只有InitCfg和errCode                        |
+| MMWave_open | `MMWave_open(handle, OpenCfg)` 2参数       | `MMWave_open(handle, MMWave_Cfg*, errCode)` 3参数 |
 
 **解决方案**：
 
@@ -1109,13 +1111,13 @@ MMWave_close(handle, &errCode);                      // 2参数
 
 **修改的文件**：
 
-| 文件 | 修改内容 |
-|-----|---------|
-| `cli.c` | UART_Transaction模式，strtok替代strtok_r |
-| `tlv_output.c` | UART_Transaction模式 |
-| `health_detect_main.c` | 添加shared_memory.h include |
-| `radar_control.c` | 完全重写，使用L-SDK 6.x正确的MMWave API |
-| `radar_control.h` | 添加新函数声明 |
+| 文件                     | 修改内容                                 |
+| ------------------------ | ---------------------------------------- |
+| `cli.c`                | UART_Transaction模式，strtok替代strtok_r |
+| `tlv_output.c`         | UART_Transaction模式                     |
+| `health_detect_main.c` | 添加shared_memory.h include              |
+| `radar_control.c`      | 完全重写，使用L-SDK 6.x正确的MMWave API  |
+| `radar_control.h`      | 添加新函数声明                           |
 
 **参考源码**：
 
@@ -1125,12 +1127,13 @@ D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\source
 ```
 
 **Git提交**：
+
 - Commit: `4a098d7` - "fix(MSS): 修复L-SDK 6.x API兼容性问题"
 
 **关键教训**：
 
 > ⚠️ **L-SDK 6.x的API与旧版SDK完全不同！**
-> 
+>
 > - UART使用UART_Transaction结构，不是分散参数
 > - MMWave没有事件回调，配置通过MMWave_Cfg结构
 > - 没有MMWave_addProfile/addChirp/setFrameCfg，改用MMWave_config()
@@ -1138,18 +1141,18 @@ D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\source
 
 ---
 
-
 ### 问题15: DSS post-build 失败 - memory_hex.cmd 缺失 (2026-01-09)
 
 **错误信息**:
+
 ```
 /cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
 gmake[3]: Target 'all' not remade because of errors.
 ```
 
-**原因**: DSS项目的post-build步骤需要`memory_hex.cmd`文件
+**原因**: DSS项目的post-build步骤需要 `memory_hex.cmd`文件
 
-**解决方案**: 从InCabin_Demos复制`memory_hex.cmd`到DSS项目
+**解决方案**: 从InCabin_Demos复制 `memory_hex.cmd`到DSS项目
 
 **状态**: ✅ 已修复
 
@@ -1158,6 +1161,7 @@ gmake[3]: Target 'all' not remade because of errors.
 ### 问题16: System post-build 失败 - MSS .rig 文件不存在 (2026-01-09)
 
 **错误信息**:
+
 ```
 /cygwin/cp: cannot stat '../health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig': No such file or directory
 ```
@@ -1173,11 +1177,12 @@ gmake[3]: Target 'all' not remade because of errors.
 ### 问题17: Config文件名大小写问题 (2026-01-09)
 
 **错误信息**:
+
 ```
 /cygwin/cat: 'C:/.../config/metaimage_cfg.Release.json': No such file or directory
 ```
 
-**原因**: makefile使用`Release`但文件名是`release`（小写）
+**原因**: makefile使用 `Release`但文件名是 `release`（小写）
 
 **解决方案**: Windows文件系统不区分大小写，无需修改
 
@@ -1188,6 +1193,7 @@ gmake[3]: Target 'all' not remade because of errors.
 ### 问题18: MSS radar_control.c API结构体字段不匹配 (2026-01-09)
 
 **错误信息**:
+
 ```
 error: no member named 'startFreqGHz' in 'struct MMWave_ProfileComCfg_t'
 error: no member named 'digOutSampleRateMHz' in 'struct MMWave_ProfileComCfg_t'
@@ -1196,9 +1202,10 @@ error: no member named 'channelCfg' in 'struct HealthDetect_CliCfg_t'
 ... (共9个错误)
 ```
 
-**原因**: L-SDK 6.x的`MMWave_ProfileComCfg_t`和`MMWave_ProfileTimeCfg_t`字段名称与代码不一致
+**原因**: L-SDK 6.x的 `MMWave_ProfileComCfg_t`和 `MMWave_ProfileTimeCfg_t`字段名称与代码不一致
 
 **SDK实际结构体**:
+
 ```c
 typedef struct MMWave_ProfileComCfg_t {
     uint8_t   digOutputSampRate;        // 不是 digOutSampleRateMHz
@@ -1214,7 +1221,8 @@ typedef struct MMWave_ProfileTimeCfg_t {
 } MMWave_ProfileTimeCfg;
 ```
 
-**解决方案**: 修正`radar_control.c`中的字段映射
+**解决方案**: 修正 `radar_control.c`中的字段映射
+
 - `startFreqGHz` 移到 `profileTimeCfg`
 - `digOutSampleRateMHz`  `digOutputSampRate` (uint8_t)
 - `numAdcSamples`  `numOfAdcSamples`
@@ -1228,6 +1236,7 @@ typedef struct MMWave_ProfileTimeCfg_t {
 ### 问题19: MSS radar_control.c API字段不匹配 - 问题18回归 (2026-01-09)
 
 **错误信息**:
+
 ```
 ../radar_control.c:235:30: error: no member named 'startFreqGHz' in 'struct MMWave_ProfileComCfg_t'
 ../radar_control.c:236:30: error: no member named 'digOutSampleRateMHz' in 'struct MMWave_ProfileComCfg_t'
@@ -1240,17 +1249,19 @@ typedef struct MMWave_ProfileTimeCfg_t {
 ../radar_control.c:254:33: error: no member named 'channelCfg' in 'struct HealthDetect_CliCfg_t'
 ```
 
-**原因**: 
-1. CCS workspace中的`radar_control.c`是旧版本代码
-2. 项目代码目录`D:/7.project/TI_Radar_Project/project-code/`中的文件已修复
+**原因**:
+
+1. CCS workspace中的 `radar_control.c`是旧版本代码
+2. 项目代码目录 `D:/7.project/TI_Radar_Project/project-code/`中的文件已修复
 3. CCS编译的是workspace中的文件：`C:/Users/Administrator/workspace_ccstheia/health_detect_6844_mss/radar_control.c`
 4. **两个目录的文件不同步**
 
 **根本问题**: CCS项目文件与项目代码目录不同步
 
-**解决方案**: 在CCS中手动修改`radar_control.c`第230-260行
+**解决方案**: 在CCS中手动修改 `radar_control.c`第230-260行
 
 **正确代码** (SDK 6.x兼容)：
+
 ```c
 /* Configure profile common parameters */
 gMmWaveCfg.profileComCfg.digOutputSampRate = (uint8_t)(cliCfg->profileCfg.digOutSampleRate / 1000);
@@ -1268,6 +1279,7 @@ gMmWaveCfg.rxEnbl = cliCfg->rxChannelEn;
 ```
 
 **修改要点**:
+
 1. `startFreqGHz` 在 `profileTimeCfg` 中（不是 `profileComCfg`）
 2. `digOutputSampRate` (不是 `digOutSampleRateMHz`)
 3. `numOfAdcSamples` (不是 `numAdcSamples`)
@@ -1287,17 +1299,19 @@ gMmWaveCfg.rxEnbl = cliCfg->rxChannelEn;
 ### 问题20: DSS post-build 失败 - memory_hex.cmd 缺失回归 (2026-01-09)
 
 **错误信息**:
+
 ```
 /cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
 gmake[3]: Target 'all' not remade because of errors.
 gmake[2]: [makefile:160: post-build] Error 2 (ignored)
 ```
 
-**原因**: 问题15的回归 - CCS workspace中的DSS项目缺少`memory_hex.cmd`
+**原因**: 问题15的回归 - CCS workspace中的DSS项目缺少 `memory_hex.cmd`
 
-**解决方案**: 从参考项目复制`memory_hex.cmd`到DSS workspace
+**解决方案**: 从参考项目复制 `memory_hex.cmd`到DSS workspace
 
 **操作步骤**:
+
 ```powershell
 # 复制 memory_hex.cmd 到 DSS workspace
 Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\dss\memory_hex.cmd" `
@@ -1311,24 +1325,28 @@ Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src
 ### 问题21: System post-build 失败 - MSS .rig文件缺失 (2026-01-09)
 
 **错误信息**:
+
 ```
 /cygwin/cp: cannot stat '../health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig': No such file or directory
 ```
 
-**原因**: 
-1. MSS项目的post-build步骤未生成`.rig`文件
-2. System项目需要MSS和DSS的`.rig`文件来生成`.appimage`
+**原因**:
 
-**前置条件**: 
+1. MSS项目的post-build步骤未生成 `.rig`文件
+2. System项目需要MSS和DSS的 `.rig`文件来生成 `.appimage`
+
+**前置条件**:
+
 - 问题19修复后MSS编译成功
 - 问题20修复后DSS post-build成功
 
 **解决方案**: 按顺序重新编译
 
 **操作步骤**:
+
 1. Clean所有项目
-2. Build MSS → 生成`health_detect_6844_mss_img.Release.rig`
-3. Build DSS → 生成`health_detect_6844_dss_img.Release.rig`
+2. Build MSS → 生成 `health_detect_6844_mss_img.Release.rig`
+3. Build DSS → 生成 `health_detect_6844_dss_img.Release.rig`
 4. Build System → 使用MSS和DSS的.rig生成.appimage
 
 **状态**: ⏳ 待问题19、20修复后验证
@@ -1338,6 +1356,7 @@ Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src
 ### 问题22: CCS工作区缺少构建配置文件（2026-01-09）
 
 **错误信息**:
+
 ```
 [91]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_mss/Release/../metaimage_cfg.Release.json': No such file or directory
 [95]/cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
@@ -1347,16 +1366,18 @@ Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src
 **问题分析**:
 
 这是**问题15和20的再次回归**，原因是：
+
 1. 项目代码目录中有这些文件
 2. 但CCS实际编译的是 `C:\Users\Administrator\workspace_ccstheia\` 目录
 3. 导入项目时只导入了源代码，**没有导入构建配置文件**
 
 **缺失的文件**:
+
 - `memory_hex.cmd` - MSS/DSS的Hex生成脚本
 - `metaimage_cfg.release.json` - MSS的元镜像配置
 - `metaimage_cfg.release.json` - System的元镜像配置
 
-**根本原因**: 
+**根本原因**:
 
 CCS导入.projectspec时不会自动复制这些构建配置文件到workspace。
 
@@ -1383,6 +1404,7 @@ Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\
 ```
 
 **验证**:
+
 ```powershell
 # 检查文件是否存在
 Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss\memory_hex.cmd"
@@ -1394,11 +1416,13 @@ Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\c
 **结果**: 所有文件返回 `True`
 
 **注意事项**:
+
 - 这些文件在项目代码目录中已存在
 - 但必须复制到CCS workspace才能被构建系统使用
 - 每次重新导入项目时都需要执行这个步骤
 
-**下一步**: 
+**下一步**:
+
 - Clean + Build MSS → 应该成功生成 `.rig` 文件
 - 然后按顺序编译 DSS 和 System
 
@@ -1409,6 +1433,7 @@ Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\c
 ### 问题23: metaimage配置文件大小写不匹配（2026-01-09）
 
 **错误信息**:
+
 ```
 [91]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_mss/Release/../metaimage_cfg.Release.json': No such file or directory
 [103]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/../config/metaimage_cfg.Release.json': No such file or directory
@@ -1417,12 +1442,13 @@ Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\c
 **问题分析**:
 
 1. **根本原因**: 文件名大小写不匹配
+
    - CCS传递的PROFILE参数: `Release` (大写R)
    - 实际文件名: `metaimage_cfg.release.json` (小写r)
    - makefile第75行: `META_IMG_CONFIG=$(CONFIG_PATH)/metaimage_cfg.$(PROFILE).json`
    - 结果: 构建系统找不到 `metaimage_cfg.Release.json`
+2. **问题22的真正原因**:
 
-2. **问题22的真正原因**: 
    - 问题22只是复制了文件到workspace
    - 但源项目的config目录本来就是空的
    - 即使重新导入项目，问题依然存在
@@ -1432,12 +1458,14 @@ Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\c
 ⚠️ **关键认知**: 用户每次编译前都会删除workspace并重新导入项目，所以**必须修复项目源代码**，而不是workspace！
 
 **步骤1**: 从InCabin_Demos复制配置文件到项目源代码
+
 ```powershell
 Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config\*" `
           "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config\"
 ```
 
 **步骤2**: 重命名文件匹配CCS的PROFILE大小写
+
 ```powershell
 # MSS配置
 Rename-Item "...\config\metaimage_cfg.release.json" "metaimage_cfg.Release.json"
@@ -1449,6 +1477,7 @@ Rename-Item "...\system\config\metaimage_cfg.debug.json" "metaimage_cfg.Debug.js
 ```
 
 **验证**:
+
 ```powershell
 Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config"
 # 应显示: metaimage_cfg.Release.json, metaimage_cfg.Debug.json
@@ -1460,6 +1489,7 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\
 **为什么InCabin_Demos没有这个问题？**
 
 检查InCabin_Demos的文件名：
+
 ```powershell
 Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config"
 # 显示: metaimage_cfg.release.json (小写)
@@ -1468,6 +1498,7 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
 **结论**: InCabin_Demos也有同样的问题！但可能他们的makefile处理了大小写转换，或者使用了不同的构建配置。
 
 **正确的工作流程**:
+
 1. ✅ 修复 `project-code\AWRL6844_HealthDetect` 中的源文件
 2. ✅ 文件名使用大写PROFILE（Release/Debug）
 3. ❌ 不再需要手动复制到workspace
@@ -1484,6 +1515,7 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
 **错误重现**:
 
 用户删除workspace并重新导入项目后，再次出现与问题23相同的错误：
+
 ```
 [90]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_mss/Release/../metaimage_cfg.Release.json': No such file or directory
 [96]/cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
@@ -1493,16 +1525,17 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
 **根本原因分析**:
 
 1. **问题23只解决了文件内容和命名问题**:
+
    - ✅ 复制了配置文件到项目源代码
    - ✅ 重命名为正确的大小写（Release/Debug）
    - ❌ 但文件没有被导入到workspace
-
 2. **CCS导入机制**:
-   - CCS根据`.projectspec`文件导入项目
+
+   - CCS根据 `.projectspec`文件导入项目
    - `.projectspec`中没有引用的文件不会被复制到workspace
    - 即使文件存在于源代码，CCS也不知道要导入它们
-
 3. **验证发现**:
+
    ```powershell
    # 文件确实存在于源代码
    D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\
@@ -1513,26 +1546,27 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
    │       └── metaimage_cfg.Debug.json          ← 存在
    └── src\dss\...\ti-c6000\
        └── memory_hex.cmd                        ← 存在
-   
+
    # 但.projectspec中没有引用
    grep "memory_hex.cmd\|metaimage_cfg" *.projectspec
    # 结果: No matches found
    ```
-
 4. **InCabin_Demos的正确做法**:
+
    ```xml
    <!-- InCabin MSS .projectspec -->
    <file path="memory_hex.cmd" openOnCreation="false" excludeFromBuild="true" action="copy"/>
    <file path="config/metaimage_cfg.debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
    <file path="config/metaimage_cfg.release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
-   
+
    <!-- InCabin DSS .projectspec -->
    <file path="memory_hex.cmd" openOnCreation="false" excludeFromBuild="true" action="copy"/>
    ```
 
 **正确的解决方案**:
 
-**步骤1**: 修改MSS的`.projectspec`文件
+**步骤1**: 修改MSS的 `.projectspec`文件
+
 ```xml
 <!-- 文件位置: src/mss/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/health_detect_6844_mss.projectspec -->
 
@@ -1542,7 +1576,8 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
 <file path="config/metaimage_cfg.Release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
 ```
 
-**步骤2**: 修改DSS的`.projectspec`文件
+**步骤2**: 修改DSS的 `.projectspec`文件
+
 ```xml
 <!-- 文件位置: src/dss/xwrL684x-evm/c66ss0_freertos/ti-c6000/health_detect_6844_dss.projectspec -->
 
@@ -1551,11 +1586,13 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
 ```
 
 **关键参数说明**:
+
 - `excludeFromBuild="true"`: 这些文件不参与编译，只在post-build阶段使用
 - `action="copy"`: 导入项目时复制文件到workspace
-- 路径相对于`.projectspec`文件所在目录
+- 路径相对于 `.projectspec`文件所在目录
 
 **验证步骤**:
+
 ```powershell
 # 1. 检查.projectspec是否包含文件引用
 grep -A2 "memory_hex.cmd\|metaimage_cfg" src/mss/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/*.projectspec
@@ -1577,20 +1614,21 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
 
 **问题总结**:
 
-| 方面 | 问题22-23的方案 | 问题24的正确方案 |
-|-----|----------------|----------------|
-| 文件位置 | ✅ 复制到源代码 | ✅ 保持在源代码 |
-| 文件命名 | ✅ 修正大小写 | ✅ 保持大小写 |
-| CCS导入 | ❌ 手动复制到workspace | ✅ .projectspec自动复制 |
-| 持久性 | ❌ 每次重新导入需手动复制 | ✅ 导入项目自动包含 |
-| 完整性 | ❌ 不完整解决方案 | ✅ 彻底解决 |
+| 方面     | 问题22-23的方案           | 问题24的正确方案        |
+| -------- | ------------------------- | ----------------------- |
+| 文件位置 | ✅ 复制到源代码           | ✅ 保持在源代码         |
+| 文件命名 | ✅ 修正大小写             | ✅ 保持大小写           |
+| CCS导入  | ❌ 手动复制到workspace    | ✅ .projectspec自动复制 |
+| 持久性   | ❌ 每次重新导入需手动复制 | ✅ 导入项目自动包含     |
+| 完整性   | ❌ 不完整解决方案         | ✅ 彻底解决             |
 
 **为什么问题23的解决方案不完整？**
 
-问题23只解决了"文件存在"的问题，但忽略了"文件如何导入"的问题。CCS不会自动扫描所有文件，必须在`.projectspec`中明确声明需要导入的文件。
+问题23只解决了"文件存在"的问题，但忽略了"文件如何导入"的问题。CCS不会自动扫描所有文件，必须在 `.projectspec`中明确声明需要导入的文件。
 
 **教训**:
-1. 修复TI CCS项目问题时，必须理解`.projectspec`的作用
+
+1. 修复TI CCS项目问题时，必须理解 `.projectspec`的作用
 2. 对比InCabin_Demos等参考项目的配置文件
 3. 验证修复方案要完整测试"删除workspace → 重新导入 → 编译"流程
 
@@ -1601,6 +1639,7 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
 ### 问题25: System .projectspec metaimage文件名大小写不匹配（2026-01-09）
 
 **错误信息**:
+
 ```
 [109]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/../config/metaimage_cfg.Release.json': No such file or directory
 [113]/cygwin/cp: cannot stat '../health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig': No such file or directory
@@ -1608,13 +1647,14 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
 
 **问题分析**:
 
-1. **第一个错误（第109行）**：System的`.projectspec`文件引用的是小写文件名
+1. **第一个错误（第109行）**：System的 `.projectspec`文件引用的是小写文件名
+
    - `.projectspec`引用: `config/metaimage_cfg.release.json`（小写r）
    - 实际文件名: `metaimage_cfg.Release.json`（大写R）
-   - CCS的`action="copy"`是**按文件名精确匹配**的
+   - CCS的 `action="copy"`是**按文件名精确匹配**的
    - 虽然Windows不区分大小写，但CCS找不到源文件就无法复制
-
 2. **第二个错误（第113行）**：MSS的.rig文件缺失
+
    - System post-build需要MSS和DSS的.rig文件
    - DSS已成功生成（第102行确认）
    - MSS没有被编译或编译失败
@@ -1622,7 +1662,8 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
 
 **解决方案**:
 
-**步骤1**: 修改System的`.projectspec`使用大写文件名
+**步骤1**: 修改System的 `.projectspec`使用大写文件名
+
 ```xml
 <!-- 文件位置: src/system/health_detect_6844_system.projectspec -->
 <!-- 修改前 -->
@@ -1635,11 +1676,13 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
 ```
 
 **步骤2**: 确保MSS先编译
+
 - CCS编译顺序必须是：MSS → DSS → System
 - System依赖MSS和DSS生成的.rig文件
 - 如果MSS编译失败，必须先解决MSS的错误
 
 **验证步骤**:
+
 ```powershell
 # 1. 删除workspace并重新导入
 Remove-Item -Recurse -Force "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*"
@@ -1658,14 +1701,15 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*\Re
 
 **为什么HealthDetect与InCabin_Demos不一致？**
 
-| 项目 | 源文件名 | .projectspec引用 | 状态 |
-|-----|---------|-----------------|------|
-| InCabin_Demos | `metaimage_cfg.release.json`（小写） | `metaimage_cfg.release.json`（小写） | ✅ 一致 |
+| 项目                         | 源文件名                               | .projectspec引用                       | 状态      |
+| ---------------------------- | -------------------------------------- | -------------------------------------- | --------- |
+| InCabin_Demos                | `metaimage_cfg.release.json`（小写） | `metaimage_cfg.release.json`（小写） | ✅ 一致   |
 | HealthDetect（问题23修复后） | `metaimage_cfg.Release.json`（大写） | `metaimage_cfg.release.json`（小写） | ❌ 不一致 |
-| HealthDetect（问题25修复后） | `metaimage_cfg.Release.json`（大写） | `metaimage_cfg.Release.json`（大写） | ✅ 一致 |
+| HealthDetect（问题25修复后） | `metaimage_cfg.Release.json`（大写） | `metaimage_cfg.Release.json`（大写） | ✅ 一致   |
 
 **教训**:
-1. 问题23重命名文件为大写后，应该同时修改`.projectspec`
+
+1. 问题23重命名文件为大写后，应该同时修改 `.projectspec`
 2. 文件名修改必须保持**源文件**和**引用**的一致性
 3. Windows虽然不区分大小写，但CCS的文件匹配可能是区分的
 
@@ -1676,6 +1720,7 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*\Re
 ### 问题26: System metaimage配置文件未复制到config子目录（2026-01-09）
 
 **错误信息**:
+
 ```
 [229]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/../config/metaimage_cfg.Release.json': No such file or directory
 [244]json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
@@ -1684,35 +1729,37 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*\Re
 **问题分析**:
 
 1. **现象**：MSS和DSS都成功编译并生成了.rig文件
+
    - 第122行：MSS生成 `health_detect_6844_mss_img.Release.rig`
    - 第222行：DSS生成 `health_detect_6844_dss_img.Release.rig`
-
 2. **System post-build失败原因**：
-   - makefile需要从`config/metaimage_cfg.Release.json`读取配置
-   - 但文件被CCS复制到了根目录，不在config子目录
 
+   - makefile需要从 `config/metaimage_cfg.Release.json`读取配置
+   - 但文件被CCS复制到了根目录，不在config子目录
 3. **workspace目录结构检查**：
+
    ```
    C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\
    ├── metaimage_cfg.Debug.json      ← 在根目录！错误！
    ├── metaimage_cfg.Release.json    ← 在根目录！错误！
    ├── makefile_system_ccs_bootimage_gen
    └── system.xml
-   
+
    应该是：
    └── config/
        ├── metaimage_cfg.Debug.json    ← 应该在这里
        └── metaimage_cfg.Release.json  ← 应该在这里
    ```
+4. **根本原因**：CCS的 `.projectspec`中 `action="copy"`默认会**扁平化**路径
 
-4. **根本原因**：CCS的`.projectspec`中`action="copy"`默认会**扁平化**路径
-   - 源路径 `config/metaimage_cfg.Release.json` 
+   - 源路径 `config/metaimage_cfg.Release.json`
    - 复制后变成 `metaimage_cfg.Release.json`（丢失了config目录）
    - 需要使用 `targetDirectory="config"` 属性保持目录结构
 
 **正确的解决方案**:
 
-修改System的`.projectspec`，添加`targetDirectory`属性：
+修改System的 `.projectspec`，添加 `targetDirectory`属性：
+
 ```xml
 <!-- 修改前 -->
 <file path="config/metaimage_cfg.Debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
@@ -1724,6 +1771,7 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*\Re
 ```
 
 **验证步骤**:
+
 ```powershell
 # 1. 删除workspace中的System项目
 Remove-Item -Recurse -Force "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system"
@@ -1740,12 +1788,12 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_syst
 
 **CCS .projectspec文件属性说明**:
 
-| 属性 | 作用 | 示例 |
-|-----|------|-----|
-| `path` | 源文件相对路径 | `config/file.json` |
-| `targetDirectory` | 目标目录名 | `config` |
-| `action="copy"` | 复制文件到workspace | - |
-| `excludeFromBuild="true"` | 不参与编译 | - |
+| 属性                        | 作用                | 示例                 |
+| --------------------------- | ------------------- | -------------------- |
+| `path`                    | 源文件相对路径      | `config/file.json` |
+| `targetDirectory`         | 目标目录名          | `config`           |
+| `action="copy"`           | 复制文件到workspace | -                    |
+| `excludeFromBuild="true"` | 不参与编译          | -                    |
 
 **为什么InCabin_Demos能工作？**
 
@@ -1760,12 +1808,14 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_syst
 **发现日期**: 2026-01-09
 
 **错误现象**:
+
 ```
 /cygwin/cp: cannot stat '../health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig': No such file or directory
 gmake: [makefile:15: system-post-build] Error 2 (ignored)
 ```
 
 **检查发现**:
+
 ```powershell
 # DSS项目存在
 Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
@@ -1779,6 +1829,7 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss\
 **根本原因**:
 
 ❌ **用户分别导入了3个项目**（错误方式）:
+
 ```
 File → Import → 选择 mss.projectspec → Finish
 File → Import → 选择 dss.projectspec → Finish
@@ -1789,6 +1840,7 @@ File → Import → 选择 system.projectspec → Finish
 ```
 
 ✅ **正确方式：只从System导入**:
+
 ```
 File → Import → CCS Projects
 Browse to: .../src/system/
@@ -1810,38 +1862,41 @@ CCS自动：
 **解决方案（用户操作）**:
 
 1. **删除当前workspace中的所有项目**:
+
    ```
    右键 health_detect_6844_mss → Delete（勾选"Delete project contents"）
    右键 health_detect_6844_dss → Delete（勾选"Delete project contents"）
    右键 health_detect_6844_system → Delete（勾选"Delete project contents"）
    ```
-
 2. **只从System项目导入（🔴 关键步骤）**:
+
    ```
    File → Import → CCS Projects
    Browse to: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\
    选择: health_detect_6844_system.projectspec
    点击 Finish
-   
+
    CCS会自动导入所有3个项目并设置依赖关系！
    ```
-
 3. **只编译System项目**:
+
    ```
    右键 health_detect_6844_system → Build Project
-   
+
    CCS会自动按顺序编译 MSS → DSS → System
    ```
 
 **关键配置验证**（项目配置是正确的）:
 
 system.projectspec已有import标签:
+
 ```xml
 <import spec="../mss/.../health_detect_6844_mss.projectspec"/>
 <import spec="../dss/.../health_detect_6844_dss.projectspec"/>
 ```
 
 system.xml已定义项目依赖:
+
 ```xml
 <project configuration="@match" id="project_0" name="health_detect_6844_mss"/>
 <project configuration="@match" id="project_1" name="health_detect_6844_dss"/>
@@ -1858,6 +1913,7 @@ system.xml已定义项目依赖:
 **发现日期**: 2026-01-09
 
 **错误现象**:
+
 ```
 cd C:/ti/MMWAVE_L_SDK_06_01_00_01/tools/MetaImageGen && metaImage_creator.exe --complete_metaimage ...
 Traceback (most recent call last):
@@ -1871,24 +1927,26 @@ KeyError: 'signedCertificateFile'
 
 metaimage配置文件（`metaimage_cfg.Release.json`）缺少metaImage_creator.exe要求的必要字段：
 
-| 缺少的字段 | 作用 |
-|-----------|------|
-| `certSigningKeyFileECDSA` | ECDSA签名密钥文件 |
-| `certSigningKeyFileRSA` | RSA签名密钥文件 |
-| `signingAlgo` | 签名算法（RSA） |
-| `signedCertificateFile` | 🔴 签名证书文件路径（错误关键） |
-| `metaImageFile` | 输出文件路径（替代finalMetaImage） |
-| `coreImages` | 空数组（必须存在） |
+| 缺少的字段                  | 作用                               |
+| --------------------------- | ---------------------------------- |
+| `certSigningKeyFileECDSA` | ECDSA签名密钥文件                  |
+| `certSigningKeyFileRSA`   | RSA签名密钥文件                    |
+| `signingAlgo`             | 签名算法（RSA）                    |
+| `signedCertificateFile`   | 🔴 签名证书文件路径（错误关键）    |
+| `metaImageFile`           | 输出文件路径（替代finalMetaImage） |
+| `coreImages`              | 空数组（必须存在）                 |
 
 **解决方案**:
 
-完全按照InCabin_Demos的配置文件格式重写`metaimage_cfg.Release.json`和`metaimage_cfg.Debug.json`：
+完全按照InCabin_Demos的配置文件格式重写 `metaimage_cfg.Release.json`和 `metaimage_cfg.Debug.json`：
 
 **修改的文件**:
+
 - `src/system/config/metaimage_cfg.Release.json`
 - `src/system/config/metaimage_cfg.Debug.json`
 
 **关键修改内容**:
+
 ```json
 "CertificateParams": {
     ...
@@ -1910,6 +1968,7 @@ metaimage配置文件（`metaimage_cfg.Release.json`）缺少metaImage_creator.e
 **发现日期**: 2026-01-09
 
 **错误现象**:
+
 ```
 cd C:/ti/MMWAVE_L_SDK_06_01_00_01/tools/MetaImageGen && metaImage_creator.exe --complete_metaimage ...
 
@@ -1921,33 +1980,36 @@ Previous file was not available
 
 **根本原因**:
 
-问题28修复时使用了错误的路径格式。makefile设计使用`PLACEHOLDER_PATH`占位符，在运行时替换为实际的workspace路径：
+问题28修复时使用了错误的路径格式。makefile设计使用 `PLACEHOLDER_PATH`占位符，在运行时替换为实际的workspace路径：
 
-| makefile关键代码 | 作用 |
-|-----------------|------|
-| `json_content:=$(shell $(CAT) .../metaimage_cfg.$(PROFILE).json)` | 读取JSON配置 |
-| `new_json_content:=$(subst PLACEHOLDER_PATH,$(MULTI_CORE_BOOTIMAGE_PATH),$(json_content))` | 替换占位符 |
+| makefile关键代码                                                                             | 作用         |
+| -------------------------------------------------------------------------------------------- | ------------ |
+| `json_content:=$(shell $(CAT) .../metaimage_cfg.$(PROFILE).json)`                          | 读取JSON配置 |
+| `new_json_content:=$(subst PLACEHOLDER_PATH,$(MULTI_CORE_BOOTIMAGE_PATH),$(json_content))` | 替换占位符   |
 
 **问题28的错误修复**：使用了SDK相对路径 `../../examples/empty/xwrL684x-evm/system_freertos`，导致：
+
 - metaImage_creator在SDK目录下查找文件（错误路径）
 - 实际.rig文件在workspace目录（正确路径）
 
 **正确的路径机制**：
 
-| 配置文件中的路径 | 运行时替换为 |
-|-----------------|-------------|
-| `PLACEHOLDER_PATH/temp/xxx.rig` | `C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/temp/xxx.rig` |
+| 配置文件中的路径                                                | 运行时替换为                                                                                                               |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `PLACEHOLDER_PATH/temp/xxx.rig`                               | `C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/temp/xxx.rig`                               |
 | `PLACEHOLDER_PATH/health_detect_6844_system.Release.appimage` | `C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/health_detect_6844_system.Release.appimage` |
 
 **解决方案**:
 
-恢复使用`PLACEHOLDER_PATH`占位符：
+恢复使用 `PLACEHOLDER_PATH`占位符：
 
 **修改的文件**:
+
 - `src/system/config/metaimage_cfg.Release.json`
 - `src/system/config/metaimage_cfg.Debug.json`
 
 **关键修改内容**:
+
 ```json
 {
     "interimMetaHeaderFile": "PLACEHOLDER_PATH/temp/metaheader.bin",
@@ -1974,8 +2036,9 @@ Previous file was not available
 ```
 
 **关键说明**:
-- 🔴 使用`PLACEHOLDER_PATH`的路径会被makefile动态替换为workspace绝对路径
-- ✅ SDK相对路径（如`../../firmware/...`）保持不变，因为metaImage_creator从SDK目录执行
+
+- 🔴 使用 `PLACEHOLDER_PATH`的路径会被makefile动态替换为workspace绝对路径
+- ✅ SDK相对路径（如 `../../firmware/...`）保持不变，因为metaImage_creator从SDK目录执行
 
 **状态**: ✅ 已修复（2026-01-09）
 
@@ -1985,37 +2048,37 @@ Previous file was not available
 
 > 💡 **说明**: 以下是所有28个编译问题的汇总表，便于快速查看问题类型和解决方案。
 
-| 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
-|---------|---------|------|---------|------|
-| 问题1 | System no input files | 未配置源文件 | 添加system.xml | ✅ 已修复 |
-| 问题2 | DSS找不到头文件 | include路径配置 | 配置正确路径 | ✅ 已修复 |
-| 问题3 | system.xml缺失 | 文件未创建 | 创建system.xml | ✅ 已修复 |
-| 问题4 | big endian not supported | 字节序配置错误 | 改为little endian | ✅ 已修复 |
-| 问题5 | include路径丢失 | 编译选项未生效 | 重新配置 | ✅ 已修复 |
-| 问题6 | SDK_INSTALL_DIR无法解析 | 变量未定义 | 手动配置路径 | ✅ 已修复 |
-| 问题7 | 找不到本地头文件 | 相对路径错误 | 修正include路径 | ✅ 已修复 |
-| 问题8 | 类型未定义 | 缺少类型定义 | 添加SubFrame_Cfg_t等 | ✅ 已修复 |
-| 问题9 | include路径风格不一致 | 路径格式混乱 | 统一为common/xxx.h | ✅ 已修复 |
-| 问题10 | PointCloud_Point_t字段缺失 | 结构体不完整 | 添加球坐标和SNR | ✅ 已修复 |
-| 问题11 | 枚举初始化错误 | 语法不符合C99 | 移除= {0} | ✅ 已修复 |
-| 问题12 | UART API不兼容 | 4参数→2参数 | 使用UART_Transaction | ✅ 已修复 |
-| 问题13 | MMWave API不兼容 | 旧版API→L-SDK 6.x | 完全重写MMWave调用 | ✅ 已修复 |
-| 问题14 | strtok_r不支持 | 函数未声明 | 改用strtok | ✅ 已修复 |
-| 问题15 | DSS post-build失败 | 缺少memory_hex.cmd | 复制文件 | ✅ 已修复 |
-| 问题16 | System post-build失败 | MSS未编译 | 按顺序编译 | ⏳ 待验证 |
-| 问题17 | Config文件名大小写 | 文件名不一致 | Windows兼容 | ✅ 已确认 |
-| 问题18 | API结构体字段不匹配 | 字段名称错误 | 修正字段映射 | ✅ 已修复 |
-| 问题19 | MSS API字段不匹配 | CCS workspace文件旧版本 | 在CCS中手动修复 | ✅ 已修复 |
-| 问题20 | DSS post-build失败回归 | memory_hex.cmd缺失 | 复制到workspace | ✅ 已修复 |
-| 问题21 | System .rig文件缺失 | MSS/DSS未生成 | 按顺序编译 | ✅ 已验证 |
-| 问题22 | CCS工作区缺少构建配置文件 | 导入项目未含配置文件 | 复制memory_hex.cmd和metaimage配置 | ⚠️ 临时方案 |
-| 问题23 | metaimage配置文件大小写不匹配 | Release vs release | 重命名为大写PROFILE | ⚠️ 不完整 |
-| 问题24 | .projectspec缺少构建配置文件引用 | 未在.projectspec声明 | 添加file引用并设置action="copy" | ✅ 已修复 |
-| 问题25 | System .projectspec metaimage大小写 | release vs Release | 修改.projectspec使用大写 | ✅ 已修复 |
-| 问题26 | System metaimage未复制到config目录 | CCS扁平化路径 | 添加targetDirectory="config" | ✅ 已修复 |
-| 问题27 | DSS未编译导致System找不到.rig | 项目导入方式错误 | 必须只从System导入，不能分别导入 | ✅ 已验证 |
-| 问题28 | metaImage_creator KeyError | 配置文件缺少字段 | 添加signedCertificateFile等必要字段 | ✅ 已修复 |
-| 问题29 | metaImage_creator找不到.rig | 路径占位符错误 | 恢复使用PLACEHOLDER_PATH占位符 | ✅ 已修复 |
+| 问题编号 | 错误类型                            | 原因                    | 解决方案                            | 状态          |
+| -------- | ----------------------------------- | ----------------------- | ----------------------------------- | ------------- |
+| 问题1    | System no input files               | 未配置源文件            | 添加system.xml                      | ✅ 已修复     |
+| 问题2    | DSS找不到头文件                     | include路径配置         | 配置正确路径                        | ✅ 已修复     |
+| 问题3    | system.xml缺失                      | 文件未创建              | 创建system.xml                      | ✅ 已修复     |
+| 问题4    | big endian not supported            | 字节序配置错误          | 改为little endian                   | ✅ 已修复     |
+| 问题5    | include路径丢失                     | 编译选项未生效          | 重新配置                            | ✅ 已修复     |
+| 问题6    | SDK_INSTALL_DIR无法解析             | 变量未定义              | 手动配置路径                        | ✅ 已修复     |
+| 问题7    | 找不到本地头文件                    | 相对路径错误            | 修正include路径                     | ✅ 已修复     |
+| 问题8    | 类型未定义                          | 缺少类型定义            | 添加SubFrame_Cfg_t等                | ✅ 已修复     |
+| 问题9    | include路径风格不一致               | 路径格式混乱            | 统一为common/xxx.h                  | ✅ 已修复     |
+| 问题10   | PointCloud_Point_t字段缺失          | 结构体不完整            | 添加球坐标和SNR                     | ✅ 已修复     |
+| 问题11   | 枚举初始化错误                      | 语法不符合C99           | 移除= {0}                           | ✅ 已修复     |
+| 问题12   | UART API不兼容                      | 4参数→2参数            | 使用UART_Transaction                | ✅ 已修复     |
+| 问题13   | MMWave API不兼容                    | 旧版API→L-SDK 6.x      | 完全重写MMWave调用                  | ✅ 已修复     |
+| 问题14   | strtok_r不支持                      | 函数未声明              | 改用strtok                          | ✅ 已修复     |
+| 问题15   | DSS post-build失败                  | 缺少memory_hex.cmd      | 复制文件                            | ✅ 已修复     |
+| 问题16   | System post-build失败               | MSS未编译               | 按顺序编译                          | ⏳ 待验证     |
+| 问题17   | Config文件名大小写                  | 文件名不一致            | Windows兼容                         | ✅ 已确认     |
+| 问题18   | API结构体字段不匹配                 | 字段名称错误            | 修正字段映射                        | ✅ 已修复     |
+| 问题19   | MSS API字段不匹配                   | CCS workspace文件旧版本 | 在CCS中手动修复                     | ✅ 已修复     |
+| 问题20   | DSS post-build失败回归              | memory_hex.cmd缺失      | 复制到workspace                     | ✅ 已修复     |
+| 问题21   | System .rig文件缺失                 | MSS/DSS未生成           | 按顺序编译                          | ✅ 已验证     |
+| 问题22   | CCS工作区缺少构建配置文件           | 导入项目未含配置文件    | 复制memory_hex.cmd和metaimage配置   | ⚠️ 临时方案 |
+| 问题23   | metaimage配置文件大小写不匹配       | Release vs release      | 重命名为大写PROFILE                 | ⚠️ 不完整   |
+| 问题24   | .projectspec缺少构建配置文件引用    | 未在.projectspec声明    | 添加file引用并设置action="copy"     | ✅ 已修复     |
+| 问题25   | System .projectspec metaimage大小写 | release vs Release      | 修改.projectspec使用大写            | ✅ 已修复     |
+| 问题26   | System metaimage未复制到config目录  | CCS扁平化路径           | 添加targetDirectory="config"        | ✅ 已修复     |
+| 问题27   | DSS未编译导致System找不到.rig       | 项目导入方式错误        | 必须只从System导入，不能分别导入    | ✅ 已验证     |
+| 问题28   | metaImage_creator KeyError          | 配置文件缺少字段        | 添加signedCertificateFile等必要字段 | ✅ 已修复     |
+| 问题29   | metaImage_creator找不到.rig         | 路径占位符错误          | 恢复使用PLACEHOLDER_PATH占位符      | ✅ 已修复     |
 
 ---
 
@@ -2025,34 +2088,34 @@ Previous file was not available
 
 ### 📊 统计信息
 
-| 项目               | 数量         |
-| ------------------ | ------------ |
-| 创建的源文件 (.c)  | 9            |
-| 创建的头文件 (.h)  | 10           |
-| 创建的配置文件     | 6            |
-| 创建的文档         | 6            |
-| **总文件数** | **31** |
+| 项目                     | 数量         |
+| ------------------------ | ------------ |
+| 创建的源文件 (.c)        | 9            |
+| 创建的头文件 (.h)        | 10           |
+| 创建的配置文件           | 6            |
+| 创建的文档               | 6            |
+| **总文件数**       | **31** |
 | **修复的编译问题** | **29** |
-| **待处理问题** | **0** |
+| **待处理问题**     | **0**  |
 
 ### ✅ 完成状态
 
-| 阶段                  | 状态      | 说明                           |
-| --------------------- | --------- | ------------------------------ |
-| 需求文档v2            | ✅ 完成   | 保留三层架构，添加FreeRTOS规范 |
-| Common层              | ✅ 完成   | 4个头文件 + 类型定义补充       |
-| MSS层                 | ✅ 完成   | 6对.c/.h文件                   |
-| DSS层                 | ✅ 完成   | 3对.c/.h文件                   |
-| System层              | ✅ 完成   | 链接脚本+配置                  |
-| CCS项目配置           | ✅ 完成   | 3个projectspec                 |
-| README文档            | ✅ 完成   | 各层+主README                  |
-| **类型定义修复** | ✅ 完成   | 添加 `SubFrame_Cfg_t`、`PointCloud_Point_t` (2026-01-08) |
-| **Include路径修复** | ✅ 完成 | 统一使用 `"common/xxx.h"` 格式 (2026-01-08) |
-| **PointCloud_Point_t完善** | ✅ 完成 | 添加球坐标和SNR字段 (2026-01-08) |
-| **枚举初始化修复** | ✅ 完成 | 移除 `= {0}` 和不可达代码 (2026-01-08) |
-| **L-SDK 6.x API修复** | ✅ 完成 | UART/MMWave API全部修正 (2026-01-08) |
-| **MSS API字段修复** | ✅ 完成 | 修正9个结构体字段映射 (2026-01-09) |
-| **CCS编译验证** | ✅ 通过 | 🎉 2026-01-09 全部编译成功，生成.appimage |
+| 阶段                             | 状态    | 说明                                                         |
+| -------------------------------- | ------- | ------------------------------------------------------------ |
+| 需求文档v2                       | ✅ 完成 | 保留三层架构，添加FreeRTOS规范                               |
+| Common层                         | ✅ 完成 | 4个头文件 + 类型定义补充                                     |
+| MSS层                            | ✅ 完成 | 6对.c/.h文件                                                 |
+| DSS层                            | ✅ 完成 | 3对.c/.h文件                                                 |
+| System层                         | ✅ 完成 | 链接脚本+配置                                                |
+| CCS项目配置                      | ✅ 完成 | 3个projectspec                                               |
+| README文档                       | ✅ 完成 | 各层+主README                                                |
+| **类型定义修复**           | ✅ 完成 | 添加 `SubFrame_Cfg_t`、`PointCloud_Point_t` (2026-01-08) |
+| **Include路径修复**        | ✅ 完成 | 统一使用 `"common/xxx.h"` 格式 (2026-01-08)                |
+| **PointCloud_Point_t完善** | ✅ 完成 | 添加球坐标和SNR字段 (2026-01-08)                             |
+| **枚举初始化修复**         | ✅ 完成 | 移除 `= {0}` 和不可达代码 (2026-01-08)                     |
+| **L-SDK 6.x API修复**      | ✅ 完成 | UART/MMWave API全部修正 (2026-01-08)                         |
+| **MSS API字段修复**        | ✅ 完成 | 修正9个结构体字段映射 (2026-01-09)                           |
+| **CCS编译验证**            | ✅ 通过 | 🎉 2026-01-09 全部编译成功，生成.appimage                    |
 
 ### 📊 雷达功能对比验证
 
@@ -2079,7 +2142,7 @@ Previous file was not available
 
 **对比结论**：
 
-| 对比项               | mmw_demo_SDK_reference | AWRL6844_HealthDetect         | 验证结果              |
+| 对比项               | mmw_demo_SDK_reference | AWRL6844_HealthDetect         | 验证结果                |
 | -------------------- | ---------------------- | ----------------------------- | ----------------------- |
 | **雷达初始化** | ✅ MMWave_init/open    | ✅ RadarControl_init/open     | 🟢 功能相同，封装不同   |
 | **雷达配置**   | ✅ MMWave_config       | ✅ RadarControl_config        | 🟢 功能相同，封装不同   |
@@ -2089,17 +2152,16 @@ Previous file was not available
 | **API调用**    | ✅ 直接调用mmWave API  | ✅ 通过radar_control封装      | 🟡 间接调用，多一层封装 |
 | **代码结构**   | ❌ 单体架构            | ✅ 三层架构                   | 🔴 结构不同（预期）     |
 
-**✅ 验证通过**: 
+**✅ 验证通过**:
+
 - 🟢 **功能层面完全相同** - 都实现了雷达初始化、配置、启动、停止、帧处理
 - 🟢 **API层面完全相同** - 都使用TI mmWave L-SDK的API
-- 🟡 **调用方式不同** - HealthDetect通过`radar_control`模块封装（更清晰）
+- 🟡 **调用方式不同** - HealthDetect通过 `radar_control`模块封装（更清晰）
 - 🔴 **架构完全不同** - HealthDetect是三层架构（这是预期的改进）
 
 ---
 
-## 🎯 下一步操作指南
-
-### 🔴🔴🔴 问题27解决方案：正确的项目导入方式（最高优先级）
+### 🔴 问题27解决方案：正确的项目导入方式（最高优先级）
 
 **请用户在CCS中执行以下步骤**:
 
@@ -2157,29 +2219,32 @@ Step 3: System post-build → 生成 .appimage
 ### 5. 🎉 编译成功记录 (2026-01-09)
 
 **编译结果**:
+
 ```
 !!!!!!!!!!!!! Meta Image generated successfully !!!!!!!!!!!!!!!!!
 Boot multi-core image: .../health_detect_6844_system.Release.appimage Done !!!
 ```
 
 **生成的固件文件**:
-| 文件 | 大小 | 说明 |
-|-----|------|------|
-| `health_detect_6844_mss_img.Release.rig` | 196,832 bytes | MSS (R5F) 核心镜像 |
-| `health_detect_6844_dss_img.Release.rig` | 230,656 bytes | DSS (C66x) 核心镜像 |
-| `health_detect_6844_system.Release.appimage` | - | 合并的可烧录固件 |
 
-**下一步**: 使用 **SDK Visualizer** 或 **arprog_cmdline_6844** 将`.appimage`烧录到AWRL6844开发板进行功能验证
+| 文件                                           | 大小          | 说明                |
+| ---------------------------------------------- | ------------- | ------------------- |
+| `health_detect_6844_mss_img.Release.rig`     | 196,832 bytes | MSS (R5F) 核心镜像  |
+| `health_detect_6844_dss_img.Release.rig`     | 230,656 bytes | DSS (C66x) 核心镜像 |
+| `health_detect_6844_system.Release.appimage` | -             | 合并的可烧录固件    |
+
+**下一步**: 使用 **SDK Visualizer** 或 **arprog_cmdline_6844** 将 `.appimage`烧录到AWRL6844开发板进行功能验证
 
 > ⚠️ **注意**：不要使用UniFlash，AWRL6844兼容性差（详见[Part16-AWRL6844固件正确烧录方式完整指南](../06-SDK固件研究/Part16-AWRL6844固件正确烧录方式完整指南.md)）
 
 ### 6. 🎉 烧录成功记录 (2026-01-09)
 
-**烧录完成**：用户已成功将`.appimage`固件烧录到AWRL6844-EVM开发板
+**烧录完成**：用户已成功将 `.appimage`固件烧录到AWRL6844-EVM开发板
 
 ### 7. 📡 配置文件创建 (2026-01-09)
 
 **配置文件位置**：
+
 ```
 project-code/AWRL6844_HealthDetect/profiles/
 ├── health_detect_simple.cfg  ← ✅ 推荐：适配HealthDetect固件CLI
@@ -2188,21 +2253,24 @@ project-code/AWRL6844_HealthDetect/profiles/
 ```
 
 **配置文件关键参数**：
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| 模式 | 4T4R TDM | 4发4收 |
-| 帧率 | 10Hz (100ms) | 适合呼吸/心跳检测 |
-| 距离范围 | 0.3m ~ 5.0m | 室内场景 |
 
-### 8. 🔴 问题28：配置文件格式不兼容 (2026-01-09)
+| 参数     | 值           | 说明              |
+| -------- | ------------ | ----------------- |
+| 模式     | 4T4R TDM     | 4发4收            |
+| 帧率     | 10Hz (100ms) | 适合呼吸/心跳检测 |
+| 距离范围 | 0.3m ~ 5.0m  | 室内场景          |
+
+### 8. 🔴 问题30：配置文件格式不兼容 (2026-01-09)
 
 **问题现象**：
+
 ```
 使用SDK Visualizer发送配置文件时报错：
 "Error in Setting up device - Please try again"
 ```
 
 **根本原因**：
+
 ```
 ❌ HealthDetect固件使用自定义CLI命令格式
 ❌ 与标准mmw_demo配置文件格式不兼容
@@ -2210,6 +2278,7 @@ project-code/AWRL6844_HealthDetect/profiles/
 ```
 
 **HealthDetect固件支持的命令**：
+
 ```
 ✅ sensorStart / sensorStop
 ✅ profileCfg (11-14个参数)
@@ -2222,6 +2291,7 @@ project-code/AWRL6844_HealthDetect/profiles/
 ```
 
 **mmw_demo专用命令（HealthDetect不支持）**：
+
 ```
 ❌ apllFreqShiftEn
 ❌ chirpComnCfg / chirpTimingCfg
@@ -2235,6 +2305,7 @@ project-code/AWRL6844_HealthDetect/profiles/
 ```
 
 **解决方案**：
+
 ```
 1. 使用 health_detect_simple.cfg（适配HealthDetect固件CLI）
 2. 不能使用 SDK Visualizer 的"Load Config"功能
@@ -2242,6 +2313,7 @@ project-code/AWRL6844_HealthDetect/profiles/
 ```
 
 **正确操作步骤**：
+
 ```
 1. 打开串口终端（PuTTY/Tera Term）
 2. 连接CLI端口（如COM3），波特率115200
@@ -2252,9 +2324,10 @@ project-code/AWRL6844_HealthDetect/profiles/
 7. 逐行发送 health_detect_simple.cfg 中的命令
 ```
 
-### 9. 🔴 问题29：UART驱动未初始化 (2026-01-09)
+### 9. 🔴 问题31：UART驱动未初始化 (2026-01-09)
 
 **问题现象**：
+
 ```
 SDK Visualizer报错：
 "Error in Setting up device - Please try again"
@@ -2263,6 +2336,7 @@ SDK Visualizer报错：
 ```
 
 **根本原因**：
+
 ```
 ❌ health_detect_main.c 中缺少 Drivers_open() 调用
 ❌ gHealthDetectMCB.uartHandle 从未被初始化
@@ -2270,6 +2344,7 @@ SDK Visualizer报错：
 ```
 
 **代码对比**：
+
 ```c
 // ❌ HealthDetect (问题代码)
 int32_t HealthDetect_init(void)
@@ -2288,8 +2363,9 @@ void demo_in_cabin_sensing_6844_mss(void* args)
 ```
 
 **修复方案**：
+
 ```c
-// 在 HealthDetect_init() 开头添加：
+// 在 HealthDetect_init() 开头添加（问题31修复）：
 Drivers_open();
 Board_driversOpen();
 gHealthDetectMCB.uartHandle = gUartHandle[0];
@@ -2297,9 +2373,11 @@ gHealthDetectMCB.uartLogHandle = gUartHandle[1];
 ```
 
 **修改的文件**：
+
 - `project-code/AWRL6844_HealthDetect/src/mss/source/health_detect_main.c`
 
 **🔴 需要用户操作**：
+
 ```
 1. 在CCS中删除workspace中的项目
 2. 重新从 project-code/AWRL6844_HealthDetect 导入
@@ -2309,7 +2387,7 @@ gHealthDetectMCB.uartLogHandle = gUartHandle[1];
 
 ### 10. ⏳ 待验证功能 (2026-01-09)
 
-- [ ] 重新编译固件（包含问题29修复）
+- [ ] 重新编译固件（包含问题31修复）
 - [ ] 重新烧录.appimage
 - [ ] 验证串口通信正常
 - [ ] 发送配置命令
@@ -2317,9 +2395,9 @@ gHealthDetectMCB.uartLogHandle = gUartHandle[1];
 
 ---
 
-> 📌 **最后更新**: 2026-01-09  
-> ✅ 已修复29个编译问题  
-> 🎉 **编译成功** - 成功生成可烧录的.appimage固件  
-> 🎉 **烧录成功** - 固件已烧录到AWRL6844-EVM  
-> 🔴 **问题28** - CLI命令格式不兼容，需使用health_detect_simple.cfg  
-> 🔴 **问题29** - UART驱动未初始化，需重新编译烧录
+> 📌 **最后更新**: 2026-01-09
+> ✅ 已修复29个编译问题
+> 🎉 **编译成功** - 成功生成可烧录的.appimage固件
+> 🎉 **烧录成功** - 固件已烧录到AWRL6844-EVM
+> 🔴 **问题30** - CLI命令格式不兼容，需使用health_detect_simple.cfg
+> 🔴 **问题31** - UART驱动未初始化，需重新编译烧录
