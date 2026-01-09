@@ -1384,7 +1384,9 @@ typedef struct MMWave_ProfileTimeCfg_t {
 | 问题9 | include路径风格不一致 | 路径格式混乱 | 统一为common/xxx.h | ✅ 已修复 |
 | 问题10 | PointCloud_Point_t字段缺失 | 结构体不完整 | 添加球坐标和SNR | ✅ 已修复 |
 | 问题11 | 枚举初始化错误 | 语法不符合C99 | 移除= {0} | ✅ 已修复 |
-| 问题12-14 | L-SDK 6.x API不兼容 | API完全不同 | 重写UART/MMWave代码 | ✅ 已修复 |
+| 问题12 | UART API不兼容 | 4参数→2参数 | 使用UART_Transaction | ✅ 已修复 |
+| 问题13 | MMWave API不兼容 | 旧版API→L-SDK 6.x | 完全重写MMWave调用 | ✅ 已修复 |
+| 问题14 | strtok_r不支持 | 函数未声明 | 改用strtok | ✅ 已修复 |
 | 问题15 | DSS post-build失败 | 缺少memory_hex.cmd | 复制文件 | ✅ 已修复 |
 | 问题16 | System post-build失败 | MSS未编译 | 按顺序编译 | ⏳ 待验证 |
 | 问题17 | Config文件名大小写 | 文件名不一致 | Windows兼容 | ✅ 已确认 |
