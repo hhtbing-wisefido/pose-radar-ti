@@ -130,6 +130,16 @@ typedef struct HealthDetect_CliCfg_t
     uint8_t                 rxChannelEn;        /**< RX channel enable mask */
     uint8_t                 txChannelEn;        /**< TX channel enable mask */
 
+    /* Antenna Configuration */
+    uint8_t                 numTxAntennas;      /**< Number of TX antennas */
+    uint8_t                 numRxAntennas;      /**< Number of RX antennas */
+
+    /* Sensor Start Configuration (L-SDK standard) */
+    uint8_t                 frameTrigMode;      /**< Frame trigger mode */
+    uint8_t                 chirpStartSigLbEn;  /**< Chirp start signal loopback enable */
+    uint8_t                 frameLivMonEn;      /**< Frame live monitor enable */
+    uint32_t                frameTrigTimerVal;  /**< Frame trigger timer value */
+
     /* GUI Monitor Configuration (L-SDK standard) */
     GuiMonitor_t            guiMonitor;         /**< GUI monitor selection */
 

@@ -41,6 +41,10 @@
 /** @brief CLI output buffer size */
 #define CLI_OUTPUT_BUF_SIZE         (512U)
 
+/** @brief APLL frequency definitions */
+#define APLL_FREQ_396MHZ            (396U)
+#define APLL_FREQ_400MHZ            (400U)
+
 /**************************************************************************
  *************************** Local Variables ******************************
  **************************************************************************/
@@ -53,6 +57,24 @@ static char gCliOutputBuf[CLI_OUTPUT_BUF_SIZE];
 
 /** @brief CLI initialized flag */
 static uint8_t gCliInitialized = 0;
+
+/**
+ * @brief Antenna geometry defined flag
+ * A value of 1000b (8) indicates its fully defined
+ * Initial value is 1, after antGeometryBoard command it becomes 8
+ */
+static uint8_t GIsAntGeoDef = 1;
+
+/**
+ * @brief Range bias and phase compensation defined flag
+ * 0: Not defined, 1: Fully defined
+ */
+static uint8_t GIsRangePhaseCompDef = 0;
+
+/**
+ * @brief APLL frequency shift enable flag
+ */
+static uint8_t gApllFreqShiftEnable = 0;
 
 /**************************************************************************
  *************************** Local Functions ******************************
@@ -82,21 +104,37 @@ static int32_t CLI_parseArgs(char *cmdLine, char *argv[])
 
 /**
  * @brief Process sensorStart command
+ * L-SDK format: sensorStart <frameTrigMode> <chirpStartSigLbEn> <frameLivMonEn> <frameTrigTimerVal>
  */
 static int32_t CLI_cmdSensorStart(int32_t argc, char *argv[])
 {
     int32_t status;
 
-    CLI_write("Starting sensor...\r\n");
+    /* Sanity Check: Minimum argument check - L-SDK requires 5 args */
+    if (argc != 5)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    /* Check if antenna geometry is fully defined */
+    if (((GIsAntGeoDef >> 3) != 1) || (GIsRangePhaseCompDef != 1))
+    {
+        CLI_write("Error: Antenna geometry is not fully defined\n");
+        return -1;
+    }
+
+    /* Store start configuration parameters */
+    gHealthDetectMCB.cliCfg.frameTrigMode = (uint8_t)atoi(argv[1]);
+    gHealthDetectMCB.cliCfg.chirpStartSigLbEn = (uint8_t)atoi(argv[2]);
+    gHealthDetectMCB.cliCfg.frameLivMonEn = (uint8_t)atoi(argv[3]);
+    gHealthDetectMCB.cliCfg.frameTrigTimerVal = (uint32_t)atoi(argv[4]);
 
     status = HealthDetect_sensorStart();
-    if (status == 0)
-    {
-        CLI_write("Sensor started successfully\r\n");
-    }
-    else
+    if (status != 0)
     {
         CLI_write("Error: Failed to start sensor [%d]\r\n", status);
+        return status;
     }
 
     return status;
@@ -104,24 +142,31 @@ static int32_t CLI_cmdSensorStart(int32_t argc, char *argv[])
 
 /**
  * @brief Process sensorStop command
+ * L-SDK format: sensorStop <frameStopMode>
  */
 static int32_t CLI_cmdSensorStop(int32_t argc, char *argv[])
 {
     int32_t status;
 
-    CLI_write("Stopping sensor...\r\n");
+    /* Sanity Check: Minimum argument check - L-SDK requires 2 args */
+    if (argc != 2)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    /* Reset antenna geometry flags to allow new configuration */
+    GIsAntGeoDef = 1;
+    GIsRangePhaseCompDef = 0;
 
     status = HealthDetect_sensorStop();
-    if (status == 0)
-    {
-        CLI_write("Sensor stopped successfully\r\n");
-    }
-    else
+    if (status != 0)
     {
         CLI_write("Error: Failed to stop sensor [%d]\r\n", status);
+        return status;
     }
 
-    return status;
+    return 0;
 }
 
 /**
@@ -298,7 +343,7 @@ static int32_t CLI_cmdPresenceCfg(int32_t argc, char *argv[])
  */
 static int32_t CLI_cmdChannelCfg(int32_t argc, char *argv[])
 {
-    if (argc < 3)
+    if (argc != 4)
     {
         CLI_write("Error: Invalid usage of the CLI command\n");
         return -1;
@@ -519,82 +564,171 @@ static int32_t CLI_cmdClutterRemoval(int32_t argc, char *argv[])
 
 /**
  * @brief Process factoryCalibCfg command (L-SDK standard)
+ * L-SDK format: factoryCalibCfg <calibEnable> <txBackoffSel> <txBackoffdB> <txBackoffTempGrad> <flashOffset>
  */
 static int32_t CLI_cmdFactoryCalibCfg(int32_t argc, char *argv[])
 {
-    /* Factory calibration - pass through */
+    if (argc != 6)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* Factory calibration - store but don't process yet */
     return 0;
 }
 
 /**
  * @brief Process runtimeCalibCfg command (L-SDK standard)
+ * L-SDK format: runtimeCalibCfg <calMonTimeUnit>
  */
 static int32_t CLI_cmdRuntimeCalibCfg(int32_t argc, char *argv[])
 {
-    /* Runtime calibration - pass through */
+    if (argc != 2)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* Runtime calibration - store but don't process yet */
     return 0;
 }
 
 /**
  * @brief Process antGeometryBoard command (L-SDK standard)
+ * L-SDK format: antGeometryBoard <boardType>
+ * This command sets GIsAntGeoDef and GIsRangePhaseCompDef flags required for sensorStart
  */
 static int32_t CLI_cmdAntGeometryBoard(int32_t argc, char *argv[])
 {
-    /* Antenna geometry - pass through */
+    /* Sanity Check: Minimum argument check */
+    if (argc != 2)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    /* Check if already defined */
+    if ((GIsAntGeoDef >> 3) == 1)
+    {
+        CLI_write("Error: Antenna geometry is already defined\n");
+        return -1;
+    }
+
+    if (GIsRangePhaseCompDef == 1)
+    {
+        CLI_write("Error: Range bias and phase compensation is already defined\n");
+        return -1;
+    }
+
+    /* Check for supported board types */
+    if (strcmp(argv[1], "xWRL6844EVM") == 0)
+    {
+        /* A value of 1000b (8) in GIsAntGeoDef indicates its fully defined */
+        GIsAntGeoDef = GIsAntGeoDef << 3;  /* 1 << 3 = 8 */
+        /* Range bias and phase compensation is fully defined */
+        GIsRangePhaseCompDef = 1;
+
+        /* Store antenna geometry for xWRL6844EVM (4TX, 4RX) */
+        gHealthDetectMCB.cliCfg.numTxAntennas = 4;
+        gHealthDetectMCB.cliCfg.numRxAntennas = 4;
+    }
+    else
+    {
+        CLI_write("Error: Unknown board type '%s'\n", argv[1]);
+        return -1;
+    }
+
     return 0;
 }
 
 /**
  * @brief Process adcDataSource command (L-SDK standard)
+ * L-SDK format: adcDataSource <sourceSelect> <fileName>
  */
 static int32_t CLI_cmdAdcDataSource(int32_t argc, char *argv[])
 {
-    /* ADC data source - pass through */
+    if (argc != 3)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* ADC data source - accept but don't process */
     return 0;
 }
 
 /**
  * @brief Process adcLogging command (L-SDK standard)
+ * L-SDK format: adcLogging <enable>
  */
 static int32_t CLI_cmdAdcLogging(int32_t argc, char *argv[])
 {
-    /* ADC logging - pass through */
+    if (argc != 2)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* ADC logging - accept but don't process */
     return 0;
 }
 
 /**
  * @brief Process lowPowerCfg command (L-SDK standard)
+ * L-SDK format: lowPowerCfg <enable>
  */
 static int32_t CLI_cmdLowPowerCfg(int32_t argc, char *argv[])
 {
-    /* Low power config - pass through */
+    if (argc != 2)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* Low power config - accept but don't process */
     return 0;
 }
 
 /**
  * @brief Process apllFreqShiftEn command (L-SDK standard)
+ * L-SDK format: apllFreqShiftEn <enable>
  */
 static int32_t CLI_cmdApllFreqShiftEn(int32_t argc, char *argv[])
 {
-    /* APLL freq shift - pass through */
+    if (argc != 2)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    gApllFreqShiftEnable = (uint8_t)atoi(argv[1]);
+
     return 0;
 }
 
 /**
  * @brief Process adcDataDitherCfg command (L-SDK standard)
+ * L-SDK format: adcDataDitherCfg <enable>
  */
 static int32_t CLI_cmdAdcDataDitherCfg(int32_t argc, char *argv[])
 {
-    /* ADC dither - pass through */
+    if (argc != 2)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* ADC dither - accept but don't process */
     return 0;
 }
 
 /**
  * @brief Process gpAdcMeasConfig command (L-SDK standard)
+ * L-SDK format: gpAdcMeasConfig <enable> <numSamples>
  */
 static int32_t CLI_cmdGpAdcMeasConfig(int32_t argc, char *argv[])
 {
-    /* GP ADC config - pass through */
+    if (argc != 3)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* GP ADC config - accept but don't process */
     return 0;
 }
 
