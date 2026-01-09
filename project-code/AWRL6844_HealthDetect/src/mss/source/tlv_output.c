@@ -322,10 +322,14 @@ int32_t TLV_sendOutput(uint32_t frameNum,
     header->totalPacketLen = offset;
     header->numTLVs = numTLVs;
 
-    /* Send via UART */
+    /* Send via UART using L-SDK 6.x UART_Transaction pattern */
     if (gTlvUartHandle != NULL && offset > 0)
     {
-        UART_write(gTlvUartHandle, gTlvOutputBuf, offset, NULL);
+        UART_Transaction trans;
+        UART_Transaction_init(&trans);
+        trans.buf = gTlvOutputBuf;
+        trans.count = offset;
+        UART_write(gTlvUartHandle, &trans);
     }
 
     return 0;

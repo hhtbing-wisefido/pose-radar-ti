@@ -68,13 +68,13 @@ static int32_t CLI_parseArgs(char *cmdLine, char *argv[])
 {
     int32_t argc = 0;
     char *token;
-    char *saveptr;
 
-    token = strtok_r(cmdLine, " \t\r\n", &saveptr);
+    /* Use strtok (thread-safe not required as CLI runs in single thread) */
+    token = strtok(cmdLine, " \t\r\n");
     while (token != NULL && argc < CLI_MAX_ARGS)
     {
         argv[argc++] = token;
-        token = strtok_r(NULL, " \t\r\n", &saveptr);
+        token = strtok(NULL, " \t\r\n");
     }
 
     return argc;
@@ -422,13 +422,17 @@ static int32_t CLI_readLine(char *buffer, uint32_t maxLen)
 {
     uint32_t idx = 0;
     char ch;
+    UART_Transaction trans;
 
     while (idx < maxLen - 1)
     {
-        /* Read one character */
+        /* Read one character using L-SDK 6.x UART_Transaction pattern */
         if (gHealthDetectMCB.uartHandle != NULL)
         {
-            UART_read(gHealthDetectMCB.uartHandle, &ch, 1, NULL);
+            UART_Transaction_init(&trans);
+            trans.buf = &ch;
+            trans.count = 1;
+            UART_read(gHealthDetectMCB.uartHandle, &trans);
         }
         else
         {
@@ -474,6 +478,7 @@ int32_t CLI_write(const char *format, ...)
 {
     va_list args;
     int32_t len;
+    UART_Transaction trans;
 
     va_start(args, format);
     len = vsnprintf(gCliOutputBuf, CLI_OUTPUT_BUF_SIZE, format, args);
@@ -481,7 +486,10 @@ int32_t CLI_write(const char *format, ...)
 
     if (len > 0 && gHealthDetectMCB.uartHandle != NULL)
     {
-        UART_write(gHealthDetectMCB.uartHandle, gCliOutputBuf, len, NULL);
+        UART_Transaction_init(&trans);
+        trans.buf = gCliOutputBuf;
+        trans.count = len;
+        UART_write(gHealthDetectMCB.uartHandle, &trans);
     }
 
     /* Also output to debug console */

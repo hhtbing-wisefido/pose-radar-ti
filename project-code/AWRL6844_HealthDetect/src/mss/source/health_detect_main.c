@@ -61,6 +61,7 @@
 #include <source/presence_detect.h>
 #include <source/tlv_output.h>
 #include <source/radar_control.h>
+#include <common/shared_memory.h>
 
 /**************************************************************************
  *************************** Global Definitions ***************************

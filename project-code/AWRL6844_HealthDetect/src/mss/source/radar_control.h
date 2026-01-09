@@ -71,6 +71,30 @@ int32_t RadarControl_stop(void);
  */
 MMWave_Handle RadarControl_getHandle(void);
 
+/**
+ * @brief Get mmWave configuration pointer
+ * @return Pointer to MMWave_Cfg structure
+ */
+MMWave_Cfg* RadarControl_getCfg(void);
+
+/**
+ * @brief Check if radar is initialized
+ * @return 1 if initialized, 0 otherwise
+ */
+uint8_t RadarControl_isInitialized(void);
+
+/**
+ * @brief Check if radar is opened
+ * @return 1 if opened, 0 otherwise
+ */
+uint8_t RadarControl_isOpened(void);
+
+/**
+ * @brief Check if radar is configured
+ * @return 1 if configured, 0 otherwise
+ */
+uint8_t RadarControl_isConfigured(void);
+
 #ifdef __cplusplus
 }
 #endif
