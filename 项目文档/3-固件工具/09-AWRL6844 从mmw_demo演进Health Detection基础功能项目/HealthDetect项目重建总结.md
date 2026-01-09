@@ -2161,11 +2161,13 @@ Previous file was not available
 
 ---
 
-### 🔴 问题27解决方案：正确的项目导入方式（最高优先级）
+## 🎯 下一步操作指南
+
+### 问题27解决方案：正确的项目导入方式（最高优先级）
 
 **请用户在CCS中执行以下步骤**:
 
-### 1. 删除当前workspace中的所有项目
+#### 1. 删除当前workspace中的所有项目
 
 ```
 在CCS中：
@@ -2174,7 +2176,7 @@ Previous file was not available
 - 右键 health_detect_6844_system → Delete（勾选"Delete project contents on disk"）
 ```
 
-### 2. 🔴 只从System项目导入（关键步骤）
+#### 2. 🔴 只从System项目导入（关键步骤）
 
 ```
 File → Import → CCS Projects
@@ -2194,7 +2196,7 @@ CCS会自动：
 - health_detect_6844_system
 ```
 
-### 3. 只编译System项目（自动编译依赖）
+#### 3. 只编译System项目（自动编译依赖）
 
 ```
 右键 health_detect_6844_system → Build Project
@@ -2207,7 +2209,7 @@ Step 3: System post-build → 生成 .appimage
 🔴 不需要手动编译MSS和DSS！CCS会自动处理！
 ```
 
-### 4. 验证输出
+#### 4. 验证输出
 
 ```
 检查以下文件是否生成:
@@ -2216,7 +2218,11 @@ Step 3: System post-build → 生成 .appimage
 - health_detect_6844_system/Release/health_detect_6844_system.Release.appimage ✅
 ```
 
-### 5. 🎉 编译成功记录 (2026-01-09)
+---
+
+## 🚀 固件验证与测试
+
+### 编译成功记录 (2026-01-09)
 
 **编译结果**:
 
@@ -2237,11 +2243,11 @@ Boot multi-core image: .../health_detect_6844_system.Release.appimage Done !!!
 
 > ⚠️ **注意**：不要使用UniFlash，AWRL6844兼容性差（详见[Part16-AWRL6844固件正确烧录方式完整指南](../06-SDK固件研究/Part16-AWRL6844固件正确烧录方式完整指南.md)）
 
-### 6. 🎉 烧录成功记录 (2026-01-09)
+### 烧录成功记录 (2026-01-09)
 
 **烧录完成**：用户已成功将 `.appimage`固件烧录到AWRL6844-EVM开发板
 
-### 7. 📡 配置文件创建 (2026-01-09)
+### 配置文件创建 (2026-01-09)
 
 **配置文件位置**：
 
@@ -2260,7 +2266,11 @@ project-code/AWRL6844_HealthDetect/profiles/
 | 帧率     | 10Hz (100ms) | 适合呼吸/心跳检测 |
 | 距离范围 | 0.3m ~ 5.0m  | 室内场景          |
 
-### 8. 🔴 问题30：配置文件格式不兼容 (2026-01-09)
+---
+
+## 🐛 运行时问题
+
+### 问题30：配置文件格式不兼容 (2026-01-09)
 
 **问题现象**：
 
@@ -2324,7 +2334,7 @@ project-code/AWRL6844_HealthDetect/profiles/
 7. 逐行发送 health_detect_simple.cfg 中的命令
 ```
 
-### 9. 🔴 问题31：UART驱动未初始化 (2026-01-09)
+### 问题31：UART驱动未初始化 (2026-01-09)
 
 **问题现象**：
 
@@ -2385,7 +2395,9 @@ gHealthDetectMCB.uartLogHandle = gUartHandle[1];
 4. 重新烧录固件
 ```
 
-### 10. ⏳ 待验证功能 (2026-01-09)
+---
+
+## ⏳ 待验证功能 (2026-01-09)
 
 - [ ] 重新编译固件（包含问题31修复）
 - [ ] 重新烧录.appimage
