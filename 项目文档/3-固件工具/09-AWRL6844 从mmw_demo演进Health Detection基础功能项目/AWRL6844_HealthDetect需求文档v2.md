@@ -1,9 +1,40 @@
-# 📋 AWRL6844 Health Detection 项目需求文档 v2.4
+# 📋 AWRL6844 Health Detection 项目需求文档 v2.5
 
 **项目路径**: `D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect`
 **创建日期**: 2026-01-08
 **更新日期**: 2026-01-09
-**版本**: v2.4（添加CCS自动依赖编译机制）
+**版本**: v2.5（修复metaimage配置文件大小写问题）
+
+---
+
+## 🔴🔴🔴 最高优先级：构建配置文件要求（2026-01-09新增）
+
+### ⚠️ metaimage配置文件必须使用大写PROFILE
+
+**问题**: CCS传递的PROFILE参数是 `Release` (大写R)，但InCabin_Demos的文件名是 `metaimage_cfg.release.json` (小写r)，导致构建失败。
+
+**强制要求**:
+
+| 文件路径 | 必须使用的文件名 | ❌ 错误的文件名 |
+|---------|-----------------|----------------|
+| `src/mss/.../config/` | `metaimage_cfg.Release.json` | ~~metaimage_cfg.release.json~~ |
+| `src/mss/.../config/` | `metaimage_cfg.Debug.json` | ~~metaimage_cfg.debug.json~~ |
+| `src/system/config/` | `metaimage_cfg.Release.json` | ~~metaimage_cfg.release.json~~ |
+| `src/system/config/` | `metaimage_cfg.Debug.json` | ~~metaimage_cfg.debug.json~~ |
+
+**验证命令**:
+```powershell
+# 检查MSS配置文件
+Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config"
+# 必须显示: metaimage_cfg.Release.json (大写R)
+
+# 检查System配置文件
+Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\config"
+# 必须显示: metaimage_cfg.Release.json (大写R)
+```
+
+**为什么InCabin_Demos使用小写？**  
+InCabin_Demos的文件名也是小写，但他们可能使用了不同的构建方式或有额外的大小写转换逻辑。我们的项目直接使用makefile，必须严格匹配CCS的PROFILE大小写。
 
 ---
 

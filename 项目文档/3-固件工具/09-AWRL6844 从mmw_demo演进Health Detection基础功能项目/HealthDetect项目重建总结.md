@@ -1336,9 +1336,80 @@ Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\c
 
 ---
 
+### 问题23: metaimage配置文件大小写不匹配（2026-01-09）
+
+**错误信息**:
+```
+[91]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_mss/Release/../metaimage_cfg.Release.json': No such file or directory
+[103]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/../config/metaimage_cfg.Release.json': No such file or directory
+```
+
+**问题分析**:
+
+1. **根本原因**: 文件名大小写不匹配
+   - CCS传递的PROFILE参数: `Release` (大写R)
+   - 实际文件名: `metaimage_cfg.release.json` (小写r)
+   - makefile第75行: `META_IMG_CONFIG=$(CONFIG_PATH)/metaimage_cfg.$(PROFILE).json`
+   - 结果: 构建系统找不到 `metaimage_cfg.Release.json`
+
+2. **问题22的真正原因**: 
+   - 问题22只是复制了文件到workspace
+   - 但源项目的config目录本来就是空的
+   - 即使重新导入项目，问题依然存在
+
+**正确的解决方案**:
+
+⚠️ **关键认知**: 用户每次编译前都会删除workspace并重新导入项目，所以**必须修复项目源代码**，而不是workspace！
+
+**步骤1**: 从InCabin_Demos复制配置文件到项目源代码
+```powershell
+Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config\*" `
+          "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config\"
+```
+
+**步骤2**: 重命名文件匹配CCS的PROFILE大小写
+```powershell
+# MSS配置
+Rename-Item "...\config\metaimage_cfg.release.json" "metaimage_cfg.Release.json"
+Rename-Item "...\config\metaimage_cfg.debug.json" "metaimage_cfg.Debug.json"
+
+# System配置
+Rename-Item "...\system\config\metaimage_cfg.release.json" "metaimage_cfg.Release.json"
+Rename-Item "...\system\config\metaimage_cfg.debug.json" "metaimage_cfg.Debug.json"
+```
+
+**验证**:
+```powershell
+Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config"
+# 应显示: metaimage_cfg.Release.json, metaimage_cfg.Debug.json
+
+Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\config"
+# 应显示: metaimage_cfg.Release.json, metaimage_cfg.Debug.json
+```
+
+**为什么InCabin_Demos没有这个问题？**
+
+检查InCabin_Demos的文件名：
+```powershell
+Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config"
+# 显示: metaimage_cfg.release.json (小写)
+```
+
+**结论**: InCabin_Demos也有同样的问题！但可能他们的makefile处理了大小写转换，或者使用了不同的构建配置。
+
+**正确的工作流程**:
+1. ✅ 修复 `project-code\AWRL6844_HealthDetect` 中的源文件
+2. ✅ 文件名使用大写PROFILE（Release/Debug）
+3. ❌ 不再需要手动复制到workspace
+4. ✅ 每次导入项目时自动包含正确的文件
+
+**状态**: ✅ 已修复（2026-01-09） - 修复了项目源代码
+
+---
+
 ## 📊 编译问题汇总表
 
-> 💡 **说明**: 以下是所有22个编译问题的汇总表，便于快速查看问题类型和解决方案。
+> 💡 **说明**: 以下是所有23个编译问题的汇总表，便于快速查看问题类型和解决方案。
 
 | 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
 |---------|---------|------|---------|------|
@@ -1363,7 +1434,8 @@ Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\c
 | 问题19 | MSS API字段不匹配 | CCS workspace文件旧版本 | 在CCS中手动修复 | ✅ 已修复 |
 | 问题20 | DSS post-build失败回归 | memory_hex.cmd缺失 | 复制到workspace | ✅ 已修复 |
 | 问题21 | System .rig文件缺失 | MSS/DSS未生成 | 按顺序编译 | ⏳ 待验证 |
-| 问题22 | CCS工作区缺少构建配置文件 | 导入项目未含配置文件 | 复制memory_hex.cmd和metaimage配置 | ✅ 已修复 |
+| 问题22 | CCS工作区缺少构建配置文件 | 导入项目未含配置文件 | 复制memory_hex.cmd和metaimage配置 | ⚠️ 临时方案 |
+| 问题23 | metaimage配置文件大小写不匹配 | Release vs release | 重命名为大写PROFILE | ✅ 已修复 |
 
 ---
 
@@ -1380,7 +1452,7 @@ Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\c
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **22** |
+| **修复的编译问题** | **23** |
 | **待处理问题** | **1 (问题21)** |
 
 ### ✅ 完成状态
