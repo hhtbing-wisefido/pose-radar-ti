@@ -20,7 +20,7 @@
 
 ## 📂 文档结构
 
-本研究分为**12个部分**，由浅入深，循序渐进：
+本研究分为**14个部分**，由浅入深，循序渐进：
 
 ### Part 1: SDK基础概念与三目录详解 ⭐⭐⭐
 
@@ -150,17 +150,19 @@ A: 不烧录到Flash，每次启动通过串口发送
 
 ---
 
-### Part 13: InCabin与标准Demo数据格式对比 ⭐⭐⭐⭐⭐ 🆕
+### Part 14: TLV数据格式与工具兼容性完整指南 ⭐⭐⭐⭐⭐ 🆕
 
-**文件**: [InCabin与标准Demo数据格式对比.md](InCabin与标准Demo数据格式对比.md)
+**文件**: [Part14-TLV数据格式与工具兼容性完整指南.md](Part14-TLV数据格式与工具兼容性完整指南.md)
 
 **内容概要**：
-- 🔍 TLV (Type-Length-Value) 数据格式详解
-- 📊 标准mmWave Demo vs InCabin Demo TLV类型对比
+- 🔍 TLV (Type-Length-Value) 数据格式基础
+- 📊 标准mmWave Demo vs InCabin Demo TLV类型完整对比
 - 🎯 点云数据TLV ID差异分析（Type=1 vs Type=3001）
-- 💡 为什么InCabin使用独有数据格式
-- 🔧 SDK Visualizer vs InCabin GUI兼容性分析
+- 💡 为什么InCabin使用独有数据格式（AI输出、量化数据）
+- 🔧 SDK Visualizer vs InCabin GUI工具兼容性分析
 - 📚 完整数据流对比（三种组合场景）
+- 🛠️ 自定义固件TLV设计指南（Type ID范围规划）
+- 🔍 快速诊断指南（Points Detected = 0问题排查）
 
 **适合人群**：
 - ✅ 使用SDK Visualizer测试InCabin固件遇到问题
@@ -186,6 +188,11 @@ A: 不烧录到Flash，每次启动通过串口发送
 答案: InCabin GUI (occupancy_demo_gui.exe)
       专门设计用于InCabin固件
       识别Type=3001/3002/1041/1042
+
+问题: 自定义固件如何设计TLV？
+答案: 核心TLV使用标准格式(Type 1-12)
+      扩展TLV从1000开始
+      确保SDK Visualizer可用
 ```
 
 **关键发现**：
