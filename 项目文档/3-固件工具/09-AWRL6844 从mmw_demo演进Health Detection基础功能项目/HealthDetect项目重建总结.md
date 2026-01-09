@@ -1,8 +1,78 @@
 ﻿# 📋 AWRL6844 Health Detect 项目重建总结
 
 **日期**: 2026-01-08
-**最后更新**: 2026-01-09 (DSS memory_hex.cmd添加)
-**状态**: 代码框架创建完成，DSS缺失文件已修复，待重新编译验证
+**最后更新**: 2026-01-09 (修复metaimage配置文件大小写，问题23)
+**状态**: 代码框架创建完成，所有构建配置文件已修复，待重新导入项目验证
+
+---
+
+## 🚨🚨🚨 编译错误修复原则（最高优先级）
+
+### ❌ 绝对禁止的操作
+
+**禁止修改 CCS workspace 中的文件来修复编译错误！**
+
+```
+❌ 错误路径: C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss\xxx.c
+❌ 错误路径: C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss\xxx.c
+❌ 错误路径: C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\xxx.xml
+```
+
+**为什么禁止？**
+1. 用户每次编译前会**删除workspace中的项目**
+2. 然后从 `project-code\AWRL6844_HealthDetect` **重新导入**
+3. workspace中的修改会**完全丢失**
+4. 导致同样的错误**反复出现**
+
+### ✅ 正确的操作
+
+**必须修改项目源代码目录！**
+
+```
+✅ 正确路径: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\source\xxx.c
+✅ 正确路径: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\dss\source\xxx.c
+✅ 正确路径: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\xxx.xml
+✅ 正确路径: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\xwrL684x-evm\...\config\xxx.json
+```
+
+### 📋 标准修复流程
+
+```
+1. 发现编译错误
+    ↓
+2. 分析错误原因（查看错误日志）
+    ↓
+3. ❌ 不要打开workspace中的文件
+   ✅ 打开project-code中的对应文件
+    ↓
+4. 修改project-code中的源文件
+    ↓
+5. 更新两个文档：
+   - 本文档（HealthDetect项目重建总结.md）→ 记录问题编号和解决方案
+   - 需求文档（AWRL6844_HealthDetect需求文档v2.md）→ 更新配置要求
+    ↓
+6. 提交到Git
+    ↓
+7. CCS中删除旧项目
+    ↓
+8. 重新从project-code导入项目
+    ↓
+9. Clean + Build 验证
+```
+
+### 🔍 AI/开发者自检清单
+
+**在执行任何文件修改前，必须回答**：
+
+- [ ] 我要修改的文件路径包含 `workspace_ccstheia` 吗？
+- [ ] 如果包含 → **立即停止！** 找到 `project-code` 中的对应文件
+- [ ] 我是否已经在两个文档中记录了修复方案？
+- [ ] 修改后是否需要用户重新导入项目？
+
+**惨痛教训**：
+
+- 问题22：在workspace中复制文件 → ⚠️ 临时方案，治标不治本
+- 问题23：修复project-code中的配置 → ✅ 正确方案，永久解决
 
 ---
 

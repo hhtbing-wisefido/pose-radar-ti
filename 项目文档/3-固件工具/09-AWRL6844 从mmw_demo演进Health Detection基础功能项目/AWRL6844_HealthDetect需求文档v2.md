@@ -449,6 +449,50 @@ AWRL6844_HealthDetect/
 
 ## 🔧 编译打包说明（保持v1.0）
 
+---
+
+### 🚨🚨🚨 编译前必读：工作区管理原则（2026-01-09新增）
+
+**核心原则**：
+
+> ❌ **绝对禁止**修改 `C:\Users\Administrator\workspace_ccstheia\` 中的任何文件来修复编译错误！  
+> ✅ **必须修改**项目源代码 `project-code\AWRL6844_HealthDetect\`！
+
+**原因**：
+
+1. 每次编译前，用户会**删除workspace中的项目**
+2. 然后从 `project-code\AWRL6844_HealthDetect` **重新导入**
+3. 如果修改了workspace中的文件，下次重新导入时**修改会丢失**
+4. 这会导致同样的错误**反复出现**，浪费时间
+
+**正确的工作流程**：
+
+```
+发现编译错误
+    ↓
+❌ 不要修改: C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss\xxx.c
+✅ 正确修改: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\source\xxx.c
+    ↓
+删除workspace中的项目
+    ↓
+重新从project-code导入
+    ↓
+编译验证
+```
+
+**AI/开发者自检清单**：
+
+- [ ] 我要修改的文件路径包含 `workspace_ccstheia` 吗？
+- [ ] 如果包含 → **立即停止**，改为修改 `project-code` 中的对应文件
+- [ ] 修改完成后，是否需要重新导入项目？
+- [ ] 是否已在两个文档中记录修复内容？
+
+**相关文档**：
+- 所有编译问题修复 → 必须记录在 `HealthDetect项目重建总结.md`
+- 所有项目配置要求 → 必须更新在本文档（需求文档v2.md）
+
+---
+
 ### 方式1: 分别编译（开发调试）
 
 ```
