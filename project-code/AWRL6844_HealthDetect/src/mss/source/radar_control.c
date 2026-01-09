@@ -231,17 +231,23 @@ int32_t RadarControl_config(HealthDetect_CliCfg_t *cliCfg)
 
     DebugP_log("RadarControl: Configuring...\r\n");
 
-    /* Configure profile common parameters */
-    gMmWaveCfg.profileComCfg.startFreqGHz = cliCfg->profileCfg.startFreqGHz;
-    gMmWaveCfg.profileComCfg.digOutSampleRateMHz = (float)cliCfg->profileCfg.digOutSampleRate / 1000.0f;
-    gMmWaveCfg.profileComCfg.numAdcSamples = cliCfg->profileCfg.numAdcSamples;
-    gMmWaveCfg.profileComCfg.rxGain = cliCfg->profileCfg.rxGain;
+    /* Configure profile common parameters - match SDK struct fields */
+    /* SDK: digOutputSampRate (uint8_t), numOfAdcSamples (uint16_t) */
+    gMmWaveCfg.profileComCfg.digOutputSampRate = (uint8_t)(cliCfg->profileCfg.digOutSampleRate / 1000);
+    gMmWaveCfg.profileComCfg.numOfAdcSamples = cliCfg->profileCfg.numAdcSamples;
+    gMmWaveCfg.profileComCfg.digOutputBitsSel = 0; /* 0: 16-bit, 2: 14-bit */
+    gMmWaveCfg.profileComCfg.dfeFirSel = 0;
+    gMmWaveCfg.profileComCfg.chirpRampEndTimeus = cliCfg->profileCfg.rampEndTimeUs;
+    gMmWaveCfg.profileComCfg.chirpRxHpfSel = 0; /* 0: 175kHz corner */
+    gMmWaveCfg.profileComCfg.chirpTxMimoPatSel = 0;
 
-    /* Configure profile timing parameters */
-    gMmWaveCfg.profileTimeCfg.idleTimeus = cliCfg->profileCfg.idleTimeUs;
-    gMmWaveCfg.profileTimeCfg.adcStartTimeus = cliCfg->profileCfg.adcStartTimeUs;
-    gMmWaveCfg.profileTimeCfg.rampEndTimeus = cliCfg->profileCfg.rampEndTimeUs;
-    gMmWaveCfg.profileTimeCfg.freqSlopeConst = cliCfg->profileCfg.freqSlopeConst;
+    /* Configure profile timing parameters - match SDK struct fields */
+    /* SDK: chirpIdleTimeus, chirpAdcStartTime (uint16_t), chirpSlope, startFreqGHz */
+    gMmWaveCfg.profileTimeCfg.chirpIdleTimeus = cliCfg->profileCfg.idleTimeUs;
+    gMmWaveCfg.profileTimeCfg.chirpAdcStartTime = (uint16_t)cliCfg->profileCfg.adcStartTimeUs;
+    gMmWaveCfg.profileTimeCfg.chirpTxStartTimeus = 0.0f; /* Typically 0 */
+    gMmWaveCfg.profileTimeCfg.chirpSlope = cliCfg->profileCfg.freqSlopeConst;
+    gMmWaveCfg.profileTimeCfg.startFreqGHz = cliCfg->profileCfg.startFreqGHz;
 
     /* Configure frame parameters */
     gMmWaveCfg.frameCfg.numOfChirpsInBurst = (cliCfg->frameCfg.chirpEndIdx - cliCfg->frameCfg.chirpStartIdx + 1);
@@ -249,9 +255,9 @@ int32_t RadarControl_config(HealthDetect_CliCfg_t *cliCfg)
     gMmWaveCfg.frameCfg.numOfFrames = cliCfg->frameCfg.numFrames;
     gMmWaveCfg.frameCfg.framePeriodicityus = (uint32_t)(cliCfg->frameCfg.framePeriodMs * 1000.0f);
 
-    /* Configure TX/RX enable */
+    /* Configure TX/RX enable - use fields from CliCfg */
     gMmWaveCfg.txEnbl = cliCfg->chirpCfg.txEnable;
-    gMmWaveCfg.rxEnbl = cliCfg->channelCfg.rxChannelEn;
+    gMmWaveCfg.rxEnbl = cliCfg->rxChannelEn;
 
     /* Apply configuration using L-SDK 6.x API */
     if (MMWave_config(gMmWaveHandle, &gMmWaveCfg, &errCode) < 0)

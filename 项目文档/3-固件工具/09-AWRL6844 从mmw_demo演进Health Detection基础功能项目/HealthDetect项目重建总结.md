@@ -1427,3 +1427,145 @@ ROMS
    - health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig
    - health_detect_6844_system/Release/health_detect_6844_system.Release.appimage
    ```
+
+---
+
+## ?? 编译错误修复记录 (2026-01-09)
+
+### 问题9: MSS radar_control.c API结构体字段不匹配
+
+**错误日期**: 2026-01-09  
+**错误位置**: `src/mss/source/radar_control.c:235-254`
+
+**错误信息**:
+```
+../radar_control.c:235:30: error: no member named 'startFreqGHz' in 'struct MMWave_ProfileComCfg_t'
+../radar_control.c:236:30: error: no member named 'digOutSampleRateMHz' in 'struct MMWave_ProfileComCfg_t'
+../radar_control.c:237:30: error: no member named 'numAdcSamples' in 'struct MMWave_ProfileComCfg_t'; did you mean 'numOfAdcSamples'?
+../radar_control.c:238:30: error: no member named 'rxGain' in 'struct MMWave_ProfileComCfg_t'
+../radar_control.c:241:31: error: no member named 'idleTimeus' in 'struct MMWave_ProfileTimeCfg_t'
+../radar_control.c:242:31: error: no member named 'adcStartTimeus' in 'struct MMWave_ProfileTimeCfg_t'
+../radar_control.c:243:31: error: no member named 'rampEndTimeus' in 'struct MMWave_ProfileTimeCfg_t'
+../radar_control.c:244:31: error: no member named 'freqSlopeConst' in 'struct MMWave_ProfileTimeCfg_t'
+../radar_control.c:254:33: error: no member named 'channelCfg' in 'struct HealthDetect_CliCfg_t'
+```
+
+**原因分析**:
+
+1. **SDK结构体字段与代码不匹配**：L-SDK 6.x的`MMWave_ProfileComCfg_t`和`MMWave_ProfileTimeCfg_t`字段名称与代码中使用的不一致。
+
+2. **实际SDK结构体定义**（`C:\ti\MMWAVE_L_SDK_06_01_00_01\source\control\mmwave\mmwave.h`）：
+   
+   **MMWave_ProfileComCfg_t**:
+   ```c
+   typedef struct MMWave_ProfileComCfg_t
+   {
+       uint8_t   digOutputSampRate;        // 不是 digOutSampleRateMHz
+       uint8_t   digOutputBitsSel;
+       uint8_t   dfeFirSel;
+       uint16_t  numOfAdcSamples;          // 不是 numAdcSamples
+       float     chirpRampEndTimeus;       // 在这里不是startFreqGHz
+       uint8_t   chirpRxHpfSel;
+       uint8_t   chirpTxMimoPatSel;
+   } MMWave_ProfileComCfg;
+   ```
+
+   **MMWave_ProfileTimeCfg_t**:
+   ```c
+   typedef struct MMWave_ProfileTimeCfg_t
+   {
+       float     chirpIdleTimeus;          // 不是 idleTimeus
+       uint16_t  chirpAdcStartTime;        // 不是 adcStartTimeus
+       float     chirpTxStartTimeus;
+       float     chirpSlope;               // 不是 freqSlopeConst
+       float     startFreqGHz;             // 在ProfileTimeCfg中
+   } MMWave_ProfileTimeCfg;
+   ```
+
+3. **CliCfg结构体问题**：`HealthDetect_CliCfg_t`中没有`channelCfg`成员，应该使用`rxChannelEn`和`txChannelEn`。
+
+**解决方案**:
+
+修改`radar_control.c`中的字段映射，使其与SDK实际结构体一致：
+
+```c
+/* Configure profile common parameters - match SDK struct fields */
+gMmWaveCfg.profileComCfg.digOutputSampRate = (uint8_t)(cliCfg->profileCfg.digOutSampleRate / 1000);
+gMmWaveCfg.profileComCfg.numOfAdcSamples = cliCfg->profileCfg.numAdcSamples;
+gMmWaveCfg.profileComCfg.digOutputBitsSel = 0; /* 0: 16-bit, 2: 14-bit */
+gMmWaveCfg.profileComCfg.dfeFirSel = 0;
+gMmWaveCfg.profileComCfg.chirpRampEndTimeus = cliCfg->profileCfg.rampEndTimeUs;
+gMmWaveCfg.profileComCfg.chirpRxHpfSel = 0;
+gMmWaveCfg.profileComCfg.chirpTxMimoPatSel = 0;
+
+/* Configure profile timing parameters - match SDK struct fields */
+gMmWaveCfg.profileTimeCfg.chirpIdleTimeus = cliCfg->profileCfg.idleTimeUs;
+gMmWaveCfg.profileTimeCfg.chirpAdcStartTime = (uint16_t)cliCfg->profileCfg.adcStartTimeUs;
+gMmWaveCfg.profileTimeCfg.chirpTxStartTimeus = 0.0f;
+gMmWaveCfg.profileTimeCfg.chirpSlope = cliCfg->profileCfg.freqSlopeConst;
+gMmWaveCfg.profileTimeCfg.startFreqGHz = cliCfg->profileCfg.startFreqGHz;
+
+/* Configure TX/RX enable - use fields from CliCfg */
+gMmWaveCfg.txEnbl = cliCfg->chirpCfg.txEnable;
+gMmWaveCfg.rxEnbl = cliCfg->rxChannelEn;
+```
+
+**关键修复点**:
+1. ? `startFreqGHz` 移到 `profileTimeCfg` 中
+2. ? `digOutSampleRateMHz`  `digOutputSampRate` (uint8_t)
+3. ? `numAdcSamples`  `numOfAdcSamples`
+4. ? `idleTimeus`  `chirpIdleTimeus`
+5. ? `adcStartTimeus`  `chirpAdcStartTime` (uint16_t)
+6. ? `rampEndTimeus`  `chirpRampEndTimeus`
+7. ? `freqSlopeConst`  `chirpSlope`
+8. ? `channelCfg.rxChannelEn`  `rxChannelEn`
+
+**状态**: ? 已修复 (2026-01-09)
+
+---
+
+### 编译问题汇总表 (更新)
+
+| 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
+|---------|---------|------|---------|------|
+| 问题6 | DSS post-build失败 | 缺少 `memory_hex.cmd` | 创建DSS的memory_hex.cmd | ? 已修复 |
+| 问题7 | System post-build失败 | MSS未编译 | 按正确顺序编译MSSDSSSystem | ? 待验证 |
+| 问题8 | Config文件名 | 大小写问题 | Windows兼容，无需修改 | ? 已确认 |
+| 问题9 | MSS API结构体字段不匹配 | SDK结构体字段名称与代码不一致 | 修正radar_control.c字段映射 | ? 已修复 |
+
+---
+
+### 下一步操作指南 (更新)
+
+**请用户在CCS中执行以下步骤**：
+
+1. **刷新项目**
+   ```
+   在CCS中右键点击各项目  Refresh
+   确保修复后的代码被识别
+   ```
+
+2. **Clean所有项目**
+   ```
+   Project  Clean...  选择所有health_detect项目  Clean
+   ```
+
+3. **按顺序编译**
+   ```
+   Step 1: 编译 health_detect_6844_mss (右键  Build Project)
+         预期：9个编译错误已修复，MSS应编译成功
+   Step 2: 编译 health_detect_6844_dss (右键  Build Project)
+         预期：DSS应编译成功
+   Step 3: 编译 health_detect_6844_system (右键  Build Project)
+         预期：System应能找到.rig文件并生成.appimage
+   ```
+
+4. **验证输出**
+   ```
+   检查以下文件是否生成：
+   - health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig
+   - health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig
+   - health_detect_6844_system/Release/health_detect_6844_system.Release.appimage
+   ```
+
+**如果仍有编译错误，请提供完整错误信息以便进一步诊断。**
