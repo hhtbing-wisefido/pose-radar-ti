@@ -952,6 +952,120 @@ while (1)
 > - 使用 `--emit_warnings_as_errors` 时，所有警告都会变成错误
 > - 不可达代码会产生 #112-D 警告
 
+### 问题12-14: MSS编译错误 - L-SDK 6.x API不兼容
+
+**日期**: 2026-01-08
+
+**错误信息**：
+
+```
+"../cli.c", line 428: error: too many arguments to function call
+    UART_read(gHealthDetectMCB.uartHandle, &ch, 1, NULL);
+              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"../cli.c", line 73: warning: implicit declaration of function 'strtok_r'
+"../tlv_output.c", line 328: error: too many arguments to function call
+    UART_write(gTlvUartHandle, gTlvOutputBuf, offset, NULL);
+               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"../health_detect_main.c", line 73: error: use of undeclared identifier 'L3_MSS_SIZE'
+"../radar_control.c", line 72: error: no member named 'eventFxn' in 'MMWave_InitCfg'
+"../radar_control.c", line 112: error: passing 'MMWave_OpenCfg *' to parameter of type 'MMWave_Cfg *'
+... (25+ errors total)
+```
+
+**根本原因分析**：
+
+MSS代码使用了**错误的SDK API风格**，导致大规模编译失败：
+
+| 问题类型 | 错误用法 | L-SDK 6.x正确用法 |
+|---------|---------|------------------|
+| UART读取 | `UART_read(handle, buf, len, NULL)` 4参数 | `UART_read(handle, &trans)` 2参数 |
+| UART写入 | `UART_write(handle, buf, len, NULL)` 4参数 | `UART_write(handle, &trans)` 2参数 |
+| strtok_r | 不支持 | 改用 `strtok()` |
+| L3_MSS_SIZE | 未包含头文件 | `#include <common/shared_memory.h>` |
+| MMWave_init | 使用eventFxn/errorFxn回调 | 无回调，只有InitCfg和errCode |
+| MMWave_open | `MMWave_open(handle, OpenCfg)` 2参数 | `MMWave_open(handle, MMWave_Cfg*, errCode)` 3参数 |
+
+**解决方案**：
+
+1. **cli.c UART API修复**：使用UART_Transaction模式
+
+```c
+/* 错误 - 4参数模式 */
+UART_read(gHealthDetectMCB.uartHandle, &ch, 1, NULL);
+
+/* 正确 - 2参数UART_Transaction模式 */
+UART_Transaction trans;
+UART_Transaction_init(&trans);
+trans.buf = &ch;
+trans.count = 1;
+UART_read(gHealthDetectMCB.uartHandle, &trans);
+```
+
+2. **cli.c strtok_r修复**：改用strtok
+
+```c
+/* 错误 */
+token = strtok_r(cmdLine, " \t\r\n", &saveptr);
+
+/* 正确 */
+token = strtok(cmdLine, " \t\r\n");
+```
+
+3. **health_detect_main.c L3_MSS_SIZE修复**：添加include
+
+```c
+/* 添加 */
+#include <common/shared_memory.h>
+```
+
+4. **radar_control.c MMWave API完全重写**：
+
+```c
+/* 旧版错误代码（不存在于L-SDK 6.x）*/
+initCfg.eventFxn = callback;      // ❌ 不存在
+MMWave_open(handle, &openCfg);    // ❌ 参数错误
+MMWave_addProfile(handle, &cfg);  // ❌ 函数不存在
+MMWave_addChirp(handle, &cfg);    // ❌ 函数不存在
+MMWave_setFrameCfg(handle, &cfg); // ❌ 函数不存在
+
+/* L-SDK 6.x 正确API */
+MMWave_init(&initCfg, &errCode);                    // 2参数
+MMWave_open(handle, &mmWaveCfg, &errCode);          // 3参数，使用MMWave_Cfg
+MMWave_config(handle, &mmWaveCfg, &errCode);        // 3参数，配置在MMWave_Cfg中
+MMWave_start(handle, &strtCfg, &errCode);           // 3参数
+MMWave_stop(handle, &strtCfg, &errCode);            // 3参数
+MMWave_close(handle, &errCode);                      // 2参数
+```
+
+**修改的文件**：
+
+| 文件 | 修改内容 |
+|-----|---------|
+| `cli.c` | UART_Transaction模式，strtok替代strtok_r |
+| `tlv_output.c` | UART_Transaction模式 |
+| `health_detect_main.c` | 添加shared_memory.h include |
+| `radar_control.c` | 完全重写，使用L-SDK 6.x正确的MMWave API |
+| `radar_control.h` | 添加新函数声明 |
+
+**参考源码**：
+
+```
+D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\source\mmwave_demo_mss.c
+D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\source\mmw_cli.c
+```
+
+**Git提交**：
+- Commit: `4a098d7` - "fix(MSS): 修复L-SDK 6.x API兼容性问题"
+
+**关键教训**：
+
+> ⚠️ **L-SDK 6.x的API与旧版SDK完全不同！**
+> 
+> - UART使用UART_Transaction结构，不是分散参数
+> - MMWave没有事件回调，配置通过MMWave_Cfg结构
+> - 没有MMWave_addProfile/addChirp/setFrameCfg，改用MMWave_config()
+> - **必须参考InCabin_Demos的实际代码，不能凭经验猜测**
+
 ---
 
 ## 📋 下一步：编译验证
@@ -1001,7 +1115,8 @@ while (1)
 | **Include路径修复** | ✅ 完成 | 统一使用 `"common/xxx.h"` 格式 (2026-01-08) |
 | **PointCloud_Point_t完善** | ✅ 完成 | 添加球坐标和SNR字段 (2026-01-08) |
 | **枚举初始化修复** | ✅ 完成 | 移除 `= {0}` 和不可达代码 (2026-01-08) |
-| **CCS编译验证** | ⏳ 进行中 | DSS编译中，需重新验证       |
+| **L-SDK 6.x API修复** | ✅ 完成 | UART/MMWave API全部修正 (2026-01-08) |
+| **CCS编译验证** | ⏳ 进行中 | DSS已通过，MSS需要在CCS中验证       |
 
 ---
 
