@@ -1,9 +1,9 @@
-# 📋 AWRL6844 Health Detection 项目需求文档 v2.3
+# 📋 AWRL6844 Health Detection 项目需求文档 v2.4
 
 **项目路径**: `D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect`
 **创建日期**: 2026-01-08
 **更新日期**: 2026-01-09
-**版本**: v2.3（添加固件烧录验证流程）
+**版本**: v2.4（添加CCS自动依赖编译机制）
 
 ---
 
@@ -456,6 +456,71 @@ CCS操作：
 状态：🔴 必须完成，不是可选的
 ```
 
+### 🔧 CCS自动依赖编译机制（🆕 v2.4新增）
+
+> 📎 **详细技术分析**: [Part15-CCS System项目自动依赖编译机制](../06-SDK固件研究/Part15-CCS System项目自动依赖编译机制.md)
+
+#### 官方文档说明
+
+**来源**: `C:\ti\MMWAVE_L_SDK_06_01_00_01\docs\api_guide_xwrL684x\BUILD_GUIDE.html`
+
+> "Building the system project... **This automatically builds all referenced core projects**"
+
+#### 工作原理
+
+CCS通过`<import>`标签实现自动依赖编译：
+
+```xml
+<!-- system.projectspec -->
+<projectSpec>
+    <import spec="../mss/.../xxx_mss.projectspec"/>   <!-- 自动导入MSS -->
+    <import spec="../dss/.../xxx_dss.projectspec"/>   <!-- 自动导入DSS -->
+    ...
+</projectSpec>
+```
+
+#### ✅ 正确的导入方式（自动触发依赖编译）
+
+```
+步骤1: File → Import → CCS Projects
+步骤2: Browse to: .../src/system/
+步骤3: 只选择: health_detect_6844_system.projectspec
+步骤4: 点击 Finish
+
+CCS自动：
+  ✅ 解析 <import> 标签
+  ✅ 自动导入 MSS 项目
+  ✅ 自动导入 DSS 项目
+  ✅ 设置项目间依赖关系
+
+编译时自动：
+  ✅ 先编译 MSS → 生成 .rig
+  ✅ 再编译 DSS → 生成 .rig
+  ✅ 最后执行 System post-build → 生成 .appimage
+```
+
+#### ❌ 错误的导入方式（导致手动编译）
+
+```
+错误做法：分别导入3个项目
+  File → Import → 选择 mss.projectspec → Finish
+  File → Import → 选择 dss.projectspec → Finish
+  File → Import → 选择 system.projectspec → Finish
+
+问题：CCS不会自动识别项目间依赖！
+结果：编译System会报错 "找不到.rig文件"
+```
+
+#### 项目配置检查清单
+
+| 检查项 | 要求 | 验证方法 |
+|-------|------|---------|
+| system.projectspec有`<import>`标签 | 引用MSS和DSS | 查看XML文件 |
+| `<import>`路径正确 | 相对路径可解析 | 路径存在 |
+| system.xml项目名匹配 | 与MSS/DSS项目名一致 | 对比名称 |
+| 导入方式正确 | 只从system导入 | 3个项目同时出现 |
+| Dependencies设置 | System依赖MSS/DSS | Project Properties |
+
 **🔴 重要说明**：
 
 - ✅ **系统打包是必选项**，不是可选的
@@ -886,6 +951,9 @@ cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
 |      |            | 🆕 添加配置加载步骤         |
 |      |            | 🆕 添加数据验证检查清单     |
 |      |            | 🆕 引用附录E/附录G/第2章    |
+| v2.4 | 2026-01-09 | 🆕 添加CCS自动依赖编译章节  |
+|      |            | 🆕 链接Part15技术文档       |
+|      |            | 🆕 添加项目配置检查清单     |
 
 ---
 

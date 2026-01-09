@@ -20,7 +20,7 @@
 
 ## 📂 文档结构
 
-本研究分为**14个部分**，由浅入深，循序渐进：
+本研究分为**15个部分**，由浅入深，循序渐进：
 
 ### Part 1: SDK基础概念与三目录详解 ⭐⭐⭐
 
@@ -206,6 +206,49 @@ A: 不烧录到Flash，每次启动通过串口发送
 - ✅ 揭示了TI不同Demo之间的数据格式差异
 - ✅ 提供了正确的测试工具选择指南
 - ✅ 为自定义固件开发提供TLV设计参考
+
+---
+
+### Part 15: CCS System项目自动依赖编译机制 ⭐⭐⭐⭐⭐ 🆕
+
+**文件**: [Part15-CCS System项目自动依赖编译机制.md](Part15-CCS System项目自动依赖编译机制.md)
+
+**内容概要**：
+- 🔍 为什么只编译System项目会失败
+- 📚 TI官方文档说明（BUILD_GUIDE.html引用）
+- 🔧 projectspec `<import>`标签的工作机制
+- 🔧 system.xml项目引用配置
+- ⚠️ 常见问题：自动编译没生效的原因
+- ✅ 正确的项目导入流程（只导入System项目）
+- 📋 项目配置检查清单
+
+**适合人群**：
+- ✅ 编译System项目遇到依赖问题
+- ✅ 不想手动按MSS→DSS→System顺序编译
+- ✅ 创建多核雷达项目（MSS/DSS/System）
+- ✅ 理解CCS项目依赖机制
+
+**核心解答**：
+```
+问题: 为什么只编译System会失败？
+答案: System的post-build需要MSS/DSS的.rig文件
+      如果MSS/DSS没先编译，.rig不存在
+
+问题: 如何让CCS自动处理依赖？
+答案: 只从system.projectspec导入项目！
+      CCS会自动解析<import>标签
+      自动导入MSS和DSS项目
+      编译时自动按正确顺序构建
+
+问题: 为什么我的自动编译没生效？
+答案: 可能是分别导入了3个项目
+      正确做法：只导入system.projectspec
+      CCS会自动导入引用的MSS/DSS
+```
+
+**官方文档引用**：
+- `C:\ti\MMWAVE_L_SDK_06_01_00_01\docs\api_guide_xwrL684x\BUILD_GUIDE.html`
+- "This automatically builds all referenced core projects"
 
 ---
 
