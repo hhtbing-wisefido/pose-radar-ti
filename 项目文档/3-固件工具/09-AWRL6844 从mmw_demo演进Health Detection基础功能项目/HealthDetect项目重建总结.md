@@ -1475,6 +1475,127 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
 
 **状态**: ✅ 已修复（2026-01-09） - 修复了项目源代码
 
+⚠️ **注意**: 问题23的解决方案不完整，导致问题24的出现。
+
+---
+
+### 问题24: .projectspec缺少构建配置文件引用（2026-01-09）
+
+**错误重现**:
+
+用户删除workspace并重新导入项目后，再次出现与问题23相同的错误：
+```
+[90]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_mss/Release/../metaimage_cfg.Release.json': No such file or directory
+[96]/cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
+[175]/cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
+```
+
+**根本原因分析**:
+
+1. **问题23只解决了文件内容和命名问题**:
+   - ✅ 复制了配置文件到项目源代码
+   - ✅ 重命名为正确的大小写（Release/Debug）
+   - ❌ 但文件没有被导入到workspace
+
+2. **CCS导入机制**:
+   - CCS根据`.projectspec`文件导入项目
+   - `.projectspec`中没有引用的文件不会被复制到workspace
+   - 即使文件存在于源代码，CCS也不知道要导入它们
+
+3. **验证发现**:
+   ```powershell
+   # 文件确实存在于源代码
+   D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\
+   ├── src\mss\...\ti-arm-clang\
+   │   ├── memory_hex.cmd                        ← 存在
+   │   └── config\
+   │       ├── metaimage_cfg.Release.json         ← 存在
+   │       └── metaimage_cfg.Debug.json          ← 存在
+   └── src\dss\...\ti-c6000\
+       └── memory_hex.cmd                        ← 存在
+   
+   # 但.projectspec中没有引用
+   grep "memory_hex.cmd\|metaimage_cfg" *.projectspec
+   # 结果: No matches found
+   ```
+
+4. **InCabin_Demos的正确做法**:
+   ```xml
+   <!-- InCabin MSS .projectspec -->
+   <file path="memory_hex.cmd" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+   <file path="config/metaimage_cfg.debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+   <file path="config/metaimage_cfg.release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+   
+   <!-- InCabin DSS .projectspec -->
+   <file path="memory_hex.cmd" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+   ```
+
+**正确的解决方案**:
+
+**步骤1**: 修改MSS的`.projectspec`文件
+```xml
+<!-- 文件位置: src/mss/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/health_detect_6844_mss.projectspec -->
+
+<!-- 在 makefile_ccs_bootimage_gen 之后添加 -->
+<file path="memory_hex.cmd" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+<file path="config/metaimage_cfg.Debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+<file path="config/metaimage_cfg.Release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+```
+
+**步骤2**: 修改DSS的`.projectspec`文件
+```xml
+<!-- 文件位置: src/dss/xwrL684x-evm/c66ss0_freertos/ti-c6000/health_detect_6844_dss.projectspec -->
+
+<!-- 在 makefile_ccs_bootimage_gen 之后添加 -->
+<file path="memory_hex.cmd" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+```
+
+**关键参数说明**:
+- `excludeFromBuild="true"`: 这些文件不参与编译，只在post-build阶段使用
+- `action="copy"`: 导入项目时复制文件到workspace
+- 路径相对于`.projectspec`文件所在目录
+
+**验证步骤**:
+```powershell
+# 1. 检查.projectspec是否包含文件引用
+grep -A2 "memory_hex.cmd\|metaimage_cfg" src/mss/xwrL684x-evm/r5fss0-0_freertos/ti-arm-clang/*.projectspec
+grep -A2 "memory_hex.cmd" src/dss/xwrL684x-evm/c66ss0_freertos/ti-c6000/*.projectspec
+
+# 2. 删除workspace并重新导入
+Remove-Item -Recurse -Force "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*"
+
+# 3. 在CCS中重新导入项目
+# Project -> Import CCS Projects -> 选择三个.projectspec文件
+
+# 4. 验证文件已被复制到workspace
+Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss" -Filter "memory_hex.cmd"
+Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss\config"
+Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss" -Filter "memory_hex.cmd"
+
+# 5. Clean Build验证编译成功
+```
+
+**问题总结**:
+
+| 方面 | 问题22-23的方案 | 问题24的正确方案 |
+|-----|----------------|----------------|
+| 文件位置 | ✅ 复制到源代码 | ✅ 保持在源代码 |
+| 文件命名 | ✅ 修正大小写 | ✅ 保持大小写 |
+| CCS导入 | ❌ 手动复制到workspace | ✅ .projectspec自动复制 |
+| 持久性 | ❌ 每次重新导入需手动复制 | ✅ 导入项目自动包含 |
+| 完整性 | ❌ 不完整解决方案 | ✅ 彻底解决 |
+
+**为什么问题23的解决方案不完整？**
+
+问题23只解决了"文件存在"的问题，但忽略了"文件如何导入"的问题。CCS不会自动扫描所有文件，必须在`.projectspec`中明确声明需要导入的文件。
+
+**教训**:
+1. 修复TI CCS项目问题时，必须理解`.projectspec`的作用
+2. 对比InCabin_Demos等参考项目的配置文件
+3. 验证修复方案要完整测试"删除workspace → 重新导入 → 编译"流程
+
+**状态**: ✅ 已修复（2026-01-09） - 修改.projectspec添加构建配置文件引用
+
 ---
 
 ## 📊 编译问题汇总表
@@ -1505,7 +1626,8 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
 | 问题20 | DSS post-build失败回归 | memory_hex.cmd缺失 | 复制到workspace | ✅ 已修复 |
 | 问题21 | System .rig文件缺失 | MSS/DSS未生成 | 按顺序编译 | ⏳ 待验证 |
 | 问题22 | CCS工作区缺少构建配置文件 | 导入项目未含配置文件 | 复制memory_hex.cmd和metaimage配置 | ⚠️ 临时方案 |
-| 问题23 | metaimage配置文件大小写不匹配 | Release vs release | 重命名为大写PROFILE | ✅ 已修复 |
+| 问题23 | metaimage配置文件大小写不匹配 | Release vs release | 重命名为大写PROFILE | ⚠️ 不完整 |
+| 问题24 | .projectspec缺少构建配置文件引用 | 未在.projectspec声明 | 添加file引用并设置action="copy" | ✅ 已修复 |
 
 ---
 
@@ -1522,7 +1644,7 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **23** |
+| **修复的编译问题** | **24** |
 | **待处理问题** | **1 (问题21)** |
 
 ### ✅ 完成状态
