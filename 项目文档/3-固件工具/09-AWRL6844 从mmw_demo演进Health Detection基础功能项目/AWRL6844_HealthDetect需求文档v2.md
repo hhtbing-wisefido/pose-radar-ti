@@ -1,7 +1,7 @@
 # 📋 AWRL6844 Health Detection 项目需求文档 v2.0
 
-**项目路径**: `D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect`  
-**创建日期**: 2026-01-08  
+**项目路径**: `D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect`
+**创建日期**: 2026-01-08
 **版本**: v2.0（基于v1.0，添加失败教训和API规范修正）
 
 ---
@@ -10,20 +10,22 @@
 
 ### ⚠️ 必须参考本地项目，不要参考radar_toolbox
 
-| 来源 | 路径 | 是否推荐 |
-|------|------|----------|
-| **✅ 本地项目** | `D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\` | **推荐** |
-| ❌ radar_toolbox | `C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\...\AWRL6844_InCabin_Demos` | 不推荐 |
+| 来源                  | 路径                                                                             | 是否推荐       |
+| --------------------- | -------------------------------------------------------------------------------- | -------------- |
+| **✅ 本地项目** | `D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\`           | **推荐** |
+| ❌ radar_toolbox      | `C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\...\AWRL6844_InCabin_Demos` | 不推荐         |
 
 ### 原因说明
 
 **从radar_toolbox导入会出现版本警告**：
+
 ```
 Product SysConfig v1.23.0 is not currently installed. A compatible version 1.26.0 will be used.
 Product mmWave low-power SDK xWRL68xx v6.0.5.01 is not currently installed. A compatible version 6.1.0.01 will be used.
 ```
 
 **从本地项目导入无任何错误**：
+
 - `D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\xwrL684x-evm\` → ✅ 无错误
 - `D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\dss\xwrL684x-evm\` → ✅ 无错误
 - `D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\system\` → ✅ 无错误
@@ -31,10 +33,13 @@ Product mmWave low-power SDK xWRL68xx v6.0.5.01 is not currently installed. A co
 ### 结论
 
 > 📌 **参考InCabin_Demos时，始终使用本地项目路径**：
+>
 > ```
 > D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\
 > ```
+>
 > **不要使用**：
+>
 > ```
 > C:\ti\radar_toolbox_3_30_00_06\source\ti\examples\...
 > ```
@@ -47,15 +52,16 @@ Product mmWave low-power SDK xWRL68xx v6.0.5.01 is not currently installed. A co
 
 **失败点**：代码编写时**错误使用了BIOS/TI-RTOS风格的API**
 
-| 错误代码（v1失败） | 正确代码（mmw_demo实际使用） |
-|---------------------|------------------------|
-| `#include <ti/sysbios/BIOS.h>` | `#include "FreeRTOS.h"` |
-| `#include <ti/sysbios/knl/Task.h>` | `#include "task.h"` |
+| 错误代码（v1失败）                        | 正确代码（mmw_demo实际使用）                |
+| ----------------------------------------- | ------------------------------------------- |
+| `#include <ti/sysbios/BIOS.h>`          | `#include "FreeRTOS.h"`                   |
+| `#include <ti/sysbios/knl/Task.h>`      | `#include "task.h"`                       |
 | `Task_create()`, `Task_Params_init()` | `xTaskCreateStatic()` / `xTaskCreate()` |
-| `BIOS_start()` | `vTaskStartScheduler()` |
-| `Semaphore_create()` | `xSemaphoreCreateBinaryStatic()` |
+| `BIOS_start()`                          | `vTaskStartScheduler()`                   |
+| `Semaphore_create()`                    | `xSemaphoreCreateBinaryStatic()`          |
 
 **错误根源**：
+
 - ❌ 没有仔细阅读 mmw_demo 的 `main.c` 和 `mmwave_demo.c`
 - ❌ 凭"TI SDK经验"使用了其他SDK（如标准mmWave SDK 3.x）的API风格
 - ❌ 不了解 **L-SDK（mmWave Low-Power SDK）本身就是FreeRTOS**
@@ -63,6 +69,7 @@ Product mmWave low-power SDK xWRL68xx v6.0.5.01 is not currently installed. A co
 ### 🟢 v1.0版本正确的部分（保留）
 
 **以下内容完全正确，继续沿用**：
+
 - ✅ **三层架构设计**：common/mss/dss/system
 - ✅ **从零重建的方向**：不复制mmw_demo，参考学习后重写
 - ✅ **功能规划**：主控、CLI、DPC协调、TLV输出、特征提取
@@ -72,6 +79,7 @@ Product mmWave low-power SDK xWRL68xx v6.0.5.01 is not currently installed. A co
 ### 🔧 v2.0修正内容
 
 **本版本仅修正**：
+
 1. 添加 **FreeRTOS API规范章节**（强制）
 2. 添加 **失败教训说明**（警示）
 3. 强调 **必须先读mmw_demo源码再编码**
@@ -86,6 +94,7 @@ Product mmWave low-power SDK xWRL68xx v6.0.5.01 is not currently installed. A co
 根据**第3章演进架构**，将TI mmWave SDK的mmw_demo功能**完整重建**为新的三层架构健康检测项目。
 
 **关键要求**：
+
 - ✅ **不是复制粘贴**mmw_demo源代码
 - ✅ **不是简单修改**mmw_demo
 - ✅ **是从零重建**，参考mmw_demo的功能和API用法
@@ -95,6 +104,7 @@ Product mmWave low-power SDK xWRL68xx v6.0.5.01 is not currently installed. A co
 ### 2. 参考与重建的关系
 
 **mmw_demo_SDK_reference的定位**：
+
 - 📚 **仅作为参考**：学习其功能实现、API调用方式、数据结构
 - 📚 **学习对象**：理解DPC工作流程、CLI命令设计、TLV输出格式
 - 🔴 **必须学习其RTOS API用法**：FreeRTOS任务创建、信号量、调度器
@@ -215,11 +225,11 @@ CLI_write("Message: %d\r\n", value);
 
 **必须阅读的文件**：
 
-| 文件 | 内容 | 必须学习的API |
-|------|------|--------------|
-| `xwrL684x-evm/r5fss0-0_freertos/main.c` | FreeRTOS入口 | `xTaskCreateStatic`, `vTaskStartScheduler` |
-| `source/mmwave_demo.c` 1-200行 | 任务定义 | 任务栈、任务对象、信号量定义 |
-| `source/mmwave_demo.c` 全局变量 | FreeRTOS对象 | `TaskHandle_t`, `StaticTask_t`, `StackType_t` |
+| 文件                                      | 内容         | 必须学习的API                                       |
+| ----------------------------------------- | ------------ | --------------------------------------------------- |
+| `xwrL684x-evm/r5fss0-0_freertos/main.c` | FreeRTOS入口 | `xTaskCreateStatic`, `vTaskStartScheduler`      |
+| `source/mmwave_demo.c` 1-200行          | 任务定义     | 任务栈、任务对象、信号量定义                        |
+| `source/mmwave_demo.c` 全局变量         | FreeRTOS对象 | `TaskHandle_t`, `StaticTask_t`, `StackType_t` |
 
 ---
 
@@ -245,6 +255,7 @@ AWRL6844_HealthDetect/
 **职责**：定义MSS与DSS之间的共享数据结构和内存映射
 
 **必须包含**：
+
 - `shared_memory.h` - L3 RAM内存映射（896KB）
 - `data_path.h` - DPC结构定义（Config/Result/PointCloud）
 - `mmwave_output.h` - TLV输出格式定义
@@ -256,14 +267,14 @@ AWRL6844_HealthDetect/
 
 **必须包含的模块**：
 
-| 模块 | 文件 | 功能 | 参考 |
-|------|------|------|------|
-| 主控程序 | `health_detect_main.c/h` | FreeRTOS任务框架、帧循环 | mmwave_demo.c |
-| DPC协调 | `dpc_control.c/h` | MSS-DSS通信 | dpc/dpc.c |
-| CLI命令 | `cli.c/h` | 命令行接口 | mmw_cli.c |
-| 存在检测 | `presence_detect.c/h` | 🆕 特征分析、状态机 | 新功能 |
-| TLV输出 | `tlv_output.c/h` | 数据包构建、UART发送 | 多个文件 |
-| 雷达控制 | `radar_control.c/h` | mmWave API封装 | mmwave_control/ |
+| 模块     | 文件                       | 功能                     | 参考            |
+| -------- | -------------------------- | ------------------------ | --------------- |
+| 主控程序 | `health_detect_main.c/h` | FreeRTOS任务框架、帧循环 | mmwave_demo.c   |
+| DPC协调  | `dpc_control.c/h`        | MSS-DSS通信              | dpc/dpc.c       |
+| CLI命令  | `cli.c/h`                | 命令行接口               | mmw_cli.c       |
+| 存在检测 | `presence_detect.c/h`    | 🆕 特征分析、状态机      | 新功能          |
+| TLV输出  | `tlv_output.c/h`         | 数据包构建、UART发送     | 多个文件        |
+| 雷达控制 | `radar_control.c/h`      | mmWave API封装           | mmwave_control/ |
 
 ### Layer 3: DSS (算法层 - C66x @ 450MHz)
 
@@ -271,15 +282,16 @@ AWRL6844_HealthDetect/
 
 **必须包含的模块**：
 
-| 模块 | 文件 | 功能 |
-|------|------|------|
-| DSP主程序 | `dss_main.c/h` | IPC消息循环 |
-| 特征提取 | `feature_extract.c/h` | 🆕 点云特征计算 |
-| DSP工具 | `dsp_utils.c/h` | Cache操作、周期计数 |
+| 模块      | 文件                    | 功能                |
+| --------- | ----------------------- | ------------------- |
+| DSP主程序 | `dss_main.c/h`        | IPC消息循环         |
+| 特征提取  | `feature_extract.c/h` | 🆕 点云特征计算     |
+| DSP工具   | `dsp_utils.c/h`       | Cache操作、周期计数 |
 
 ### Layer 0: System (系统配置层)
 
 **必须包含**：
+
 - `linker_mss.cmd` - MSS链接脚本
 - `linker_dss.cmd` - DSS链接脚本
 - `shared_memory.ld` - 共享内存区域定义
@@ -291,16 +303,16 @@ AWRL6844_HealthDetect/
 
 ## 🔄 功能对照表（保持v1.0）
 
-| mmw_demo功能 | mmw_demo文件 | 新架构文件 | 层级 | 状态 |
-|-------------|-------------|-----------|------|------|
-| 主控程序 | mmwave_demo.c | health_detect_main.c | MSS | ✅ 重写 |
-| DPC协调 | dpc/dpc.c | dpc_control.c | MSS | ✅ 重写 |
-| CLI命令 | mmw_cli.c | cli.c | MSS | ✅ 重写 |
-| TLV输出 | (多个文件) | tlv_output.c | MSS | ✅ 重写 |
-| 雷达控制 | mmwave_control/ | radar_control.c | MSS | ✅ 封装 |
-| DSP处理 | ❌ 无 | dss_main.c | DSS | 🆕 新增 |
-| **特征提取** | ❌ 无 | feature_extract.c | DSS | 🆕 新增 |
-| 存在检测 | ❌ 无 | presence_detect.c | MSS | 🆕 新增 |
+| mmw_demo功能       | mmw_demo文件    | 新架构文件           | 层级 | 状态    |
+| ------------------ | --------------- | -------------------- | ---- | ------- |
+| 主控程序           | mmwave_demo.c   | health_detect_main.c | MSS  | ✅ 重写 |
+| DPC协调            | dpc/dpc.c       | dpc_control.c        | MSS  | ✅ 重写 |
+| CLI命令            | mmw_cli.c       | cli.c                | MSS  | ✅ 重写 |
+| TLV输出            | (多个文件)      | tlv_output.c         | MSS  | ✅ 重写 |
+| 雷达控制           | mmwave_control/ | radar_control.c      | MSS  | ✅ 封装 |
+| DSP处理            | ❌ 无           | dss_main.c           | DSS  | 🆕 新增 |
+| **特征提取** | ❌ 无           | feature_extract.c    | DSS  | 🆕 新增 |
+| 存在检测           | ❌ 无           | presence_detect.c    | MSS  | 🆕 新增 |
 
 ---
 
@@ -350,6 +362,7 @@ AWRL6844_HealthDetect/
 **目标**：按第3章架构从零重建所有代码
 
 **交付物清单**：
+
 - [ ] src/common/*.h (4个文件)
 - [ ] src/system/* (7个文件，含config目录)
 - [ ] src/mss/*.c/h (12个文件)
@@ -364,6 +377,7 @@ AWRL6844_HealthDetect/
 **目标**：在CCS中编译通过，生成.appimage固件
 
 **验收标准**：
+
 - [ ] 导入CCS项目成功（MSS/DSS/System三个项目）
 - [ ] MSS项目编译0错误
 - [ ] DSS项目编译0错误
@@ -386,16 +400,15 @@ AWRL6844_HealthDetect/
 ### 绝对不允许
 
 1. ❌ **复制粘贴mmw_demo源代码**
-
 2. ❌ **照搬mmw_demo目录结构**
-
 3. ❌ **使用BIOS/TI-RTOS API**（🔴 新增强调）
+
    - 禁止 `#include <ti/sysbios/*.h>`
    - 禁止 `Task_create()`, `BIOS_start()`
    - 禁止 `Semaphore_create()`, `Semaphore_pend()`
    - L-SDK中这些API**根本不存在**！
-
 4. ❌ **不读源码就编写代码**（🔴 新增）
+
    - 必须先阅读mmw_demo的main.c和mmwave_demo.c
    - 必须确认API用法正确
    - 凭"经验"猜测 = 失败
@@ -443,6 +456,7 @@ CCS操作：
 ```
 
 **🔴 重要说明**：
+
 - ✅ **系统打包是必选项**，不是可选的
 - ✅ **系统打包才是完整的**项目形态
 - ✅ **方式1仅供开发调试**参考，不作为交付方式
@@ -470,11 +484,13 @@ health_detect_system.release.appimage
 ### Milestone策略
 
 **Milestone 1-2（开发阶段）**：
+
 - ✅ 已完成MSS/DSS/System项目配置
 - ✅ 先验证分别编译成功（快速迭代）
 - 🔄 然后验证系统打包成功（Milestone 2必须完成）
 
 **Milestone 3+（发布阶段）**：
+
 - ✅ 只使用系统打包方式
 - ✅ 交付.appimage文件
 
@@ -484,13 +500,13 @@ health_detect_system.release.appimage
 
 ### 必读的mmw_demo文件（🔴 编码前必须阅读）
 
-| 文件 | 内容 | 必须学习 |
-|------|------|---------|
-| `xwrL684x-evm/r5fss0-0_freertos/main.c` | FreeRTOS入口 | ⭐⭐⭐⭐⭐ |
-| `source/mmwave_demo.c` 1-200行 | 头文件、全局变量 | ⭐⭐⭐⭐⭐ |
-| `source/mmwave_demo.c` 全部 | 主应用逻辑 | ⭐⭐⭐⭐ |
-| `source/mmw_cli.c` | CLI命令 | ⭐⭐⭐⭐ |
-| `source/dpc/dpc.c` | DPC处理 | ⭐⭐⭐ |
+| 文件                                      | 内容             | 必须学习   |
+| ----------------------------------------- | ---------------- | ---------- |
+| `xwrL684x-evm/r5fss0-0_freertos/main.c` | FreeRTOS入口     | ⭐⭐⭐⭐⭐ |
+| `source/mmwave_demo.c` 1-200行          | 头文件、全局变量 | ⭐⭐⭐⭐⭐ |
+| `source/mmwave_demo.c` 全部             | 主应用逻辑       | ⭐⭐⭐⭐   |
+| `source/mmw_cli.c`                      | CLI命令          | ⭐⭐⭐⭐   |
+| `source/dpc/dpc.c`                      | DPC处理          | ⭐⭐⭐     |
 
 ### 失败经验资料
 
@@ -523,16 +539,75 @@ health_detect_system.release.appimage
 
 ---
 
+## 📎 附录A：TLV数据格式兼容性要求
+
+### 🔴 关键原则：必须兼容标准mmWave Demo TLV格式
+
+**AWRL6844_HealthDetect 项目必须使用标准 mmWave Demo 的 TLV Type ID**，以确保与 SDK Visualizer 等官方测试工具兼容。
+
+### 标准 vs InCabin TLV Type ID 对照表
+
+| 数据类型 | 标准mmWave Demo | InCabin Demo | 兼容性 |
+|---------|----------------|--------------|--------|
+| **点云数据** | Type = 1 `DETECTED_POINTS` | Type = 3001 `POINT_CLOUD` | ❌ 不兼容 |
+| **Range Profile** | Type = 2 `RANGE_PROFILE` | Type = 2 `RANGE_PROFILE` | ✅ 兼容 |
+| **Stats统计** | Type = 6 `STATS` | Type = 6 `STATS` | ✅ 兼容 |
+| **占用特征** | ❌ 无 | Type = 3002 `OCCUPANCY_FEATURES` | - |
+| **分类结果** | ❌ 无 | Type = 1041 `CLASSIFICATION_RES` | - |
+
+### 工具兼容性矩阵
+
+| 固件 | SDK Visualizer | InCabin GUI | 说明 |
+|-----|----------------|-------------|------|
+| **标准mmwave_demo** | ✅ 能用 | ❌ 不能 | 使用Type=1点云 |
+| **InCabin固件** | ❌ 不能 | ✅ 能用 | 使用Type=3001点云 |
+| **AWRL6844_HealthDetect** | ✅ 能用 | ❌ 不能 | **必须遵循标准格式** |
+
+### AWRL6844_HealthDetect TLV 格式规范
+
+**核心TLV（兼容标准Demo）**:
+
+| Type ID | 名称 | 说明 | 兼容性 |
+|---------|------|------|--------|
+| **1** | `MMWDEMO_OUTPUT_MSG_DETECTED_POINTS` | 点云数据 | ✅ 标准格式 |
+| 2 | `MMWDEMO_OUTPUT_MSG_RANGE_PROFILE` | Range Profile | ✅ 标准格式 |
+| 6 | `MMWDEMO_OUTPUT_MSG_STATS` | 处理统计 | ✅ 标准格式 |
+| 7 | `MMWDEMO_OUTPUT_MSG_DETECTED_POINTS_SIDE_INFO` | 点云SNR | ✅ 标准格式 |
+
+**扩展TLV（健康检测专用，从1000开始）**:
+
+| Type ID | 名称 | 说明 | 影响 |
+|---------|------|------|------|
+| 1000 | `MMWDEMO_OUTPUT_MSG_PRESENCE_DETECT` | 人存检测结果 | SDK Visualizer忽略 |
+| 1001 | `MMWDEMO_OUTPUT_MSG_HEALTH_FEATURES` | 健康特征 | SDK Visualizer忽略 |
+| 1002 | `MMWDEMO_OUTPUT_MSG_VITAL_SIGNS` | 生命体征 | SDK Visualizer忽略 |
+
+**设计原则**:
+- ✅ 核心TLV（1-12）完全遵循标准mmWave Demo格式
+- ✅ 扩展TLV从1000开始，避开标准范围(1-299)和扩展范围(300-399)
+- ✅ SDK Visualizer可正常显示点云、Range Profile等核心数据
+- ✅ 扩展TLV被SDK Visualizer忽略，但不会导致解析错误
+
+### 详细技术分析
+
+完整TLV格式对比请参考:
+- [TLV数据格式快速参考.md](../08-AWRL6844雷达健康检测实现方案/TLV数据格式快速参考.md)
+- [InCabin与标准Demo数据格式对比.md](../06-SDK固件研究/InCabin与标准Demo数据格式对比.md)
+
+---
+
 ## 📝 版本历史
 
-| 版本 | 日期 | 说明 |
-|------|------|------|
-| v1.0 | 2026-01-07 | 初版，架构和功能规划正确 |
-| | | ❌ 代码使用了错误的BIOS API |
-| v2.0 | 2026-01-08 | 添加FreeRTOS API规范 |
-| | | 添加失败教训说明 |
-| | | 强调必须先读源码 |
-| | | 其他内容保持v1.0 |
+| 版本 | 日期       | 说明                        |
+| ---- | ---------- | --------------------------- |
+| v1.0 | 2026-01-07 | 初版，架构和功能规划正确    |
+|      |            | ❌ 代码使用了错误的BIOS API |
+| v2.0 | 2026-01-08 | 添加FreeRTOS API规范        |
+|      |            | 添加失败教训说明            |
+|      |            | 强调必须先读源码            |
+|      |            | 其他内容保持v1.0            |
+| v2.1 | 2026-01-09 | 添加TLV格式兼容性附录       |
+|      |            | 明确必须使用标准Demo格式    |
 
 ---
 
