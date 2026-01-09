@@ -12,11 +12,11 @@
     "interimMetaHeaderFile": "PLACEHOLDER_PATH/temp/metaheader.bin",
     "buildImages": [
         {
-            "buildImagePath": "PLACEHOLDER_PATH/temp/health_detect_6844_mss_img.debug.rig",
+            "buildImagePath": "PLACEHOLDER_PATH/temp/health_detect_6844_mss_img.Debug.rig",
             "encryptEnable": "no"
         },
         {
-            "buildImagePath": "PLACEHOLDER_PATH/temp/health_detect_6844_dss_img.debug.rig",
+            "buildImagePath": "PLACEHOLDER_PATH/temp/health_detect_6844_dss_img.Debug.rig",
             "encryptEnable": "no"
         },
         {
@@ -48,8 +48,11 @@
             "debugType": "0"
         },
         "interimCertDataFile": "config/x509_config.cfg",
-        "keyCert": "config_keys/keypriv.pem",
-        "keyCertPwd": ""
+        "certSigningKeyFileECDSA": "config_keys/mpk_ecdsa.pem",
+        "certSigningKeyFileRSA": "config_keys/mpk.pem",
+        "signingAlgo": "RSA",
+        "signedCertificateFile": "PLACEHOLDER_PATH/temp/signed_cert.bin"
     },
-    "finalMetaImage": "PLACEHOLDER_PATH/health_detect_6844_system.debug.appimage"
+    "metaImageFile": "PLACEHOLDER_PATH/health_detect_6844_system.Debug.appimage",
+    "coreImages": []
 }

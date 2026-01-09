@@ -1905,6 +1905,82 @@ metaimage配置文件（`metaimage_cfg.Release.json`）缺少metaImage_creator.e
 
 ---
 
+### 问题29: metaImage_creator找不到.rig文件路径错误
+
+**发现日期**: 2026-01-09
+
+**错误现象**:
+```
+cd C:/ti/MMWAVE_L_SDK_06_01_00_01/tools/MetaImageGen && metaImage_creator.exe --complete_metaimage ...
+
+******* MetaImage Generator Tool Version: 1.0.1.3 *******
+
+file:{'buildImagePath': '../../examples/empty/xwrL684x-evm/system_freertos/temp/health_detect_6844_mss_img.Release.rig', 'encryptEnable': 'no'} doesn't exist
+Previous file was not available
+```
+
+**根本原因**:
+
+问题28修复时使用了错误的路径格式。makefile设计使用`PLACEHOLDER_PATH`占位符，在运行时替换为实际的workspace路径：
+
+| makefile关键代码 | 作用 |
+|-----------------|------|
+| `json_content:=$(shell $(CAT) .../metaimage_cfg.$(PROFILE).json)` | 读取JSON配置 |
+| `new_json_content:=$(subst PLACEHOLDER_PATH,$(MULTI_CORE_BOOTIMAGE_PATH),$(json_content))` | 替换占位符 |
+
+**问题28的错误修复**：使用了SDK相对路径 `../../examples/empty/xwrL684x-evm/system_freertos`，导致：
+- metaImage_creator在SDK目录下查找文件（错误路径）
+- 实际.rig文件在workspace目录（正确路径）
+
+**正确的路径机制**：
+
+| 配置文件中的路径 | 运行时替换为 |
+|-----------------|-------------|
+| `PLACEHOLDER_PATH/temp/xxx.rig` | `C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/temp/xxx.rig` |
+| `PLACEHOLDER_PATH/health_detect_6844_system.Release.appimage` | `C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/health_detect_6844_system.Release.appimage` |
+
+**解决方案**:
+
+恢复使用`PLACEHOLDER_PATH`占位符：
+
+**修改的文件**:
+- `src/system/config/metaimage_cfg.Release.json`
+- `src/system/config/metaimage_cfg.Debug.json`
+
+**关键修改内容**:
+```json
+{
+    "interimMetaHeaderFile": "PLACEHOLDER_PATH/temp/metaheader.bin",
+    "buildImages": [
+        {
+            "buildImagePath": "PLACEHOLDER_PATH/temp/health_detect_6844_mss_img.Release.rig",
+            "encryptEnable": "no"
+        },
+        {
+            "buildImagePath": "PLACEHOLDER_PATH/temp/health_detect_6844_dss_img.Release.rig",
+            "encryptEnable": "no"
+        },
+        {
+            "buildImagePath": "../../firmware/mmwave_dfp/rfsfirmware/xWRL68xx/mmwave_rfs_patch.rig",
+            "encryptEnable": "no"
+        }
+    ],
+    "CertificateParams": {
+        ...
+        "signedCertificateFile": "PLACEHOLDER_PATH/temp/signed_cert.bin"
+    },
+    "metaImageFile": "PLACEHOLDER_PATH/health_detect_6844_system.Release.appimage"
+}
+```
+
+**关键说明**:
+- 🔴 使用`PLACEHOLDER_PATH`的路径会被makefile动态替换为workspace绝对路径
+- ✅ SDK相对路径（如`../../firmware/...`）保持不变，因为metaImage_creator从SDK目录执行
+
+**状态**: ✅ 已修复（2026-01-09）
+
+---
+
 ## 📊 编译问题汇总表
 
 > 💡 **说明**: 以下是所有28个编译问题的汇总表，便于快速查看问题类型和解决方案。
@@ -1939,6 +2015,7 @@ metaimage配置文件（`metaimage_cfg.Release.json`）缺少metaImage_creator.e
 | 问题26 | System metaimage未复制到config目录 | CCS扁平化路径 | 添加targetDirectory="config" | ✅ 已修复 |
 | 问题27 | DSS未编译导致System找不到.rig | 项目导入方式错误 | 必须只从System导入，不能分别导入 | ✅ 已验证 |
 | 问题28 | metaImage_creator KeyError | 配置文件缺少字段 | 添加signedCertificateFile等必要字段 | ✅ 已修复 |
+| 问题29 | metaImage_creator找不到.rig | 路径占位符错误 | 恢复使用PLACEHOLDER_PATH占位符 | ✅ 已修复 |
 
 ---
 
@@ -1955,7 +2032,7 @@ metaimage配置文件（`metaimage_cfg.Release.json`）缺少metaImage_creator.e
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **28** |
+| **修复的编译问题** | **29** |
 | **待处理问题** | **0** |
 
 ### ✅ 完成状态
@@ -2087,5 +2164,5 @@ Step 3: System post-build → 生成 .appimage
 ---
 
 > 📌 **最后更新**: 2026-01-09  
-> ✅ 已修复27个编译问题  
-> ⚠️ 问题27需要用户按正确方式重新导入项目
+> ✅ 已修复29个编译问题  
+> ⏳ 待用户重新导入项目验证
