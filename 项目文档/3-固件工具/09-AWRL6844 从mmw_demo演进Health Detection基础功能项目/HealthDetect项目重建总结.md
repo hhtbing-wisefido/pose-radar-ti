@@ -1,8 +1,8 @@
 ﻿# 📋 AWRL6844 Health Detect 项目重建总结
 
 **日期**: 2026-01-08
-**最后更新**: 2026-01-09 (✅ 问题34已修复并编译成功)
-**状态**: ✅ 编译成功，CLI使用L-SDK标准格式，SDK Visualizer兼容
+**最后更新**: 2026-01-09 (❌ 问题35：CLI命令处理逻辑不完整)
+**状态**: ❌ 编译成功但SDK Visualizer仍报错 - CLI命令处理逻辑不完整
 
 ---
 
@@ -2596,13 +2596,78 @@ SDK Visualizer报错：
 
 ---
 
+### 问题35：CLI命令处理逻辑不完整 (2026-01-09) ❌ 待修复
+
+**现象**：
+- 固件编译成功
+- SDK Visualizer发送配置文件后仍报 "Error in Setting up device"
+
+**根本原因分析**：
+
+我们的CLI命令处理只是"假装"处理了L-SDK命令，实际上关键逻辑缺失：
+
+1. **antGeometryBoard命令**：SDK需要设置`GIsAntGeoDef`和`GIsRangePhaseCompDef`标志
+   - 我们的实现：直接返回0（什么都不做）
+   - SDK的实现：解析xWRL6844EVM，设置天线几何配置
+
+2. **sensorStart命令**：SDK需要检查天线配置是否完成
+   - 我们的实现：直接调用RadarControl_start()
+   - SDK的实现：检查`(GIsAntGeoDef >> 3) == 1`和`GIsRangePhaseCompDef == 1`
+
+3. **配置应用时机**：SDK在sensorStart时才真正配置雷达
+   - 我们的实现：sensorStart调用RadarControl_config()
+   - SDK的实现：通过MmwStart()完成完整的配置流程
+
+**SDK mmw_demo的sensorStart检查逻辑**：
+```c
+int32_t CLI_MMWaveSensorStart (int32_t argc, char* argv[])
+{
+    if (argc != 5)  // sensorStart需要5个参数
+    {
+        CLI_write ("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    if(((GIsAntGeoDef >> 3) != 1) || (GIsRangePhaseCompDef != 1))
+    {
+        CLI_write ("Error: Antenna geometry is not fully defined\n");
+        return -1;
+    }
+    // ... 后续配置和启动
+}
+```
+
+**解决方案选项**：
+
+| 选项 | 描述 | 工作量 | 风险 |
+|-----|------|-------|-----|
+| A. 修复CLI命令处理 | 补全antGeometryBoard等命令的完整实现 | 中 | 中 |
+| B. 直接使用SDK mmw_cli.c | 替换cli.c为SDK的mmw_cli.c | 大 | 高 |
+| C. 先用SDK mmw_demo验证 | 使用SDK固件验证环境正常，再修复 | 小 | 低 |
+
+**推荐方案**：选项C
+
+1. 先烧录SDK mmw_demo固件验证SDK Visualizer正常工作
+2. 确认profile_4T4R_tdm.cfg配置文件可用
+3. 再回来修复HealthDetect固件的CLI命令处理
+
+**待修复文件清单**：
+1. `cli.c` - 需要添加：
+   - 天线几何配置变量(GIsAntGeoDef, GIsRangePhaseCompDef)
+   - antGeometryBoard命令完整实现
+   - sensorStart参数检查(argc==5)
+   - sensorStop参数检查(argc==2)
+   - 完整的MmwStart()流程
+
+---
+
 ## ⏳ 待修复功能 (2026-01-09)
 
 - [x] 重新编译固件（包含问题31修复）→ ✅ 问题32已解决
 - [x] 执行Clean + Build（解决问题32）→ ✅ 2026-01-09完成
 - [x] 重新烧录.appimage（包含UART初始化修复）→ ✅ 烧录成功
-- [x] 🔴 **问题34：修改CLI模块使用mmw_demo标准框架** → ✅ 已修复
+- [x] 🔴 **问题34：修改CLI模块使用mmw_demo标准框架** → ✅ 已修复格式
 - [x] 重新编译（Clean + Build）→ ✅ 2026-01-09编译成功
+- [ ] 🔴 **问题35：修复CLI命令处理逻辑** → ❌ 待修复
 - [ ] 重新烧录.appimage
 - [ ] 使用SDK Visualizer验证配置发送
 - [ ] 验证点云数据输出
@@ -2610,11 +2675,8 @@ SDK Visualizer报错：
 ---
 
 > 📌 **最后更新**: 2026-01-09
-> ✅ 已修复34个问题（全部编译成功）
+> ✅ 已修复34个问题（编译成功）
 > 🎉 **编译成功** - MSS: 209,712 bytes, DSS: 230,656 bytes
 > 🎉 **固件已生成** - `health_detect_6844_system.Release.appimage`
-> ✅ **问题30** - CLI命令格式不兼容（已合并到问题34）
-> ✅ **问题31** - UART驱动未初始化，已修复
-> ✅ **问题32** - MSS编译失败，已通过Clean + Build解决
-> ⚠️ **问题33** - 分析有误，合并到问题34
-> ✅ **问题34** - **CLI已使用L-SDK标准格式，编译成功！**
+> ✅ **问题34** - CLI使用L-SDK标准命令格式
+> ❌ **问题35** - **CLI命令处理逻辑不完整，antGeometryBoard等命令只是空实现**
