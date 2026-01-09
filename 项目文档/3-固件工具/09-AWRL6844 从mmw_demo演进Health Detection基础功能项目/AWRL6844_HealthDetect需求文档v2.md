@@ -1,9 +1,72 @@
-# 📋 AWRL6844 Health Detection 项目需求文档 v2.5
+# 📋 AWRL6844 Health Detection 项目需求文档 v2.6
 
 **项目路径**: `D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect`
 **创建日期**: 2026-01-08
 **更新日期**: 2026-01-09
-**版本**: v2.5（修复metaimage配置文件大小写问题）
+**版本**: v2.6（新增TLV和CLI兼容性强制要求）
+
+---
+
+## 🔴🔴🔴 最高优先级：SDK Visualizer兼容性要求（2026-01-09新增）
+
+> ⭐ **来源**: [AWRL6844雷达健康检测-02-方案确认.md](../08-AWRL6844雷达健康检测实现方案/AWRL6844雷达健康检测-02-方案确认.md)
+> 
+> **核心原则**: 最终固件**必须能被SDK Visualizer识别和控制**
+
+### 🔴 强制要求1：TLV数据格式必须兼容标准Demo
+
+| 要求 | 说明 |
+|-----|------|
+| **点云必须Type=1** | 使用标准`MMWDEMO_OUTPUT_MSG_DETECTED_POINTS`格式 |
+| **扩展从Type=1000开始** | 健康检测专用TLV避开官方范围 |
+| **禁止使用Type=3001** | InCabin私有格式，SDK Visualizer不兼容 |
+
+### 🔴 强制要求2：CLI必须使用标准mmwave_demo框架
+
+**问题34发现（2026-01-09）**：自定义简化CLI与SDK Visualizer不兼容！
+
+| ❌ 错误做法（当前） | ✅ 正确做法（必须修改） |
+|-------------------|----------------------|
+| 自定义简化cli.c | 使用mmw_demo的mmw_cli.c框架 |
+| 自定义banner格式 | 使用标准`MMW Demo XX.XX.XX.XX`格式 |
+| 自定义prompt | 使用`mmwDemo:/>`格式 |
+| 无mmWaveExtension | 设置`enableMMWaveExtension = 1U` |
+
+**必须包含的CLI_Cfg配置**：
+
+```c
+// ✅ 正确：使用标准mmw_demo CLI框架
+CLI_Cfg cliCfg;
+cliCfg.cliPrompt = "mmwDemo:/>";
+cliCfg.cliBanner = "MMW Demo XX.XX.XX.XX";
+cliCfg.UartHandle = gMmwMssMCB.commandUartHandle;
+cliCfg.mmWaveHandle = gMmwMssMCB.ctrlHandle;
+cliCfg.enableMMWaveExtension = 1U;  // 关键！
+cliCfg.usePolledMode = true;
+// 然后注册命令表...
+CLI_open(&cliCfg);
+```
+
+**为什么重要**：
+- SDK Visualizer通过CLI发送配置命令
+- 它期望标准mmwave_demo的响应格式
+- 自定义CLI格式会导致"Error in Setting up device"
+
+### 🔴 强制要求3：配置命令格式必须兼容
+
+**标准mmw_demo CLI命令**（SDK Visualizer使用）：
+
+```
+sensorStop
+channelCfg <rxChannelEn> <txChannelEn>
+chirpComnCfg <params...>
+chirpTimingCfg <params...>
+frameCfg <params...>
+guiMonitor <params...>
+sensorStart
+```
+
+**禁止使用自定义命令格式！**
 
 ---
 
