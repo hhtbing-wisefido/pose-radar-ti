@@ -505,6 +505,63 @@ Path '../src/dss/dss_main.c' cannot be resolved
 | `system_project.projectspec` | deviceId, products,**添加 `<import>`标签** |
 | `src/system/system.xml`      | **新增** - 定义多核系统结构                  |
 
+### 🔴🔴🔴 正确的项目导入方式（最高优先级）
+
+> ⚠️ **重要**：这是编译成功的关键！错误的导入方式会导致各种编译错误！
+
+**请用户在CCS中执行以下步骤**:
+
+#### 步骤1：删除当前workspace中的所有项目
+
+```
+在CCS中：
+- 右键 health_detect_6844_mss → Delete（勾选"Delete project contents on disk"）
+- 右键 health_detect_6844_dss → Delete（勾选"Delete project contents on disk"）
+- 右键 health_detect_6844_system → Delete（勾选"Delete project contents on disk"）
+```
+
+#### 步骤2：🔴 只从System项目导入（关键步骤）
+
+```
+File → Import → CCS Projects
+Browse to: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\
+只选择: health_detect_6844_system.projectspec
+点击 Finish
+
+CCS会自动：
+✅ 解析 <import> 标签
+✅ 自动导入 health_detect_6844_mss 项目
+✅ 自动导入 health_detect_6844_dss 项目
+✅ 设置项目间依赖关系
+
+导入后应看到3个项目：
+- health_detect_6844_mss
+- health_detect_6844_dss
+- health_detect_6844_system
+```
+
+#### 步骤3：只编译System项目（自动编译依赖）
+
+```
+右键 health_detect_6844_system → Build Project
+
+CCS会自动按顺序：
+Step 1: 自动编译 MSS → 生成 .rig
+Step 2: 自动编译 DSS → 生成 .rig
+Step 3: System post-build → 生成 .appimage
+
+🔴 不需要手动编译MSS和DSS！CCS会自动处理！
+```
+
+#### 步骤4：验证输出
+
+```
+检查以下文件是否生成:
+- health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig ✅
+- health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig ✅
+- health_detect_6844_system/Release/health_detect_6844_system.Release.appimage ✅
+```
+
 ---
 
 ## 🐛 编译问题及解决方案
@@ -2158,65 +2215,6 @@ Previous file was not available
 - 🟢 **API层面完全相同** - 都使用TI mmWave L-SDK的API
 - 🟡 **调用方式不同** - HealthDetect通过 `radar_control`模块封装（更清晰）
 - 🔴 **架构完全不同** - HealthDetect是三层架构（这是预期的改进）
-
----
-
-## 🎯 下一步操作指南
-
-### 问题27解决方案：正确的项目导入方式（最高优先级）
-
-**请用户在CCS中执行以下步骤**:
-
-#### 1. 删除当前workspace中的所有项目
-
-```
-在CCS中：
-- 右键 health_detect_6844_mss → Delete（勾选"Delete project contents on disk"）
-- 右键 health_detect_6844_dss → Delete（勾选"Delete project contents on disk"）
-- 右键 health_detect_6844_system → Delete（勾选"Delete project contents on disk"）
-```
-
-#### 2. 🔴 只从System项目导入（关键步骤）
-
-```
-File → Import → CCS Projects
-Browse to: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\
-只选择: health_detect_6844_system.projectspec
-点击 Finish
-
-CCS会自动：
-✅ 解析 <import> 标签
-✅ 自动导入 health_detect_6844_mss 项目
-✅ 自动导入 health_detect_6844_dss 项目
-✅ 设置项目间依赖关系
-
-导入后应看到3个项目：
-- health_detect_6844_mss
-- health_detect_6844_dss
-- health_detect_6844_system
-```
-
-#### 3. 只编译System项目（自动编译依赖）
-
-```
-右键 health_detect_6844_system → Build Project
-
-CCS会自动按顺序：
-Step 1: 自动编译 MSS → 生成 .rig
-Step 2: 自动编译 DSS → 生成 .rig
-Step 3: System post-build → 生成 .appimage
-
-🔴 不需要手动编译MSS和DSS！CCS会自动处理！
-```
-
-#### 4. 验证输出
-
-```
-检查以下文件是否生成:
-- health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig ✅ (196,832 bytes)
-- health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig ✅ (230,656 bytes)
-- health_detect_6844_system/Release/health_detect_6844_system.Release.appimage ✅
-```
 
 ---
 
