@@ -1,8 +1,9 @@
-# 📋 AWRL6844 Health Detection 项目需求文档 v2.0
+# 📋 AWRL6844 Health Detection 项目需求文档 v2.3
 
 **项目路径**: `D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect`
 **创建日期**: 2026-01-08
-**版本**: v2.0（基于v1.0，添加失败教训和API规范修正）
+**更新日期**: 2026-01-09
+**版本**: v2.3（添加固件烧录验证流程）
 
 ---
 
@@ -496,6 +497,283 @@ health_detect_system.release.appimage
 
 ---
 
+## 🔥 固件烧录与验证流程（新增）
+
+> ⚠️ **重要**：编译生成.appimage后，必须完成以下步骤验证固件正常工作！
+> 📎 **详细操作**：参见[第2章-标准Demo验证](../08-AWRL6844雷达健康检测实现方案/AWRL6844雷达健康检测-05-第2章-标准Demo验证.md)
+
+### 1. 固件烧录
+
+#### 1.1 硬件准备
+
+**SOP跳线设置（烧录模式）**：
+```
+烧录模式: S7-OFF, S8-OFF
+运行模式: S7-ON, S8-ON
+```
+
+**COM端口确认**：
+```powershell
+# 设备管理器查看端口
+# CLI端口: COMx（如COM3）- 用于命令/配置
+# 数据端口: COMy（如COM4）- 用于点云数据
+```
+
+#### 1.2 使用SDK Visualizer烧录（推荐）
+
+```
+步骤1: 启动Visualizer
+       C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\visualizer\visualizer.exe
+
+步骤2: 切换到 Flash 标签页
+
+步骤3: 设置SOP跳线为烧录模式（S7-OFF, S8-OFF）
+       按S2复位键
+
+步骤4: 选择固件文件
+       project-code/AWRL6844_HealthDetect/.../health_detect_system.release.appimage
+
+步骤5: 点击 FLASH 按钮，等待进度条到100%
+
+步骤6: 恢复SOP跳线为运行模式（S7-ON, S8-ON）
+       按S2复位键
+```
+
+#### 1.3 使用命令行烧录（备选）
+
+```powershell
+cd C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool
+
+.\arprog_cmdline_6844.exe -p COM3 `
+  -f1 "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\...\health_detect_system.release.appimage" `
+  -s SFLASH `
+  -c
+```
+
+#### 1.4 烧录成功标志
+
+```
+✅ 进度条到100%
+✅ 显示 "Flashing completed successfully"
+✅ 串口有启动信息输出（波特率115200）
+```
+
+---
+
+### 2. 雷达配置加载
+
+> 🚨 **关键步骤**：固件烧录后，**必须发送配置文件才能启动雷达**！
+> 📎 **配置文件分析**：参见[附录G-雷达配置文件对比分析](../08-AWRL6844雷达健康检测实现方案/AWRL6844雷达健康检测-附录G-雷达配置文件对比分析.md)
+
+#### 2.1 配置文件工作原理
+
+```
+烧录固件 → 发送配置文件(.cfg) → 执行sensorStart → 雷达输出数据
+```
+
+**没有配置文件，雷达不会工作！**
+
+#### 2.2 标准配置文件位置
+
+| 配置文件 | 路径 | 说明 |
+|---------|------|------|
+| **profile_4T4R_tdm.cfg** | `mmw_demo_SDK_reference/profiles/` | ✅ 推荐，4TX 4RX TDM模式 |
+| **6844_profile_4T4R_tdm.cfg** | `MMWAVE_L_SDK/.../visualizer/tmp/` | SDK Visualizer默认 |
+| **健康检测专用配置** | `AWRL6844_HealthDetect/cfg/` | 项目自定义配置（待开发） |
+
+#### 2.3 标准配置文件关键参数
+
+```properties
+% 核心配置（mmw_demo标准格式）
+channelCfg 153 255 0              % 4TX 4RX TDM模式
+chirpComnCfg 8 0 0 256 1 13.1 3   % Chirp参数
+frameCfg 64 0 1358 1 100 0        % 10 FPS帧率
+cfarProcCfg 0 2 8 4 3 0 9.0 0     % CFAR检测
+aoaProcCfg 64 64                  % AOA处理
+aoaFovCfg -60 60 -60 60           % 视场角±60°
+antGeometryBoard xWRL6844EVM      % 天线配置（简化）
+sensorStart 0 0 0 0               % 启动雷达
+```
+
+#### 2.4 设备安装配置
+
+> 📎 **详细安装信息**：参见[附录E-设备安装配置信息](../08-AWRL6844雷达健康检测实现方案/AWRL6844雷达健康检测-附录E-设备安装配置信息.md)
+
+**实际安装参数**：
+```
+雷达位置: 墙面壁挂安装
+离地高度: 1.78m
+俯仰角度: -40°（向下俯视）
+检测区域: 4m宽 × 5m深 × 2m高
+```
+
+**配置文件中的位置参数**（如需自定义）：
+```properties
+% 传感器位置配置（InCabin格式，标准mmw_demo不需要）
+sensorPosition 0 0 1.78 0 -40
+% 格式：X Y Z azimuthTilt elevationTilt
+
+% 检测区域定义（InCabin格式，标准mmw_demo不需要）
+cuboidDef 0 0  -2.0  2.0  0.2  5.0  0.0  2.0
+% 格式：zoneId subZoneId xMin xMax yMin yMax zMin zMax
+```
+
+> ⚠️ **注意**：`sensorPosition`和`cuboidDef`是InCabin专用CLI命令，标准mmw_demo固件**不识别**！
+> 如需区域定义功能，需要在HealthDetect固件中实现这些CLI命令。
+
+#### 2.5 使用SDK Visualizer发送配置
+
+```
+步骤1: 启动SDK Visualizer（如已启动则继续）
+
+步骤2: 切换到 Sensor Config 标签页
+
+步骤3: 选择COM端口
+        - CLI Port: COM3 (命令端口)
+        - Data Port: COM4 (数据端口)
+
+步骤4: 连接设备 → 点击 "Connect"
+
+步骤5: 加载配置文件 → 点击 "Browse..."
+        选择：mmw_demo_SDK_reference/profiles/profile_4T4R_tdm.cfg
+
+步骤6: 发送配置 → 点击 "Send Config"
+        每行命令应返回 "Done"
+
+步骤7: 雷达自动启动，或手动点击 "Start Sensor"
+```
+
+#### 2.6 配置加载成功标志
+
+```
+✅ 所有CLI命令返回 "Done"
+✅ 无 "Error" 或 "Invalid command" 提示
+✅ sensorStart执行成功
+✅ 雷达开始输出数据
+```
+
+---
+
+### 3. 数据输出验证
+
+#### 3.1 CLI端口验证
+
+**连接参数**：
+```
+端口: CLI端口（如COM3）
+波特率: 115200
+数据位: 8, 停止位: 1, 校验: None
+```
+
+**验证命令响应**：
+```
+发送: help
+预期: 显示可用命令列表
+
+发送: version
+预期: 显示固件版本信息
+```
+
+#### 3.2 数据端口验证（SDK Visualizer）
+
+```
+步骤1: 切换到 Plots 标签页
+
+步骤2: 验证实时数据显示：
+        - Range-Azimuth Heat Map（距离-方位热图）
+        - Detected Objects（检测到的目标点）
+        - Statistics（统计信息）
+
+步骤3: 测试场景验证：
+        - 静态环境 → 无点云或极少静态点
+        - 人员走动 → 有明显移动点云
+        - 手部摆动 → 能检测到小目标运动
+```
+
+#### 3.3 功能验证测试场景
+
+| 测试场景 | 预期结果 | 验证标志 |
+|---------|---------|---------|
+| **静态环境** | 无点云或极少静态点 | ✅ 无虚警 |
+| **人员走动** | 检测到移动点云 | ✅ 能跟踪 |
+| **人员静止** | 点云稳定 | ✅ 位置准确 |
+| **手部摆动** | 检测到小目标 | ✅ 灵敏度正常 |
+| **多人场景** | 多个点云簇 | ✅ 可区分 |
+
+#### 3.4 TLV数据格式验证
+
+**验证点云数据使用标准格式**：
+```
+点云TLV: Type = 1 (MMWDEMO_OUTPUT_MSG_DETECTED_POINTS)
+         ✅ SDK Visualizer能正常显示
+
+自定义TLV: Type = 1000+ (健康检测扩展)
+         ✅ SDK Visualizer安全忽略，不影响显示
+```
+
+> 📎 **TLV格式规范**：参见[附录F-TLV数据格式兼容性要求](../08-AWRL6844雷达健康检测实现方案/AWRL6844雷达健康检测-附录F-TLV数据格式兼容性要求.md)
+
+---
+
+### 4. 验证完成检查清单
+
+| 类别 | 检查项 | 状态 |
+|------|--------|------|
+| **烧录** | 固件烧录成功（进度100%） | ⬜ |
+| **烧录** | SOP已恢复运行模式 | ⬜ |
+| **烧录** | 串口有启动信息 | ⬜ |
+| **配置** | 配置文件发送成功 | ⬜ |
+| **配置** | 所有CLI命令返回Done | ⬜ |
+| **配置** | sensorStart执行成功 | ⬜ |
+| **验证** | CLI命令响应正常 | ⬜ |
+| **验证** | 数据端口有输出 | ⬜ |
+| **验证** | Visualizer显示点云 | ⬜ |
+| **验证** | 能检测到人员运动 | ⬜ |
+
+**✅ 所有检查项通过后，固件验证完成！**
+
+---
+
+### 5. 常见问题排查
+
+#### 问题1: 烧录超时
+
+```
+错误: Connect to Device Timeout
+
+解决:
+1. 确认SOP跳线正确（S7-OFF, S8-OFF）
+2. 按S2复位键后立即执行烧录
+3. 检查USB连接稳定性
+4. 尝试命令行烧录
+```
+
+#### 问题2: 配置发送失败
+
+```
+错误: CLI命令响应超时或错误
+
+解决:
+1. 确认SOP已恢复运行模式（S7-ON, S8-ON）
+2. 确认连接的是CLI端口（波特率115200）
+3. 重启EVM后重试
+4. 检查配置文件编码（必须是ASCII，不能UTF-8带BOM）
+```
+
+#### 问题3: 无点云输出
+
+```
+现象: CLI正常，但无点云数据
+
+解决:
+1. 确认sensorStart已执行
+2. 检查数据端口波特率（必须是1250000）
+3. 检查天线朝向（正面朝向监测区域）
+4. 检查检测区域内是否有目标
+```
+
+---
+
 ## 📚 参考资源
 
 ### 必读的mmw_demo文件（🔴 编码前必须阅读）
@@ -604,6 +882,10 @@ health_detect_system.release.appimage
 |      |            | 明确必须使用标准Demo格式    |
 | v2.2 | 2026-01-09 | 添加SDK技术深度分析引用     |
 |      |            | 链接Part10/Part13/Part14    |
+| v2.3 | 2026-01-09 | 🆕 添加固件烧录验证流程     |
+|      |            | 🆕 添加配置加载步骤         |
+|      |            | 🆕 添加数据验证检查清单     |
+|      |            | 🆕 引用附录E/附录G/第2章    |
 
 ---
 
