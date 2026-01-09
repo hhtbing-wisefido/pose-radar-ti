@@ -1847,15 +1847,67 @@ system.xml已定义项目依赖:
 <project configuration="@match" id="project_1" name="health_detect_6844_dss"/>
 ```
 
-**状态**: ⚠️ 操作方式问题（代码正确，需用户按正确方式重新导入）
+**状态**: ✅ 已验证 - 用户确认导入方式正确，自动依赖编译机制正常工作
 
 **参考文档**: `AWRL6844_HealthDetect需求文档v2.md` - "CCS自动依赖编译机制"章节
 
 ---
 
+### 问题28: metaImage_creator报错KeyError: 'signedCertificateFile'
+
+**发现日期**: 2026-01-09
+
+**错误现象**:
+```
+cd C:/ti/MMWAVE_L_SDK_06_01_00_01/tools/MetaImageGen && metaImage_creator.exe --complete_metaimage ...
+Traceback (most recent call last):
+  File "metaImage_tool_wrapper.py", line 104, in <module>
+  File "metaImage_tool_wrapper.py", line 41, in metaImage_tool_automation
+  File "meta_image.py", line 57, in __init__
+KeyError: 'signedCertificateFile'
+```
+
+**根本原因**:
+
+metaimage配置文件（`metaimage_cfg.Release.json`）缺少metaImage_creator.exe要求的必要字段：
+
+| 缺少的字段 | 作用 |
+|-----------|------|
+| `certSigningKeyFileECDSA` | ECDSA签名密钥文件 |
+| `certSigningKeyFileRSA` | RSA签名密钥文件 |
+| `signingAlgo` | 签名算法（RSA） |
+| `signedCertificateFile` | 🔴 签名证书文件路径（错误关键） |
+| `metaImageFile` | 输出文件路径（替代finalMetaImage） |
+| `coreImages` | 空数组（必须存在） |
+
+**解决方案**:
+
+完全按照InCabin_Demos的配置文件格式重写`metaimage_cfg.Release.json`和`metaimage_cfg.Debug.json`：
+
+**修改的文件**:
+- `src/system/config/metaimage_cfg.Release.json`
+- `src/system/config/metaimage_cfg.Debug.json`
+
+**关键修改内容**:
+```json
+"CertificateParams": {
+    ...
+    "certSigningKeyFileECDSA": "config_keys/mpk_ecdsa.pem",
+    "certSigningKeyFileRSA": "config_keys/mpk.pem",
+    "signingAlgo": "RSA",
+    "signedCertificateFile": "../../examples/empty/xwrL684x-evm/system_freertos/temp/signed_cert.bin"
+},
+"metaImageFile": "../../examples/empty/xwrL684x-evm/system_freertos/health_detect_6844_system.Release.appimage",
+"coreImages": []
+```
+
+**状态**: ✅ 已修复（2026-01-09）
+
+---
+
 ## 📊 编译问题汇总表
 
-> 💡 **说明**: 以下是所有27个编译问题的汇总表，便于快速查看问题类型和解决方案。
+> 💡 **说明**: 以下是所有28个编译问题的汇总表，便于快速查看问题类型和解决方案。
 
 | 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
 |---------|---------|------|---------|------|
@@ -1885,7 +1937,8 @@ system.xml已定义项目依赖:
 | 问题24 | .projectspec缺少构建配置文件引用 | 未在.projectspec声明 | 添加file引用并设置action="copy" | ✅ 已修复 |
 | 问题25 | System .projectspec metaimage大小写 | release vs Release | 修改.projectspec使用大写 | ✅ 已修复 |
 | 问题26 | System metaimage未复制到config目录 | CCS扁平化路径 | 添加targetDirectory="config" | ✅ 已修复 |
-| 问题27 | DSS未编译导致System找不到.rig | 项目导入方式错误 | 必须只从System导入，不能分别导入 | ⚠️ 操作问题 |
+| 问题27 | DSS未编译导致System找不到.rig | 项目导入方式错误 | 必须只从System导入，不能分别导入 | ✅ 已验证 |
+| 问题28 | metaImage_creator KeyError | 配置文件缺少字段 | 添加signedCertificateFile等必要字段 | ✅ 已修复 |
 
 ---
 
@@ -1902,7 +1955,7 @@ system.xml已定义项目依赖:
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **27** |
+| **修复的编译问题** | **28** |
 | **待处理问题** | **0** |
 
 ### ✅ 完成状态
