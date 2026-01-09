@@ -508,6 +508,17 @@ health_detect_system.release.appimage
 | `source/mmw_cli.c`                      | CLI命令          | ⭐⭐⭐⭐   |
 | `source/dpc/dpc.c`                      | DPC处理          | ⭐⭐⭐     |
 
+### SDK技术深度分析（推荐阅读）
+
+> 📎 以下文档位于 `项目文档/3-固件工具/06-SDK固件研究/`
+
+| 文档 | 内容 | 推荐程度 |
+| ---- | ---- | -------- |
+| [Part10-MMWAVE_L_SDK深度解析](../06-SDK固件研究/Part10-MMWAVE_L_SDK深度解析.md) | SDK完整架构、目录结构、组件分析 | ⭐⭐⭐⭐ |
+| [Part13-SDK对比与RTOS深度解析](../06-SDK固件研究/Part13-SDK对比与RTOS深度解析.md) | L-SDK vs 标准SDK对比、FreeRTOS vs BIOS详解 | ⭐⭐⭐⭐⭐ |
+| [Part14-TLV数据格式与工具兼容性完整指南](../06-SDK固件研究/Part14-TLV数据格式与工具兼容性完整指南.md) | TLV格式详解、工具兼容性分析 | ⭐⭐⭐⭐⭐ |
+| [Part3-SDK与固件关系及工作流程](../06-SDK固件研究/Part3-SDK与固件关系及工作流程.md) | SDK与固件关系、编译流程 | ⭐⭐⭐ |
+
 ### 失败经验资料
 
 - 位置：`项目文档/3-固件工具/09-.../失败经验资料/`
@@ -591,6 +602,8 @@ health_detect_system.release.appimage
 |      |            | 其他内容保持v1.0            |
 | v2.1 | 2026-01-09 | 添加TLV格式兼容性附录       |
 |      |            | 明确必须使用标准Demo格式    |
+| v2.2 | 2026-01-09 | 添加SDK技术深度分析引用     |
+|      |            | 链接Part10/Part13/Part14    |
 
 ---
 
