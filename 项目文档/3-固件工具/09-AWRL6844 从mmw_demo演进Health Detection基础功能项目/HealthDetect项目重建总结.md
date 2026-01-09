@@ -1,8 +1,8 @@
 # 📋 AWRL6844 Health Detect 项目重建总结
 
 **日期**: 2026-01-08
-**最后更新**: 2026-01-08 (编译问题修复)
-**状态**: 代码框架创建完成，编译问题已修复，待重新导入CCS验证
+**最后更新**: 2026-01-09 (DSS memory_hex.cmd添加)
+**状态**: 代码框架创建完成，DSS缺失文件已修复，待重新编译验证
 
 ---
 
@@ -1279,3 +1279,151 @@ MMWave_stop(gMmwMssMCB.ctrlHandle, ...)
 ---
 
 > 🎯 **目标**: 编译通过 → 能烧录 → 能运行 → 功能验证
+
+---
+
+## 🆕 编译问题修复记录 (2026-01-09)
+
+### 问题6: DSS post-build 失败 - memory_hex.cmd 缺失
+
+**错误信息**：
+
+```
+/cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
+gmake[3]: Target 'all' not remade because of errors.
+gmake[2]: [makefile:160: post-build] Error 2 (ignored)
+```
+
+**原因**：DSS项目的 `makefile_ccs_bootimage_gen` 需要 `memory_hex.cmd` 文件来生成hex文件和.rig镜像，但该文件不存在。
+
+**解决方案**：创建 `memory_hex.cmd` 文件
+
+**文件位置**：`src/dss/xwrL684x-evm/c66ss0_freertos/ti-c6000/memory_hex.cmd`
+
+**文件内容**：
+```bat
+/*----------------------------------------------------------------------------*/
+/* memory_hex.cmd                                                             */
+/*                                                                            */
+/* (c) Texas Instruments 2024, All rights reserved.                           */
+/*                                                                            */
+/* Health Detection Demo - DSS (C66 DSP) Hex Generation Memory Map            */
+/* Reference: AWRL6844_InCabin_Demos/src/dss/.../memory_hex.cmd               */
+/*----------------------------------------------------------------------------*/
+
+ROMS
+{
+    ROW1        : org = 0x00800000     len = 0x00060000     romwidth=32
+    files = { temp/health_detect_dss_l2.hex }
+    ROW2        : org = 0x44000000     len = 0x000003CE     romwidth=32
+    files = { temp/health_detect_mailbox_hsm.hex }
+    ROW3        : org = 0x44000400     len = 0x000003CE     romwidth=32
+    files = { temp/health_detect_mailbox_r5f.hex }
+    ROW4        : org = 0x88000000     len = 0x00200000     romwidth=32
+    files = { temp/health_detect_dss_l3.hex }
+    ROW5        : org = 0xC02E8000     len = 0x00004000     romwidth=32
+    files = { temp/health_detect_user_shm_mem.hex }
+    ROW6        : org = 0xC02EC000     len = 0x00004000     romwidth=32
+    files = { temp/health_detect_log_shm_mem.hex }
+    ROW7        : org = 0xC5000200     len = 0x00001C80     romwidth=32
+    files = { temp/health_detect_rtos_nortos_ipc_shm_mem.hex }
+}
+```
+
+**状态**：✅ 已修复（2026-01-09）
+
+---
+
+### 问题7: System post-build 失败 - MSS .rig 文件不存在
+
+**错误信息**：
+
+```
+/cygwin/cp: cannot stat '../health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig': No such file or directory
+```
+
+**原因**：System项目的makefile需要MSS和DSS的 `.rig` 镜像文件，但MSS项目未编译。
+
+**解决方案**：**必须按正确顺序编译所有项目**
+
+**正确的编译顺序**：
+```
+1. 编译 MSS 项目 (health_detect_6844_mss) → 生成 health_detect_6844_mss_img.Release.rig
+2. 编译 DSS 项目 (health_detect_6844_dss) → 生成 health_detect_6844_dss_img.Release.rig
+3. 编译 System 项目 (health_detect_6844_system) → 合并生成 .appimage
+```
+
+**CCS操作步骤**：
+```
+1. 在Project Explorer中选择 health_detect_6844_mss 项目
+2. 右键 → Build Project
+3. 等待编译完成，确认生成 .rig 文件
+4. 选择 health_detect_6844_dss 项目
+5. 右键 → Build Project
+6. 等待编译完成，确认生成 .rig 文件
+7. 选择 health_detect_6844_system 项目
+8. 右键 → Build Project
+9. 验证输出 health_detect_6844_system.Release.appimage
+```
+
+**状态**：⏳ 需用户按顺序编译
+
+---
+
+### 问题8: Config文件名大小写问题 (可能)
+
+**错误信息**：
+
+```
+/cygwin/cat: 'C:/.../config/metaimage_cfg.Release.json': No such file or directory
+```
+
+**原因**：makefile使用 `$(PROFILE)` 变量（值为 `Release`），但config目录中的文件名是小写 `release`。
+
+**说明**：Windows文件系统不区分大小写，所以这个错误通常不会发生。如果在Linux/Mac上编译会有问题。
+
+**解决方案**：确保文件名与makefile期望一致（已有 `metaimage_cfg.release.json`）
+
+**状态**：✅ 无需修改（Windows兼容）
+
+---
+
+### 编译问题汇总表
+
+| 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
+|---------|---------|------|---------|------|
+| 问题6 | DSS post-build失败 | 缺少 `memory_hex.cmd` | 创建DSS的memory_hex.cmd | ✅ 已修复 |
+| 问题7 | System post-build失败 | MSS未编译 | 按正确顺序编译MSS→DSS→System | ⏳ 待验证 |
+| 问题8 | Config文件名 | 大小写问题 | Windows兼容，无需修改 | ✅ 已确认 |
+
+---
+
+### 下一步操作指南
+
+**请用户在CCS中执行以下步骤**：
+
+1. **刷新项目**
+   ```
+   在CCS中右键点击各项目 → Refresh
+   确保新创建的 memory_hex.cmd 文件被识别
+   ```
+
+2. **Clean所有项目**
+   ```
+   Project → Clean... → 选择所有health_detect项目 → Clean
+   ```
+
+3. **按顺序编译**
+   ```
+   Step 1: 编译 health_detect_6844_mss (右键 → Build Project)
+   Step 2: 编译 health_detect_6844_dss (右键 → Build Project)
+   Step 3: 编译 health_detect_6844_system (右键 → Build Project)
+   ```
+
+4. **验证输出**
+   ```
+   检查以下文件是否生成：
+   - health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig
+   - health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig
+   - health_detect_6844_system/Release/health_detect_6844_system.Release.appimage
+   ```
