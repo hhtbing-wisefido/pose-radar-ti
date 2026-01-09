@@ -545,54 +545,37 @@ health_detect_system.release.appimage
 
 **AWRL6844_HealthDetect 项目必须使用标准 mmWave Demo 的 TLV Type ID**，以确保与 SDK Visualizer 等官方测试工具兼容。
 
-### 标准 vs InCabin TLV Type ID 对照表
+> ⭐ **最高优先级要求**：点云数据**必须使用Type=1**（标准DETECTED_POINTS格式），禁止使用Type=3001（InCabin私有格式）。
+>
+> 📎 **完整技术分析**: [附录F：TLV数据格式兼容性要求](../08-AWRL6844雷达健康检测实现方案/AWRL6844雷达健康检测-附录F-TLV数据格式兼容性要求.md)
 
-| 数据类型 | 标准mmWave Demo | InCabin Demo | 兼容性 |
-|---------|----------------|--------------|--------|
-| **点云数据** | Type = 1 `DETECTED_POINTS` | Type = 3001 `POINT_CLOUD` | ❌ 不兼容 |
-| **Range Profile** | Type = 2 `RANGE_PROFILE` | Type = 2 `RANGE_PROFILE` | ✅ 兼容 |
-| **Stats统计** | Type = 6 `STATS` | Type = 6 `STATS` | ✅ 兼容 |
-| **占用特征** | ❌ 无 | Type = 3002 `OCCUPANCY_FEATURES` | - |
-| **分类结果** | ❌ 无 | Type = 1041 `CLASSIFICATION_RES` | - |
+### 快速参考表
 
-### 工具兼容性矩阵
+| 数据类型 | 标准mmWave Demo | InCabin Demo | HealthDetect选择 |
+|---------|----------------|--------------|------------------|
+| **点云数据** | Type = 1 | Type = 3001 | **Type = 1** ✅ |
+| **Range Profile** | Type = 2 | Type = 2 | **Type = 2** ✅ |
+| **Stats统计** | Type = 6 | Type = 6 | **Type = 6** ✅ |
+| **健康检测扩展** | ❌ 无 | ❌ 无 | **Type = 1000+** ✅ |
 
-| 固件 | SDK Visualizer | InCabin GUI | 说明 |
-|-----|----------------|-------------|------|
-| **标准mmwave_demo** | ✅ 能用 | ❌ 不能 | 使用Type=1点云 |
-| **InCabin固件** | ❌ 不能 | ✅ 能用 | 使用Type=3001点云 |
-| **AWRL6844_HealthDetect** | ✅ 能用 | ❌ 不能 | **必须遵循标准格式** |
+### 扩展TLV设计（从1000开始）
 
-### AWRL6844_HealthDetect TLV 格式规范
+```c
+// 健康检测专用TLV（从1000开始，避开官方范围）
+#define MMWDEMO_OUTPUT_MSG_PRESENCE_DETECT      1000  // 人存检测结果
+#define MMWDEMO_OUTPUT_MSG_HEALTH_FEATURES      1001  // 健康特征向量
+#define MMWDEMO_OUTPUT_MSG_VITAL_SIGNS          1002  // 生命体征
+#define MMWDEMO_OUTPUT_MSG_POSTURE_RESULT       1003  // 姿态检测结果
+#define MMWDEMO_OUTPUT_MSG_FALL_DETECTION       1004  // 跌倒检测告警
+```
 
-**核心TLV（兼容标准Demo）**:
+### 设计原则
 
-| Type ID | 名称 | 说明 | 兼容性 |
-|---------|------|------|--------|
-| **1** | `MMWDEMO_OUTPUT_MSG_DETECTED_POINTS` | 点云数据 | ✅ 标准格式 |
-| 2 | `MMWDEMO_OUTPUT_MSG_RANGE_PROFILE` | Range Profile | ✅ 标准格式 |
-| 6 | `MMWDEMO_OUTPUT_MSG_STATS` | 处理统计 | ✅ 标准格式 |
-| 7 | `MMWDEMO_OUTPUT_MSG_DETECTED_POINTS_SIDE_INFO` | 点云SNR | ✅ 标准格式 |
-
-**扩展TLV（健康检测专用，从1000开始）**:
-
-| Type ID | 名称 | 说明 | 影响 |
-|---------|------|------|------|
-| 1000 | `MMWDEMO_OUTPUT_MSG_PRESENCE_DETECT` | 人存检测结果 | SDK Visualizer忽略 |
-| 1001 | `MMWDEMO_OUTPUT_MSG_HEALTH_FEATURES` | 健康特征 | SDK Visualizer忽略 |
-| 1002 | `MMWDEMO_OUTPUT_MSG_VITAL_SIGNS` | 生命体征 | SDK Visualizer忽略 |
-
-**设计原则**:
-- ✅ 核心TLV（1-12）完全遵循标准mmWave Demo格式
-- ✅ 扩展TLV从1000开始，避开标准范围(1-299)和扩展范围(300-399)
-- ✅ SDK Visualizer可正常显示点云、Range Profile等核心数据
-- ✅ 扩展TLV被SDK Visualizer忽略，但不会导致解析错误
-
-### 详细技术分析
-
-完整TLV格式对比请参考:
-- [TLV数据格式快速参考.md](../08-AWRL6844雷达健康检测实现方案/TLV数据格式快速参考.md)
-- [InCabin与标准Demo数据格式对比.md](../06-SDK固件研究/InCabin与标准Demo数据格式对比.md)
+| 原则 | 说明 | 结果 |
+|-----|------|------|
+| **核心TLV完全兼容** | Type 1-12使用标准格式 | SDK Visualizer正常显示 |
+| **扩展TLV不冲突** | Type 1000+自定义 | SDK Visualizer安全忽略 |
+| **点云必须Type=1** | 最关键的兼容性要求 | 官方工具可用 |
 
 ---
 
