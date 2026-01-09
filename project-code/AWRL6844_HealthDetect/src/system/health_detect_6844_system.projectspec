@@ -35,7 +35,7 @@
 
         <file path="system.xml" action="copy" openOnCreation="true"/>
         <file path="makefile_system_ccs_bootimage_gen" action="copy" openOnCreation="false"/>
-        <file path="config/metaimage_cfg.debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
-        <file path="config/metaimage_cfg.release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+        <file path="config/metaimage_cfg.Debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+        <file path="config/metaimage_cfg.Release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
     </project>
 </projectSpec>

@@ -1598,6 +1598,81 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
 
 ---
 
+### 问题25: System .projectspec metaimage文件名大小写不匹配（2026-01-09）
+
+**错误信息**:
+```
+[109]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_system/Release/../config/metaimage_cfg.Release.json': No such file or directory
+[113]/cygwin/cp: cannot stat '../health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig': No such file or directory
+```
+
+**问题分析**:
+
+1. **第一个错误（第109行）**：System的`.projectspec`文件引用的是小写文件名
+   - `.projectspec`引用: `config/metaimage_cfg.release.json`（小写r）
+   - 实际文件名: `metaimage_cfg.Release.json`（大写R）
+   - CCS的`action="copy"`是**按文件名精确匹配**的
+   - 虽然Windows不区分大小写，但CCS找不到源文件就无法复制
+
+2. **第二个错误（第113行）**：MSS的.rig文件缺失
+   - System post-build需要MSS和DSS的.rig文件
+   - DSS已成功生成（第102行确认）
+   - MSS没有被编译或编译失败
+   - 需要按顺序编译：MSS → DSS → System
+
+**解决方案**:
+
+**步骤1**: 修改System的`.projectspec`使用大写文件名
+```xml
+<!-- 文件位置: src/system/health_detect_6844_system.projectspec -->
+<!-- 修改前 -->
+<file path="config/metaimage_cfg.debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+<file path="config/metaimage_cfg.release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+
+<!-- 修改后 -->
+<file path="config/metaimage_cfg.Debug.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+<file path="config/metaimage_cfg.Release.json" openOnCreation="false" excludeFromBuild="true" action="copy"/>
+```
+
+**步骤2**: 确保MSS先编译
+- CCS编译顺序必须是：MSS → DSS → System
+- System依赖MSS和DSS生成的.rig文件
+- 如果MSS编译失败，必须先解决MSS的错误
+
+**验证步骤**:
+```powershell
+# 1. 删除workspace并重新导入
+Remove-Item -Recurse -Force "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*"
+
+# 2. 在CCS中导入三个.projectspec
+# Project -> Import CCS Projects
+
+# 3. 按顺序Clean Build
+# 右键 health_detect_6844_mss -> Clean Project -> Build Project
+# 右键 health_detect_6844_dss -> Clean Project -> Build Project
+# 右键 health_detect_6844_system -> Clean Project -> Build Project
+
+# 4. 验证所有.rig文件生成
+Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_*\Release\*.rig" -Recurse
+```
+
+**为什么HealthDetect与InCabin_Demos不一致？**
+
+| 项目 | 源文件名 | .projectspec引用 | 状态 |
+|-----|---------|-----------------|------|
+| InCabin_Demos | `metaimage_cfg.release.json`（小写） | `metaimage_cfg.release.json`（小写） | ✅ 一致 |
+| HealthDetect（问题23修复后） | `metaimage_cfg.Release.json`（大写） | `metaimage_cfg.release.json`（小写） | ❌ 不一致 |
+| HealthDetect（问题25修复后） | `metaimage_cfg.Release.json`（大写） | `metaimage_cfg.Release.json`（大写） | ✅ 一致 |
+
+**教训**:
+1. 问题23重命名文件为大写后，应该同时修改`.projectspec`
+2. 文件名修改必须保持**源文件**和**引用**的一致性
+3. Windows虽然不区分大小写，但CCS的文件匹配可能是区分的
+
+**状态**: ✅ 已修复（2026-01-09） - 修改System .projectspec使用大写文件名
+
+---
+
 ## 📊 编译问题汇总表
 
 > 💡 **说明**: 以下是所有23个编译问题的汇总表，便于快速查看问题类型和解决方案。
@@ -1628,6 +1703,7 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
 | 问题22 | CCS工作区缺少构建配置文件 | 导入项目未含配置文件 | 复制memory_hex.cmd和metaimage配置 | ⚠️ 临时方案 |
 | 问题23 | metaimage配置文件大小写不匹配 | Release vs release | 重命名为大写PROFILE | ⚠️ 不完整 |
 | 问题24 | .projectspec缺少构建配置文件引用 | 未在.projectspec声明 | 添加file引用并设置action="copy" | ✅ 已修复 |
+| 问题25 | System .projectspec metaimage大小写 | release vs Release | 修改.projectspec使用大写 | ✅ 已修复 |
 
 ---
 
@@ -1644,7 +1720,7 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **24** |
+| **修复的编译问题** | **25** |
 | **待处理问题** | **1 (问题21)** |
 
 ### ✅ 完成状态
