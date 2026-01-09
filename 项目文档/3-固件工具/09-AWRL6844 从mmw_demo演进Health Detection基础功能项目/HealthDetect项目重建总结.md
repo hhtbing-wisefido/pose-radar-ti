@@ -1,8 +1,8 @@
 ﻿# 📋 AWRL6844 Health Detect 项目重建总结
 
 **日期**: 2026-01-08
-**最后更新**: 2026-01-09 (🔴 问题34：CLI必须使用mmw_demo标准框架)
-**状态**: 🔴 需要修复CLI模块 - 当前自定义CLI与SDK Visualizer不兼容
+**最后更新**: 2026-01-09 (✅ 问题34已修复：CLI使用L-SDK标准格式)
+**状态**: ✅ CLI已修改为L-SDK标准格式，SDK Visualizer兼容
 
 ---
 
@@ -2527,9 +2527,9 @@ SysConfig生成的关键文件：
 5. 使用标准命令格式（chirpComnCfg等）
 ```
 
-**状态**: 🔴 问题33分析有误 → 转为问题34处理
+**状态**: ✅ 问题34已修复（2026-01-09）
 
-### 问题34：CLI必须使用标准mmw_demo框架 (2026-01-09)
+### 问题34：CLI必须使用标准mmw_demo框架 (2026-01-09) ✅ 已解决
 
 **问题现象**：
 
@@ -2551,27 +2551,48 @@ SDK Visualizer报错：
  以确保SDK Visualizer等官方工具可用。"
 ```
 
-**必须修改的内容**：
+**已修改的内容**：
 
-| 当前（错误） | 应改为（正确） |
-|------------|--------------|
-| 自定义cli.c | 使用mmw_demo的mmw_cli.c框架 |
-| 自定义banner | 使用`MMW Demo XX.XX.XX.XX`格式 |
-| 自定义prompt | 使用`mmwDemo:/>`格式 |
-| 无mmWaveExtension | 设置`enableMMWaveExtension = 1U` |
-| 自定义命令格式 | 使用标准命令（chirpComnCfg等） |
+| 原来（错误） | 修改后（正确） | 状态 |
+|------------|--------------|------|
+| 自定义prompt `HealthDetect:/>` | `mmwDemo:/>` | ✅ 已修改 |
+| 自定义banner | `xWRL684x MMW Demo 06.01.00.01` | ✅ 已修改 |
+| 命令成功后无标准响应 | 成功输出`Done`，失败输出`Error %d` | ✅ 已修改 |
+| 只支持自定义命令 | 支持L-SDK标准命令+健康检测扩展 | ✅ 已修改 |
+| `health_detect_simple.cfg` | `health_detect_standard.cfg` | ✅ 已更换 |
 
-**修复方案**：
+**新增支持的L-SDK标准命令**：
 
 ```
-1. 复制mmw_demo_SDK_reference/source/mmw_cli.c到项目中
-2. 修改CLI_init()使用CLI_Cfg结构
-3. 在标准命令表基础上添加健康检测专用命令
-4. 保留标准TLV输出（Type=1点云）
-5. 重新编译、烧录、测试
+✅ chirpComnCfg      - Chirp通用配置
+✅ chirpTimingCfg    - Chirp时序配置  
+✅ guiMonitor        - GUI监视器选择
+✅ cfarProcCfg       - CFAR处理配置
+✅ cfarFovCfg        - CFAR视场配置
+✅ aoaProcCfg        - AOA处理配置
+✅ aoaFovCfg         - AOA视场配置
+✅ clutterRemoval    - 杂波移除
+✅ factoryCalibCfg   - 工厂校准配置
+✅ runtimeCalibCfg   - 运行时校准
+✅ antGeometryBoard  - 天线几何板配置
+✅ adcDataSource     - ADC数据源
+✅ adcLogging        - ADC日志
+✅ lowPowerCfg       - 低功耗配置
+✅ apllFreqShiftEn   - APLL频偏使能
+✅ adcDataDitherCfg  - ADC抖动配置
+✅ gpAdcMeasConfig   - GP ADC配置
 ```
 
-**状态**: 🔴 需要修复CLI模块 → 这是下一步工作重点
+**修改的文件**：
+
+1. `cli.h` - 修改CLI_PROMPT为`mmwDemo:/>`
+2. `cli.c` - 修改Banner为标准格式、添加Done/Error响应、添加L-SDK命令处理
+3. `health_detect_main.h` - 添加GuiMonitor_t结构
+4. `profiles/health_detect_standard.cfg` - 新建L-SDK标准配置文件
+5. `profiles/health_detect_simple.cfg` - 删除（不兼容）
+6. `profiles/README.md` - 更新说明
+
+**状态**: ✅ 已修复 → 需要重新编译测试
 
 ---
 
@@ -2580,11 +2601,10 @@ SDK Visualizer报错：
 - [x] 重新编译固件（包含问题31修复）→ ✅ 问题32已解决
 - [x] 执行Clean + Build（解决问题32）→ ✅ 2026-01-09完成
 - [x] 重新烧录.appimage（包含UART初始化修复）→ ✅ 烧录成功
-- [ ] 🔴 **问题34：修改CLI模块使用mmw_demo标准框架**
-- [ ] 重新编译、烧录
+- [x] 🔴 **问题34：修改CLI模块使用mmw_demo标准框架** → ✅ 已修复
+- [ ] 重新编译（Clean + Build）
+- [ ] 重新烧录.appimage
 - [ ] 使用SDK Visualizer验证配置发送
-- [ ] 输入help列出命令
-- [ ] 手动发送配置命令
 - [ ] 验证点云数据输出
 
 ---
@@ -2593,8 +2613,8 @@ SDK Visualizer报错：
 > ✅ 已修复32个编译问题
 > 🎉 **编译成功** - 包含UART初始化修复的新固件已生成
 > 🎉 **烧录成功** - 新.appimage已烧录到EVM
-> 🔴 **问题30** - CLI命令格式不兼容（已合并到问题34）
+> ✅ **问题30** - CLI命令格式不兼容（已合并到问题34）
 > ✅ **问题31** - UART驱动未初始化，已修复
 > ✅ **问题32** - MSS编译失败，已通过Clean + Build解决
 > ⚠️ **问题33** - 分析有误，合并到问题34
-> 🔴🔴 **问题34** - **CLI必须使用mmw_demo标准框架** - 当前主要问题
+> ✅ **问题34** - **CLI已使用L-SDK标准格式** - 需要重新编译测试

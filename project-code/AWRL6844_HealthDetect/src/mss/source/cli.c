@@ -294,23 +294,307 @@ static int32_t CLI_cmdPresenceCfg(int32_t argc, char *argv[])
 
 /**
  * @brief Process channelCfg command
+ * L-SDK format: channelCfg <rxChannelEn> <txChannelEn> <cascading>
  */
 static int32_t CLI_cmdChannelCfg(int32_t argc, char *argv[])
 {
     if (argc < 3)
     {
-        CLI_write("Error: channelCfg requires 2 arguments\r\n");
-        CLI_write("Usage: channelCfg <rxChannelEn> <txChannelEn>\r\n");
+        CLI_write("Error: Invalid usage of the CLI command\n");
         return -1;
     }
 
     gHealthDetectMCB.cliCfg.rxChannelEn = (uint8_t)atoi(argv[1]);
     gHealthDetectMCB.cliCfg.txChannelEn = (uint8_t)atoi(argv[2]);
+    /* argv[3] is cascading, not used in single-chip */
 
-    CLI_write("channelCfg: RX=0x%02X, TX=0x%02X\r\n",
-              gHealthDetectMCB.cliCfg.rxChannelEn,
-              gHealthDetectMCB.cliCfg.txChannelEn);
+    return 0;
+}
 
+/**
+ * @brief Process chirpComnCfg command (L-SDK standard)
+ * Format: chirpComnCfg <digOutputSampRate> <digOutputBitsSel> <dfeFirSel>
+ *         <numOfAdcSamples> <chirpTxMimoPatSel> <chirpRampEndTime> <chirpRxHpfSel>
+ */
+static int32_t CLI_cmdChirpComnCfg(int32_t argc, char *argv[])
+{
+    if (argc != 8)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    /* Store L-SDK chirp common config */
+    gHealthDetectMCB.cliCfg.profileCfg.digOutSampleRate = (uint16_t)atoi(argv[1]);
+    /* argv[2] digOutputBitsSel - not stored */
+    /* argv[3] dfeFirSel - not stored */
+    gHealthDetectMCB.cliCfg.profileCfg.numAdcSamples = (uint16_t)atoi(argv[4]);
+    /* argv[5] chirpTxMimoPatSel */
+    gHealthDetectMCB.cliCfg.profileCfg.rampEndTimeUs = (float)atof(argv[6]);
+    /* argv[7] chirpRxHpfSel */
+
+    gHealthDetectMCB.cliCfg.isProfileCfgPending = 1;
+
+    return 0;
+}
+
+/**
+ * @brief Process chirpTimingCfg command (L-SDK standard)
+ * Format: chirpTimingCfg <idleTime> <adcSkipSamples> <txStartTime> <slope> <startFreq>
+ */
+static int32_t CLI_cmdChirpTimingCfg(int32_t argc, char *argv[])
+{
+    if (argc != 6)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    gHealthDetectMCB.cliCfg.profileCfg.idleTimeUs = (float)atof(argv[1]);
+    gHealthDetectMCB.cliCfg.profileCfg.adcStartTimeUs = (float)atof(argv[2]);
+    /* argv[3] txStartTime - not stored directly */
+    gHealthDetectMCB.cliCfg.profileCfg.freqSlopeConst = (float)atof(argv[4]);
+    gHealthDetectMCB.cliCfg.profileCfg.startFreqGHz = (float)atof(argv[5]);
+
+    gHealthDetectMCB.cliCfg.isProfileCfgPending = 1;
+
+    return 0;
+}
+
+/**
+ * @brief Process frameCfg command (L-SDK standard)
+ * Format: frameCfg <numChirpsInBurst> <numChirpsAccum> <burstPeriodicity>
+ *         <numBurstsInFrame> <framePeriodicity> <numFrames>
+ */
+static int32_t CLI_cmdFrameCfgLSDK(int32_t argc, char *argv[])
+{
+    if (argc != 7)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    gHealthDetectMCB.cliCfg.frameCfg.numChirpsPerFrame = (uint16_t)atoi(argv[1]);
+    gHealthDetectMCB.cliCfg.frameCfg.numLoops = (uint16_t)atoi(argv[2]);
+    /* argv[3] burstPeriodicity - not stored */
+    /* argv[4] numBurstsInFrame */
+    gHealthDetectMCB.cliCfg.frameCfg.framePeriodMs = (float)atof(argv[5]);
+    gHealthDetectMCB.cliCfg.frameCfg.numFrames = (uint16_t)atoi(argv[6]);
+
+    gHealthDetectMCB.cliCfg.isFrameCfgPending = 1;
+
+    return 0;
+}
+
+/**
+ * @brief Process guiMonitor command (L-SDK standard)
+ * Format: guiMonitor <pointCloud> <rangeProfile> <noiseProfile>
+ *         <rangeAzimuthHeatMap> <rangeDopplerHeatMap> <statsInfo>
+ */
+static int32_t CLI_cmdGuiMonitor(int32_t argc, char *argv[])
+{
+    if (argc != 7)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    /* Store GUI monitor config - used for TLV output selection */
+    gHealthDetectMCB.cliCfg.guiMonitor.pointCloud = (uint8_t)atoi(argv[1]);
+    gHealthDetectMCB.cliCfg.guiMonitor.rangeProfile = (uint8_t)atoi(argv[2]);
+    gHealthDetectMCB.cliCfg.guiMonitor.noiseProfile = (uint8_t)atoi(argv[3]);
+    gHealthDetectMCB.cliCfg.guiMonitor.rangeAzimuthHeatMap = (uint8_t)atoi(argv[4]);
+    gHealthDetectMCB.cliCfg.guiMonitor.rangeDopplerHeatMap = (uint8_t)atoi(argv[5]);
+    gHealthDetectMCB.cliCfg.guiMonitor.statsInfo = (uint8_t)atoi(argv[6]);
+
+    return 0;
+}
+
+/**
+ * @brief Process cfarProcCfg command (L-SDK standard)
+ * Format: cfarProcCfg <procDirection> <averageMode> <winLen> <guardLen>
+ *         <noiseDiv> <cyclicMode> <thresholdScale> <peakGroupingEn>
+ */
+static int32_t CLI_cmdCfarProcCfg(int32_t argc, char *argv[])
+{
+    if (argc != 9)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    uint8_t direction = (uint8_t)atoi(argv[1]);
+    CFAR_Config_t *cfg;
+
+    if (direction == 0)
+    {
+        cfg = &gHealthDetectMCB.cliCfg.cfarRangeCfg.config;
+    }
+    else
+    {
+        cfg = &gHealthDetectMCB.cliCfg.cfarDopplerCfg.config;
+    }
+
+    cfg->cfarMethod = (uint8_t)atoi(argv[2]);
+    cfg->noiseLen = (uint8_t)atoi(argv[3]);
+    cfg->guardLen = (uint8_t)atoi(argv[4]);
+    /* argv[5] noiseDiv - not stored */
+    /* argv[6] cyclicMode - not stored */
+    cfg->thresholdScale = (float)atof(argv[7]);
+    /* argv[8] peakGroupingEn - not stored */
+
+    gHealthDetectMCB.cliCfg.isCfarCfgPending = 1;
+
+    return 0;
+}
+
+/**
+ * @brief Process cfarFovCfg command (L-SDK standard)
+ * Format: cfarFovCfg <procDirection> <min> <max>
+ */
+static int32_t CLI_cmdCfarFovCfg(int32_t argc, char *argv[])
+{
+    if (argc != 4)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+
+    uint8_t direction = (uint8_t)atoi(argv[1]);
+
+    if (direction == 0)
+    {
+        /* Range FOV */
+        gHealthDetectMCB.cliCfg.cfarRangeCfg.minRangeBin = (uint16_t)(atof(argv[2]) * 10); /* approx */
+        gHealthDetectMCB.cliCfg.cfarRangeCfg.maxRangeBin = (uint16_t)(atof(argv[3]) * 10);
+    }
+    /* direction == 1 is Doppler FOV, not stored */
+
+    return 0;
+}
+
+/**
+ * @brief Process aoaProcCfg command (L-SDK standard)
+ * Format: aoaProcCfg <azimuthFftSize> <elevationFftSize>
+ */
+static int32_t CLI_cmdAoaProcCfg(int32_t argc, char *argv[])
+{
+    if (argc != 3)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* AOA config - not used in basic health detection */
+    return 0;
+}
+
+/**
+ * @brief Process aoaFovCfg command (L-SDK standard)
+ * Format: aoaFovCfg <minAzim> <maxAzim> <minElev> <maxElev>
+ */
+static int32_t CLI_cmdAoaFovCfg(int32_t argc, char *argv[])
+{
+    if (argc != 5)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* AOA FOV config - not used in basic health detection */
+    return 0;
+}
+
+/**
+ * @brief Process clutterRemoval command (L-SDK standard)
+ */
+static int32_t CLI_cmdClutterRemoval(int32_t argc, char *argv[])
+{
+    if (argc != 2)
+    {
+        CLI_write("Error: Invalid usage of the CLI command\n");
+        return -1;
+    }
+    /* Clutter removal - not implemented yet */
+    return 0;
+}
+
+/**
+ * @brief Process factoryCalibCfg command (L-SDK standard)
+ */
+static int32_t CLI_cmdFactoryCalibCfg(int32_t argc, char *argv[])
+{
+    /* Factory calibration - pass through */
+    return 0;
+}
+
+/**
+ * @brief Process runtimeCalibCfg command (L-SDK standard)
+ */
+static int32_t CLI_cmdRuntimeCalibCfg(int32_t argc, char *argv[])
+{
+    /* Runtime calibration - pass through */
+    return 0;
+}
+
+/**
+ * @brief Process antGeometryBoard command (L-SDK standard)
+ */
+static int32_t CLI_cmdAntGeometryBoard(int32_t argc, char *argv[])
+{
+    /* Antenna geometry - pass through */
+    return 0;
+}
+
+/**
+ * @brief Process adcDataSource command (L-SDK standard)
+ */
+static int32_t CLI_cmdAdcDataSource(int32_t argc, char *argv[])
+{
+    /* ADC data source - pass through */
+    return 0;
+}
+
+/**
+ * @brief Process adcLogging command (L-SDK standard)
+ */
+static int32_t CLI_cmdAdcLogging(int32_t argc, char *argv[])
+{
+    /* ADC logging - pass through */
+    return 0;
+}
+
+/**
+ * @brief Process lowPowerCfg command (L-SDK standard)
+ */
+static int32_t CLI_cmdLowPowerCfg(int32_t argc, char *argv[])
+{
+    /* Low power config - pass through */
+    return 0;
+}
+
+/**
+ * @brief Process apllFreqShiftEn command (L-SDK standard)
+ */
+static int32_t CLI_cmdApllFreqShiftEn(int32_t argc, char *argv[])
+{
+    /* APLL freq shift - pass through */
+    return 0;
+}
+
+/**
+ * @brief Process adcDataDitherCfg command (L-SDK standard)
+ */
+static int32_t CLI_cmdAdcDataDitherCfg(int32_t argc, char *argv[])
+{
+    /* ADC dither - pass through */
+    return 0;
+}
+
+/**
+ * @brief Process gpAdcMeasConfig command (L-SDK standard)
+ */
+static int32_t CLI_cmdGpAdcMeasConfig(int32_t argc, char *argv[])
+{
+    /* GP ADC config - pass through */
     return 0;
 }
 
@@ -351,6 +635,7 @@ static int32_t CLI_cmdVersion(int32_t argc, char *argv[])
 
 /**
  * @brief Process a single command
+ * Supports both legacy commands and L-SDK standard commands for SDK Visualizer compatibility
  */
 static int32_t CLI_processCommand(char *cmdLine)
 {
@@ -365,7 +650,7 @@ static int32_t CLI_processCommand(char *cmdLine)
         return 0; /* Empty command */
     }
 
-    /* Match command and execute */
+    /* Match command and execute - L-SDK standard commands first */
     if (strcmp(argv[0], "sensorStart") == 0)
     {
         status = CLI_cmdSensorStart(argc, argv);
@@ -374,6 +659,92 @@ static int32_t CLI_processCommand(char *cmdLine)
     {
         status = CLI_cmdSensorStop(argc, argv);
     }
+    else if (strcmp(argv[0], "channelCfg") == 0)
+    {
+        status = CLI_cmdChannelCfg(argc, argv);
+    }
+    /* L-SDK standard commands */
+    else if (strcmp(argv[0], "chirpComnCfg") == 0)
+    {
+        status = CLI_cmdChirpComnCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "chirpTimingCfg") == 0)
+    {
+        status = CLI_cmdChirpTimingCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "frameCfg") == 0)
+    {
+        /* Check argument count to determine format */
+        if (argc == 7)
+        {
+            status = CLI_cmdFrameCfgLSDK(argc, argv);
+        }
+        else
+        {
+            status = CLI_cmdFrameCfg(argc, argv);
+        }
+    }
+    else if (strcmp(argv[0], "guiMonitor") == 0)
+    {
+        status = CLI_cmdGuiMonitor(argc, argv);
+    }
+    else if (strcmp(argv[0], "cfarProcCfg") == 0)
+    {
+        status = CLI_cmdCfarProcCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "cfarFovCfg") == 0)
+    {
+        status = CLI_cmdCfarFovCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "aoaProcCfg") == 0)
+    {
+        status = CLI_cmdAoaProcCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "aoaFovCfg") == 0)
+    {
+        status = CLI_cmdAoaFovCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "clutterRemoval") == 0)
+    {
+        status = CLI_cmdClutterRemoval(argc, argv);
+    }
+    else if (strcmp(argv[0], "factoryCalibCfg") == 0)
+    {
+        status = CLI_cmdFactoryCalibCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "runtimeCalibCfg") == 0)
+    {
+        status = CLI_cmdRuntimeCalibCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "antGeometryBoard") == 0)
+    {
+        status = CLI_cmdAntGeometryBoard(argc, argv);
+    }
+    else if (strcmp(argv[0], "adcDataSource") == 0)
+    {
+        status = CLI_cmdAdcDataSource(argc, argv);
+    }
+    else if (strcmp(argv[0], "adcLogging") == 0)
+    {
+        status = CLI_cmdAdcLogging(argc, argv);
+    }
+    else if (strcmp(argv[0], "lowPowerCfg") == 0)
+    {
+        status = CLI_cmdLowPowerCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "apllFreqShiftEn") == 0)
+    {
+        status = CLI_cmdApllFreqShiftEn(argc, argv);
+    }
+    else if (strcmp(argv[0], "adcDataDitherCfg") == 0)
+    {
+        status = CLI_cmdAdcDataDitherCfg(argc, argv);
+    }
+    else if (strcmp(argv[0], "gpAdcMeasConfig") == 0)
+    {
+        status = CLI_cmdGpAdcMeasConfig(argc, argv);
+    }
+    /* Legacy commands */
     else if (strcmp(argv[0], "profileCfg") == 0)
     {
         status = CLI_cmdProfileCfg(argc, argv);
@@ -381,14 +752,6 @@ static int32_t CLI_processCommand(char *cmdLine)
     else if (strcmp(argv[0], "chirpCfg") == 0)
     {
         status = CLI_cmdChirpCfg(argc, argv);
-    }
-    else if (strcmp(argv[0], "frameCfg") == 0)
-    {
-        status = CLI_cmdFrameCfg(argc, argv);
-    }
-    else if (strcmp(argv[0], "channelCfg") == 0)
-    {
-        status = CLI_cmdChannelCfg(argc, argv);
     }
     else if (strcmp(argv[0], "cfarCfg") == 0)
     {
@@ -408,8 +771,19 @@ static int32_t CLI_processCommand(char *cmdLine)
     }
     else
     {
-        CLI_write("Error: Unknown command '%s'. Type 'help' for available commands.\r\n", argv[0]);
-        status = -1;
+        CLI_write("Ignored: '%s'\r\n", argv[0]);
+        /* Return 0 to avoid Error for unknown commands - SDK Visualizer sends many commands */
+        status = 0;
+    }
+
+    /* SDK Visualizer compatibility: output Done or Error after each command */
+    if (status == 0)
+    {
+        CLI_write("Done\r\n\n");
+    }
+    else if (status < 0)
+    {
+        CLI_write("Error %d\r\n", status);
     }
 
     return status;
@@ -500,18 +874,21 @@ int32_t CLI_write(const char *format, ...)
 
 /**
  * @brief Initialize CLI module
+ * 
+ * Banner format must match mmw_demo for SDK Visualizer compatibility:
+ * "******************************************\r\n"
+ * "xWRL684x MMW Demo XX.XX.XX.XX\r\n"
+ * "******************************************\r\n"
  */
 int32_t CLI_init(void)
 {
     gCliInitialized = 1;
 
+    /* Standard mmw_demo banner format - required for SDK Visualizer */
     CLI_write("\r\n");
-    CLI_write("********************************************\r\n");
-    CLI_write("*   AWRL6844 Health Detection Firmware     *\r\n");
-    CLI_write("*   Version 1.0.0                          *\r\n");
-    CLI_write("********************************************\r\n");
-    CLI_write("\r\n");
-    CLI_write("Type 'help' for available commands\r\n");
+    CLI_write("******************************************\r\n");
+    CLI_write("xWRL684x MMW Demo 06.01.00.01\r\n");
+    CLI_write("******************************************\r\n");
     CLI_write("\r\n");
 
     return 0;

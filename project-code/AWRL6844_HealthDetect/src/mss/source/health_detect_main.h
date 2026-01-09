@@ -94,6 +94,19 @@ typedef enum HealthDetect_State_e
 /*===========================================================================*/
 
 /**
+ * @brief GUI Monitor Selection Structure (L-SDK standard)
+ */
+typedef struct GuiMonitor_t
+{
+    uint8_t     pointCloud;             /**< Enable point cloud output */
+    uint8_t     rangeProfile;           /**< Enable range profile output */
+    uint8_t     noiseProfile;           /**< Enable noise profile output */
+    uint8_t     rangeAzimuthHeatMap;    /**< Enable range-azimuth heatmap */
+    uint8_t     rangeDopplerHeatMap;    /**< Enable range-Doppler heatmap */
+    uint8_t     statsInfo;              /**< Enable statistics info */
+} GuiMonitor_t;
+
+/**
  * @brief CLI Configuration Structure
  * Holds all configuration received via CLI commands
  */
@@ -116,6 +129,9 @@ typedef struct HealthDetect_CliCfg_t
     /* Channel Configuration */
     uint8_t                 rxChannelEn;        /**< RX channel enable mask */
     uint8_t                 txChannelEn;        /**< TX channel enable mask */
+
+    /* GUI Monitor Configuration (L-SDK standard) */
+    GuiMonitor_t            guiMonitor;         /**< GUI monitor selection */
 
     /* Configuration Flags */
     uint8_t                 isProfileCfgPending;

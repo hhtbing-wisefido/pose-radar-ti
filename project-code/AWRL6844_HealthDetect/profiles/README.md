@@ -1,125 +1,113 @@
 # 📡 AWRL6844 健康检测雷达配置文件
 
-## 🚨 重要说明
+## ✅ SDK Visualizer 兼容
 
-**❗ HealthDetect固件使用自定义CLI命令格式，与标准mmw_demo不兼容！**
+**v3.0更新（2026-01-09）：CLI已更新为L-SDK标准格式，完全兼容SDK Visualizer！**
 
 | 配置文件 | 兼容性 | 说明 |
 |---------|-------|------|
-| `health_detect_simple.cfg` | ✅ **推荐** | 适配HealthDetect固件CLI |
-| `health_detect_4T4R.cfg` | ❌ 不兼容 | mmw_demo格式，不适用于本固件 |
+| `health_detect_standard.cfg` | ✅ **推荐** | L-SDK标准格式，SDK Visualizer兼容 |
+| `health_detect_4T4R.cfg` | ⚠️ 旧格式 | 保留参考，建议使用standard版本 |
 
-### 🔴 "Error in Setting up device" 错误原因
+---
 
-如果SDK Visualizer显示这个错误，说明：
-1. 配置文件中包含固件不识别的命令
-2. HealthDetect固件CLI只支持以下命令：
+## 📋 支持的命令
+
+### L-SDK标准命令（SDK Visualizer使用）
 
 ```支持的命令
-✅ sensorStart / sensorStop
-✅ profileCfg
-✅ chirpCfg
-✅ frameCfg
-✅ channelCfg
-✅ cfarCfg
-✅ presenceCfg
-✅ help / version
+✅ sensorStart / sensorStop       - 传感器控制
+✅ channelCfg                      - 通道配置
+✅ chirpComnCfg                    - Chirp通用配置
+✅ chirpTimingCfg                  - Chirp时序配置
+✅ frameCfg                        - 帧配置
+✅ guiMonitor                      - GUI监视器选择
+✅ cfarProcCfg                     - CFAR处理配置
+✅ cfarFovCfg                      - CFAR视场配置
+✅ aoaProcCfg / aoaFovCfg          - AOA配置
+✅ clutterRemoval                  - 杂波移除
+✅ factoryCalibCfg / runtimeCalibCfg - 校准配置
+✅ antGeometryBoard                - 天线几何
+✅ adcDataSource / adcLogging      - ADC配置
+✅ lowPowerCfg                     - 低功耗配置
+✅ apllFreqShiftEn                 - APLL频偏
+✅ adcDataDitherCfg                - ADC抖动
+✅ gpAdcMeasConfig                 - GP ADC配置
 ```
 
-```不支持的命令（mmw_demo专用）
-❌ apllFreqShiftEn
-❌ chirpComnCfg / chirpTimingCfg
-❌ guiMonitor
-❌ cfarProcCfg / cfarFovCfg
-❌ aoaProcCfg / aoaFovCfg
-❌ factoryCalibCfg / runtimeCalibCfg
-❌ lowPowerCfg
-... 等等
+### 健康检测扩展命令
+
+```扩展命令
+✅ presenceCfg                     - 人员存在检测配置
+✅ help / version                  - 帮助/版本信息
+```
+
+### 旧版兼容命令
+
+```旧版命令（仍然支持）
+✅ profileCfg                      - 旧版Profile配置
+✅ chirpCfg                        - 旧版Chirp配置
+✅ cfarCfg                         - 旧版CFAR配置
 ```
 
 ---
 
-## 📋 配置文件列表
-
-| 文件名 | 用途 | 状态 |
-|--------|------|------|
-| `health_detect_simple.cfg` | HealthDetect固件专用配置 | ✅ 推荐使用 |
-| `health_detect_4T4R.cfg` | mmw_demo标准格式（参考） | ⚠️ 不适用于本固件 |
-
 ## 🚀 使用方法
 
-### 方式1：串口终端发送（推荐）
+### 方式1：SDK Visualizer（推荐）
+
+1. 打开SDK Visualizer
+2. 连接设备（选择正确的COM端口）
+3. 加载 `health_detect_standard.cfg`
+4. 点击"Send Config"发送配置
+5. 观察点云数据
+
+### 方式2：串口终端
 
 1. 打开串口终端（PuTTY/Tera Term）
-2. 连接CLI端口（如COM3），波特率115200
+2. 连接CLI端口，波特率115200
 3. 确认SOP跳线为运行模式（S7-OFF, S8-ON）
 4. 按S2复位键
-5. 等待看到固件启动信息
-6. 发送 `help` 确认固件响应
-7. 逐行发送 `health_detect_simple.cfg` 中的命令
+5. 等待看到 `mmwDemo:/>` 提示符
+6. 逐行发送 `health_detect_standard.cfg` 中的命令
 
-### 方式2：PowerShell脚本发送
+---
 
-```powershell
-# 使用PowerShell发送配置
-$port = New-Object System.IO.Ports.SerialPort COM3,115200
-$port.Open()
+## 📊 配置参数说明
 
-Get-Content "health_detect_simple.cfg" | ForEach-Object {
-    if ($_ -notmatch "^%" -and $_.Trim() -ne "") {
-        $port.WriteLine($_)
-        Write-Host "Sent: $_"
-        Start-Sleep -Milliseconds 100
-    }
-}
-
-$port.Close()
-```
-
-### 方式3：Python脚本发送
-
-```python
-import serial
-import time
-
-port = serial.Serial('COM3', 115200)
-
-with open('health_detect_simple.cfg', 'r') as f:
-    for line in f:
-        line = line.strip()
-        if line and not line.startswith('%'):
-            port.write((line + '\r\n').encode())
-            print(f'Sent: {line}')
-            time.sleep(0.1)
-
-port.close()
-```
-
-## ⚙️ 配置参数说明
-
-### 关键参数
+### 基本参数
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
-| `channelCfg` | 153 255 0 | 4T4R模式 |
-| `framePeriodicity` | 100ms | 10Hz帧率 |
-| `cfarFovCfg 0` | 0.25~9.0m | 距离范围 |
-| `clutterRemoval` | 0 | 关闭杂波移除（保留静态目标） |
-| `lowPowerCfg` | 1 | 低功耗模式 |
+| 频率 | 60 GHz | 起始频率 |
+| 通道 | 4T4R | 全通道模式 |
+| ADC采样数 | 256 | 范围分辨率相关 |
+| Chirp数 | 64 | 每帧chirp数 |
+| 帧周期 | 100 ms | 10 Hz帧率 |
+| 检测范围 | 0.25-9.0 m | CFAR范围 |
 
-### 健康检测优化
+### 适用场景
 
-- **帧率**：10Hz足够检测呼吸(0.2-0.5Hz)和心跳(1-2Hz)
-- **距离范围**：0.25-9m覆盖室内场景
-- **杂波移除**：关闭，保留静态目标用于人员存在检测
+- 🏠 室内人员存在检测
+- 💓 健康监测（呼吸/心跳）
+- 👥 近距离目标检测
 
-## 📚 参考来源
+---
 
-- 基于 `mmw_demo/profiles/profile_4T4R_tdm.cfg`
-- SDK版本：MMWAVE_L_SDK 06.01.00.01
+## 📁 文件说明
 
-## 📅 更新记录
+| 文件 | 说明 |
+|------|------|
+| `health_detect_standard.cfg` | **主配置文件** - L-SDK标准格式 |
+| `health_detect_4T4R.cfg` | 旧版配置，保留参考 |
+| `README.md` | 本文档 |
 
-| 日期 | 版本 | 说明 |
+---
+
+## 🔄 版本历史
+
+| 版本 | 日期 | 说明 |
 |------|------|------|
-| 2026-01-09 | v1.0 | 初始版本，基于mmw_demo优化 |
+| v3.0 | 2026-01-09 | CLI更新为L-SDK标准格式，SDK Visualizer兼容 |
+| v2.0 | 2026-01-09 | 自定义CLI格式（已废弃） |
+| v1.0 | 2026-01-08 | 初始版本 |

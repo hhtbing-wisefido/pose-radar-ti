@@ -32,8 +32,8 @@ extern "C" {
 /** @brief Maximum number of command arguments */
 #define CLI_MAX_ARGS                (32U)
 
-/** @brief CLI prompt string */
-#define CLI_PROMPT                  "HealthDetect:/>  "
+/** @brief CLI prompt string - Must match mmw_demo for SDK Visualizer compatibility */
+#define CLI_PROMPT                  "mmwDemo:/>"
 
 /*===========================================================================*/
 /*                         Function Prototypes                                */
