@@ -1155,9 +1155,119 @@ typedef struct MMWave_ProfileTimeCfg_t {
 
 ---
 
+### 问题19: MSS radar_control.c API字段不匹配 - 问题18回归 (2026-01-09)
+
+**错误信息**:
+```
+../radar_control.c:235:30: error: no member named 'startFreqGHz' in 'struct MMWave_ProfileComCfg_t'
+../radar_control.c:236:30: error: no member named 'digOutSampleRateMHz' in 'struct MMWave_ProfileComCfg_t'
+../radar_control.c:237:30: error: no member named 'numAdcSamples' in 'struct MMWave_ProfileComCfg_t'
+../radar_control.c:238:30: error: no member named 'rxGain' in 'struct MMWave_ProfileComCfg_t'
+../radar_control.c:241:31: error: no member named 'idleTimeus' in 'struct MMWave_ProfileTimeCfg_t'
+../radar_control.c:242:31: error: no member named 'adcStartTimeus' in 'struct MMWave_ProfileTimeCfg_t'
+../radar_control.c:243:31: error: no member named 'rampEndTimeus' in 'struct MMWave_ProfileTimeCfg_t'
+../radar_control.c:244:31: error: no member named 'freqSlopeConst' in 'struct MMWave_ProfileTimeCfg_t'
+../radar_control.c:254:33: error: no member named 'channelCfg' in 'struct HealthDetect_CliCfg_t'
+```
+
+**原因**: 
+1. CCS workspace中的`radar_control.c`是旧版本代码
+2. 项目代码目录`D:/7.project/TI_Radar_Project/project-code/`中的文件已修复
+3. CCS编译的是workspace中的文件：`C:/Users/Administrator/workspace_ccstheia/health_detect_6844_mss/radar_control.c`
+4. **两个目录的文件不同步**
+
+**根本问题**: CCS项目文件与项目代码目录不同步
+
+**解决方案**: 在CCS中手动修改`radar_control.c`第230-260行
+
+**正确代码** (SDK 6.x兼容)：
+```c
+/* Configure profile common parameters */
+gMmWaveCfg.profileComCfg.digOutputSampRate = (uint8_t)(cliCfg->profileCfg.digOutSampleRate / 1000);
+gMmWaveCfg.profileComCfg.numOfAdcSamples = cliCfg->profileCfg.numAdcSamples;
+gMmWaveCfg.profileComCfg.chirpRampEndTimeus = cliCfg->profileCfg.rampEndTimeUs;
+
+/* Configure profile timing parameters */
+gMmWaveCfg.profileTimeCfg.chirpIdleTimeus = cliCfg->profileCfg.idleTimeUs;
+gMmWaveCfg.profileTimeCfg.chirpAdcStartTime = (uint16_t)cliCfg->profileCfg.adcStartTimeUs;
+gMmWaveCfg.profileTimeCfg.chirpSlope = cliCfg->profileCfg.freqSlopeConst;
+gMmWaveCfg.profileTimeCfg.startFreqGHz = cliCfg->profileCfg.startFreqGHz;
+
+/* Configure TX/RX enable */
+gMmWaveCfg.rxEnbl = cliCfg->rxChannelEn;
+```
+
+**修改要点**:
+1. `startFreqGHz` 在 `profileTimeCfg` 中（不是 `profileComCfg`）
+2. `digOutputSampRate` (不是 `digOutSampleRateMHz`)
+3. `numOfAdcSamples` (不是 `numAdcSamples`)
+4. `chirpIdleTimeus` (不是 `idleTimeus`)
+5. `chirpAdcStartTime` (不是 `adcStartTimeus`)
+6. `chirpSlope` (不是 `freqSlopeConst`)
+7. `chirpRampEndTimeus` 在 `profileComCfg` (不是 `rampEndTimeus` 在 `profileTimeCfg`)
+8. 删除 `rxGain` (SDK中不存在)
+9. `rxChannelEn` 直接访问 (不是 `channelCfg.rxChannelEn`)
+
+**详细修复说明**: `项目文档/2-开发记录/2026-01-09/2026-01-09_MSS_radar_control_编译错误修复.md`
+
+**状态**: ✅ 用户已在CCS中手动修复 (2026-01-09)
+
+---
+
+### 问题20: DSS post-build 失败 - memory_hex.cmd 缺失回归 (2026-01-09)
+
+**错误信息**:
+```
+/cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
+gmake[3]: Target 'all' not remade because of errors.
+gmake[2]: [makefile:160: post-build] Error 2 (ignored)
+```
+
+**原因**: 问题15的回归 - CCS workspace中的DSS项目缺少`memory_hex.cmd`
+
+**解决方案**: 从参考项目复制`memory_hex.cmd`到DSS workspace
+
+**操作步骤**:
+```powershell
+# 复制 memory_hex.cmd 到 DSS workspace
+Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\dss\memory_hex.cmd" `
+          "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss\"
+```
+
+**状态**: ⏳ 待用户执行
+
+---
+
+### 问题21: System post-build 失败 - MSS .rig文件缺失 (2026-01-09)
+
+**错误信息**:
+```
+/cygwin/cp: cannot stat '../health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig': No such file or directory
+```
+
+**原因**: 
+1. MSS项目的post-build步骤未生成`.rig`文件
+2. System项目需要MSS和DSS的`.rig`文件来生成`.appimage`
+
+**前置条件**: 
+- 问题19修复后MSS编译成功
+- 问题20修复后DSS post-build成功
+
+**解决方案**: 按顺序重新编译
+
+**操作步骤**:
+1. Clean所有项目
+2. Build MSS → 生成`health_detect_6844_mss_img.Release.rig`
+3. Build DSS → 生成`health_detect_6844_dss_img.Release.rig`
+4. Build System → 使用MSS和DSS的.rig生成.appimage
+
+**状态**: ⏳ 待问题19、20修复后验证
+
+---
+
 ## 📊 编译问题汇总表
 
-> 💡 **说明**: 以下是所有18个编译问题的汇总表，便于快速查看问题类型和解决方案。
+> 💡 **说明**: 以下是所有21个编译问题的汇总表，便于快速查看问题类型和解决方案。
 
 | 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
 |---------|---------|------|---------|------|
@@ -1179,6 +1289,9 @@ typedef struct MMWave_ProfileTimeCfg_t {
 | 问题16 | System post-build失败 | MSS未编译 | 按顺序编译 | ⏳ 待验证 |
 | 问题17 | Config文件名大小写 | 文件名不一致 | Windows兼容 | ✅ 已确认 |
 | 问题18 | API结构体字段不匹配 | 字段名称错误 | 修正字段映射 | ✅ 已修复 |
+| 问题19 | MSS API字段不匹配 | CCS workspace文件旧版本 | 在CCS中手动修复 | ✅ 已修复 |
+| 问题20 | DSS post-build失败回归 | memory_hex.cmd缺失 | 复制到workspace | ⏳ 待执行 |
+| 问题21 | System .rig文件缺失 | MSS/DSS未生成 | 按顺序编译 | ⏳ 待验证 |
 
 ---
 
@@ -1195,7 +1308,8 @@ typedef struct MMWave_ProfileTimeCfg_t {
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **18** |
+| **修复的编译问题** | **21** |
+| **待处理问题** | **2 (问题20,21)** |
 
 ### ✅ 完成状态
 
