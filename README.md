@@ -2,452 +2,677 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-AWRL6844--EVM-red?style=flat-square" alt="Platform">
-  <img src="https://img.shields.io/badge/SDK-MMWAVE__L__SDK%2006.01-blue?style=flat-square" alt="SDK">
+  <img src="https://img.shields.io/badge/SDK-MMWAVE__L__SDK%2006.01.00.01-blue?style=flat-square" alt="SDK">
+  <img src="https://img.shields.io/badge/Radar_Toolbox-3.30.00.06-purple?style=flat-square" alt="Radar Toolbox">
   <img src="https://img.shields.io/badge/Language-C%20%7C%20Python-green?style=flat-square" alt="Language">
   <img src="https://img.shields.io/badge/IDE-CCS%2020.x-orange?style=flat-square" alt="IDE">
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License">
 </p>
 
-基于 **TI AWRL6844-EVM** 毫米波雷达评估板的固件开发与健康检测应用研究项目。
+---
+
+## 🎯 项目概述
+
+基于 **TI AWRL6844-EVM** 毫米波雷达评估板的完整开发项目，包含：
+
+| 模块 | 说明 | 状态 |
+|------|------|------|
+| 🔧 **固件烧录系统** | arprog_cmdline烧录工具、GUI管理界面 | ✅ 完成 |
+| 📊 **雷达配置研究** | 46万+字符深度分析文档、GUI配置工具 | ✅ 完成 |
+| 💓 **健康检测固件** | 呼吸/心跳检测算法、三层架构固件 | 🔄 开发中 |
+| 🚶 **跌倒检测迁移** | xWRL6432→AWRL6844算法迁移研究 | 📋 研究中 |
+| 📚 **SDK深度研究** | 16 Parts系列文档（60万+字符） | ✅ 完成 |
 
 ---
 
-## 🎯 项目目标
+## 🛠️ 硬件平台
 
-- 🔧 **固件烧录系统** - 实现可靠的固件烧录与管理工具
-- 📊 **雷达配置研究** - 深入理解雷达参数配置与调优
-- 💓 **健康检测应用** - 基于毫米波雷达的呼吸/心跳检测算法研究
-- 🚶 **跌倒检测应用** - 人体跌倒检测算法迁移与实现
-- 📚 **SDK深度研究** - TI mmWave SDK架构与开发指南（16 Parts系列文档）
+### AWRL6844-EVM 评估板
+
+| 参数 | 规格 |
+|------|------|
+| **雷达芯片** | AWRL6844 (60GHz mmWave) |
+| **天线配置** | 4TX × 4RX |
+| **主处理器** | ARM Cortex-R5F (MSS) @ 300MHz |
+| **DSP处理器** | TI C66x (DSS) @ 450MHz |
+| **Flash存储** | 2MB QSPI Flash |
+| **RAM** | 1.5MB SRAM |
+| **接口** | UART×2, SPI, I2C, GPIO |
+
+### Flash 布局
+
+| 区域 | 偏移地址 | 大小 | 用途 |
+|------|----------|------|------|
+| **SBL** | 0x00000 | 640KB | 二级引导加载程序 |
+| **App** | 0xA0000 | 1.375MB | 应用固件 |
 
 ---
 
-## 📁 完整项目结构
+## 📦 软件工具链
+
+| 工具 | 版本 | 路径 |
+|------|------|------|
+| **MMWAVE_L_SDK** | 06.01.00.01 | `C:\ti\MMWAVE_L_SDK_06_01_00_01\` |
+| **Radar Toolbox** | 3.30.00.06 | `C:\ti\radar_toolbox_3_30_00_06\` |
+| **CCS** | 20.x | Code Composer Studio |
+| **arprog_cmdline** | SDK内置 | `...\tools\arprog_cmdline\arprog_cmdline.exe` |
+| **Python** | 3.13+ | GUI工具和辅助脚本 |
+
+### ⚠️ 重要提示
+
+> 🔴 **AWRL6844 必须使用 `arprog_cmdline` 烧录，不要用 UniFlash！**
+> 
+> UniFlash 对 AWRL6844 支持不完善，会导致烧录失败或固件无法启动。
+
+---
+
+## 📁 项目结构总览
 
 ```
 TI_Radar_Project/
-│
-├── 📂 project-code/                                    # 🔥 项目源代码
-│   │
-│   ├── 📂 AWRL6844_HealthDetect/                       # ⭐ 健康检测固件项目
-│   │   ├── README.md
-│   │   ├── 📂 profiles/                                # 配置文件
-│   │   │   ├── health_detect_standard.cfg
-│   │   │   └── README.md
-│   │   └── 📂 src/                                     # 源代码（三层架构）
-│   │       ├── 📂 common/                              # Layer 1: 共享接口层
-│   │       │   ├── data_path.h
-│   │       │   ├── health_detect_types.h
-│   │       │   ├── mmwave_output.h
-│   │       │   └── shared_memory.h
-│   │       ├── 📂 mss/                                 # Layer 2: MSS应用层 (R5F)
-│   │       │   ├── 📂 source/
-│   │       │   │   ├── cli.c / cli.h
-│   │       │   │   ├── dpc_control.c / dpc_control.h
-│   │       │   │   ├── health_detect_main.c / health_detect_main.h
-│   │       │   │   ├── presence_detect.c / presence_detect.h
-│   │       │   │   ├── radar_control.c / radar_control.h
-│   │       │   │   └── tlv_output.c / tlv_output.h
-│   │       │   └── 📂 xwrL684x-evm/
-│   │       │       └── *.projectspec
-│   │       ├── 📂 dss/                                 # Layer 3: DSS算法层 (C66x)
-│   │       │   ├── 📂 source/
-│   │       │   │   ├── dsp_utils.c / dsp_utils.h
-│   │       │   │   ├── feature_extract.c / feature_extract.h
-│   │       │   │   └── health_detect_dss.c / health_detect_dss.h
-│   │       │   └── 📂 xwrL684x-evm/
-│   │       │       └── *.projectspec
-│   │       └── 📂 system/                              # Layer 0: 系统配置层
-│   │           ├── 📂 config/
-│   │           │   ├── metaimage_cfg.Release.json
-│   │           │   └── metaimage_cfg.Debug.json
-│   │           ├── health_detect_6844_system.projectspec
-│   │           ├── makefile_system_ccs_bootimage_gen
-│   │           ├── shared_memory.ld
-│   │           └── system.xml
-│   │
-│   ├── 📂 AWRL6844_InCabin_Demos/                      # InCabin参考项目
-│   │   ├── 📂 docs/
-│   │   ├── 📂 firmware/
-│   │   ├── 📂 prebuilt_binaries/
-│   │   └── 📂 src/
-│   │
-│   └── 📂 mmw_demo_SDK_reference/                      # SDK mmw_demo参考
-│       ├── 📂 prebuilt_binaries/
-│       ├── 📂 profiles/
-│       ├── 📂 source/
-│       └── 📂 xwrL684x-evm/
-│
-├── 📂 项目文档/                                         # 📚 项目核心文档
-│   │
-│   ├── 📂 1-需求与设计/                                 # 需求分析、设计文档
-│   │   ├── 01-AWRL6844固件系统工具提示词.md
-│   │   ├── 06.雷达配置参数研究提示词.md
-│   │   ├── 07-跌倒检测研究提示词.md
-│   │   ├── 08-AWRL6844雷达健康检测实现方案.md
-│   │   ├── AWRL6844_HealthDetect提示词.md
-│   │   ├── sdk 编译流程.md
-│   │   ├── 寻找TI 固件项目规律.md
-│   │   ├── 烧录APP一行启动命令.md
-│   │   ├── 雷达配置文件相关提示词.md
-│   │   └── 📂 image/
-│   │
-│   ├── 📂 2-开发记录/                                   # 日常开发日志（按日期）
-│   │   ├── README.md
-│   │   ├── 📂 2025-12-23/
-│   │   ├── 📂 2025-12-24/
-│   │   ├── 📂 2025-12-29/
-│   │   ├── 📂 2026-01-05/
-│   │   ├── 📂 2026-01-06/
-│   │   ├── 📂 2026-01-07/
-│   │   ├── 📂 2026-01-08/
-│   │   ├── 📂 2026-01-09/
-│   │   └── 📂 image/
-│   │
-│   ├── 📂 3-固件工具/                                   # 🔥 固件开发核心文档
-│   │   ├── README.md
-│   │   │
-│   │   ├── 📂 01-AWRL6844固件系统工具/                  # Flash布局、SBL引导
-│   │   │   ├── README.md
-│   │   │   ├── Flash布局说明.md
-│   │   │   ├── 操作指南.md
-│   │   │   ├── 支持雷达配置读取的固件列表.md
-│   │   │   ├── 版本更新说明-v1.7.1.md
-│   │   │   ├── 📂 1-SBL_Bootloader/
-│   │   │   ├── 📂 2-HelloWorld_App/
-│   │   │   ├── 📂 3-Tools/
-│   │   │   ├── 📂 4-Generated/
-│   │   │   ├── 📂 5-Scripts/
-│   │   │   └── 📂 image/
-│   │   │
-│   │   ├── 📂 02-固件智能管理系统/                      # 固件匹配算法与GUI
-│   │   │   ├── README.md
-│   │   │   ├── PROJECT_OVERVIEW.md
-│   │   │   ├── 目录说明.md
-│   │   │   ├── 项目交付说明.md
-│   │   │   ├── 应用固件与SBL固件匹配算法.md
-│   │   │   ├── 应用固件与雷达配置文件匹配算法.md      # ⭐ 53KB
-│   │   │   ├── v4.0实施TODO清单.md
-│   │   │   ├── awrl6844_firmware_matcher.py
-│   │   │   ├── awrl6844_gui_app.py
-│   │   │   ├── test_matcher.py
-│   │   │   ├── test_v4_algorithm.py
-│   │   │   └── 📂 image/
-│   │   │
-│   │   ├── 📂 03-固件烧录测试/                          # 烧录测试记录
-│   │   │   ├── App烧录成功记录_2025-12-19.md
-│   │   │   ├── SBL烧录成功记录_2025-12-19.md
-│   │   │   ├── AWRL6844烧录测试完整报告_2025-12-19.md
-│   │   │   ├── arprog_cmdline_6844与UniFlash详细对比-基于官方E2E论坛.md
-│   │   │   ├── Python脚本进度条BUG分析_2025-12-19.md
-│   │   │   ├── app_flash_log.txt
-│   │   │   ├── sbl_flash_log.txt
-│   │   │   └── batchstatus.txt
-│   │   │
-│   │   ├── 📂 04-烧录进度条测试研究/                    # 进度条问题分析
-│   │   │   ├── README.md
-│   │   │   ├── SBL烧录0秒问题分析.md                   # 21KB深度分析
-│   │   │   ├── test_correct_progress.py
-│   │   │   ├── test_encoding.ps1
-│   │   │   ├── test_label_progress.py
-│   │   │   ├── test_progress_output.py
-│   │   │   ├── test_tkinter_debug.py
-│   │   │   ├── test_tkinter_progress.py
-│   │   │   └── 📂 image/
-│   │   │
-│   │   ├── 📂 05-雷达配置参数研究/                      # ⭐⭐ 配置深度研究 (46万+字符)
-│   │   │   ├── README.md
-│   │   │   ├── 雷达配置文件深度分析_v2.0_Part1.md      # ⭐ 284KB
-│   │   │   ├── 雷达配置文件深度分析_v2.0_Part2.md      # ⭐ 172KB
-│   │   │   ├── 雷达配置文件深度分析_v1.0_简版.md
-│   │   │   ├── GUI工具使用说明.md
-│   │   │   ├── TODO_雷达配置参数研究.md
-│   │   │   ├── 代码注释完善说明.md
-│   │   │   ├── 升级完成总结.md
-│   │   │   ├── TI_6844_profile_4T4R_tdm.cfg
-│   │   │   ├── radar_test_gui.py
-│   │   │   ├── test_radar_fixed.py
-│   │   │   ├── create_icon.py
-│   │   │   ├── verify_v1.1.4.py
-│   │   │   ├── verify_v1.1.5.py
-│   │   │   ├── radar_icon.ico / radar_icon.png
-│   │   │   ├── 📂 image/
-│   │   │   ├── 📂 log/
-│   │   │   └── 📂 temp/
-│   │   │
-│   │   ├── 📂 06-SDK固件研究/                           # ⭐⭐⭐ SDK 16 Parts系列 (60万+字符)
-│   │   │   ├── README.md
-│   │   │   ├── Part1-SDK基础概念与三目录详解.md
-│   │   │   ├── Part2-固件校验方法完整指南.md
-│   │   │   ├── Part3-SDK与固件关系及工作流程.md
-│   │   │   ├── Part4-实践案例与常见问题.md
-│   │   │   ├── Part5-SysConfig工具深度分析.md
-│   │   │   ├── Part6-硬件设计文件与SDK关系分析.md
-│   │   │   ├── Part7-Radar Academy学习资源与SDK关系.md
-│   │   │   ├── Part8-Radar Toolbox工具链与应用实例.md
-│   │   │   ├── Part9-跌倒检测完整实现与深度学习.md     # 97KB
-│   │   │   ├── Part10-MMWAVE_L_SDK深度解析.md          # 87KB
-│   │   │   ├── Part11-mmWave Studio深度解析.md         # 107KB
-│   │   │   ├── Part12-arprog与UniFlash烧录工具深度对比.md
-│   │   │   ├── Part13-SDK对比与RTOS深度解析.md
-│   │   │   ├── Part14-TLV数据格式与工具兼容性完整指南.md
-│   │   │   ├── Part15-CCS System项目自动依赖编译机制.md
-│   │   │   └── Part16-AWRL6844固件正确烧录方式完整指南.md
-│   │   │
-│   │   ├── 📂 07-跌倒检测研究/                          # 跌倒检测迁移研究
-│   │   │   ├── README.md
-│   │   │   ├── Migration_xWRL6432_to_6844_索引与快速指南.md
-│   │   │   ├── Migration_xWRL6432_to_6844_深度总结_Part1.md
-│   │   │   ├── Migration_xWRL6432_to_6844_深度总结_Part2.md
-│   │   │   ├── Migration_xWRL6432_to_6844_深度总结_Part3.md
-│   │   │   └── 📂 跌倒检测汇总资料/
-│   │   │
-│   │   ├── 📂 08-AWRL6844雷达健康检测实现方案/          # 健康检测方案（15+文档）
-│   │   │   ├── README.md
-│   │   │   ├── AWRL6844雷达健康检测-00-能力评估报告.md
-│   │   │   ├── AWRL6844雷达健康检测-01-方案讨论与分析.md
-│   │   │   ├── AWRL6844雷达健康检测-02-方案确认.md
-│   │   │   ├── AWRL6844雷达健康检测-03-实施目录大纲.md
-│   │   │   ├── AWRL6844雷达健康检测-04-第1章-环境搭建.md
-│   │   │   ├── AWRL6844雷达健康检测-05-第2章-标准Demo验证.md
-│   │   │   ├── AWRL6844雷达健康检测-06-第3章-架构演进规划.md
-│   │   │   ├── AWRL6844雷达健康检测-附录A-配置文件对比分析.md
-│   │   │   ├── AWRL6844雷达健康检测-附录B-SDK源码架构分析.md
-│   │   │   ├── AWRL6844雷达健康检测-附录C-InCabin架构学习参考.md
-│   │   │   ├── AWRL6844雷达健康检测-附录D-CCS与VSCode开发对比.md
-│   │   │   ├── AWRL6844雷达健康检测-附录E-设备安装配置信息.md
-│   │   │   ├── AWRL6844雷达健康检测-附录F-TLV数据格式兼容性要求.md
-│   │   │   ├── AWRL6844雷达健康检测-附录G-雷达配置文件对比分析.md
-│   │   │   ├── TLV数据格式快速参考.md
-│   │   │   └── 📂 旧资料参考使用/
-│   │   │
-│   │   └── 📂 09-AWRL6844 从mmw_demo演进Health Detection基础功能项目/
-│   │       ├── README.md
-│   │       ├── AWRL6844_HealthDetect需求文档v2.md      # 需求文档
-│   │       ├── HealthDetect项目重建总结.md              # ⭐ 3100+行完整记录
-│   │       ├── 📂 image/
-│   │       └── 📂 失败经验资料/
-│   │
-│   └── 📂 4-测试实验结果/                               # 测试数据与结果
-│       ├── 1.烧录偏移量实际测试结果.md
-│       ├── 2.雷达配置实际测试结果.md
-│       ├── test_config_fixed-1.cfg
-│       └── test_config_fixed-2.cfg
-│
-├── 📂 知识库/                                           # ⚠️ 本地资料库 (不包含在Git)
-│   │
-│   ├── 📂 雷达模块/                                     # TI官方资料
-│   │   ├── 📂 IDE/                                     # Code Composer Studio
-│   │   ├── 📂 MMWAVE-STUDIO-XWRL68XX/                  # mmWave Studio
-│   │   ├── 📂 RADAR-TOOLBOX/                           # Radar Toolbox
-│   │   ├── 📂 UniFlash 闪存编程工具/
-│   │   ├── 📂 技术文档/                                # 数据手册、参考手册
-│   │   └── 📂 设计文件/                                # 原理图、PCB
-│   │
-│   ├── 📂 知识库PDF转机器可读文件/                      # ⭐ 50+个Markdown文档
-│   │   ├── 3D_people_tracking_demo_implementation_guide.md
-│   │   ├── 3D_people_tracking_detection_layer_tuning_guide.md
-│   │   ├── 3D_people_tracking_tracker_layer_tuning_guide.md
-│   │   ├── ADC_data_capture_DCA1000_CLI.md
-│   │   ├── AOA_SVC_DPU_Implementation_Details.md
-│   │   ├── AWR6843_CPD_with_Classification_Setup_Guide.md
-│   │   ├── AWRL6432_2_Row_Coverage_Test_Report.md
-│   │   ├── AWRL6432_Intruder_Detection_Testing.md
-│   │   ├── AWRL6432_Truckbed_Radar_Testing.md
-│   │   ├── AWRL6844-IWRL6844 评估模块zhcuco8.md
-│   │   ├── AWRL6844EVM-规格书swru630a.md
-│   │   ├── AWRL6844_CPD_&_SBR_Point_Cloud_Tuning_Guide.md
-│   │   ├── AWRL6844_CPD_&_SBR_Test_Results.md
-│   │   ├── AWRL6844_Intruder_Detection_Testing.md
-│   │   ├── awrl6844规格书.md
-│   │   ├── Beamforming_in_LRPD.md
-│   │   ├── DCA1000_Debugging_Handbook.md
-│   │   ├── DCA1000_Quick_Start_Guide.md
-│   │   ├── Migration_from_xWRLx432_to_xWRL6844.md
-│   │   ├── Migration_from_xWRx843_to_xWRLx432.md
-│   │   ├── mmwave_studio_user_guide.md
-│   │   ├── mmwave_studio_user_guide-dual.md
-│   │   ├── mmwave_studio_user_guide-mono.md
-│   │   ├── mmwave_studio_release_notes.md
-│   │   ├── Parameter_Tuning_Guide_for_Intrusion_Detection_Demo.md
-│   │   ├── people_counting_customization_guide.md
-│   │   ├── TI 低功耗毫米波雷达传感器中的校准 (Rev. B).md
-│   │   ├── Tracking_radar_targets_with_multiple_reflection_points.md
-│   │   ├── xWRL6844 Software Getting Started Guide.md
-│   │   ├── xWRL68xx Technical Reference Manual.md
-│   │   ├── FCC认证文档 (FCC_47_CFR_*.md)
-│   │   ├── 硬件设计文档 (PROC182A_*.md)
-│   │   └── 📂 images/
-│   │
-│   ├── 📂 C_ti_link/                                   # TI Link文档
-│   ├── 📂 Pose_And_Fall_Detection/                     # 姿态与跌倒检测参考
-│   └── 📂 Refer_data_LEE/                              # 参考资料
-│
-├── 📂 .github/                                          # GitHub配置
-│   ├── copilot-instructions.md                         # AI核心工作原则
-│   ├── RULES_SYNC_GUIDE.md                             # 规则同步指南
-│   ├── 📂 instructions/                                # AI编程助手规则
-│   │   ├── README.md
-│   │   ├── directory-management.instructions.md
-│   │   ├── emoji-style.instructions.md
-│   │   ├── file-operations.instructions.md
-│   │   ├── file-reading.instructions.md                # 🔴 禁止AI偷懒规则
-│   │   ├── git-operations.instructions.md
-│   │   └── naming-conventions.instructions.md
-│   └── 📂 workflows/
-│
-├── 📂 .vscode/                                          # VS Code配置
-├── 📂 .cursor/                                          # Cursor AI配置
-├── 📂 .windsurf/                                        # Windsurf配置
-├── 📂 temp/                                             # 临时文件
-├── 📂 .venv/                                            # Python虚拟环境
-│
-├── README.md                                            # 本文件
-└── .gitignore                                           # Git忽略配置
+├── 📂 project-code/           # 源代码（3个项目）
+├── 📂 项目文档/                # 核心文档（4个分类）
+├── 📂 知识库/                  # 本地参考资料（不在Git）
+├── 📂 .github/                # GitHub配置和AI规则
+├── 📂 temp/                   # 临时文件
+└── README.md                  # 本文件
 ```
 
 ---
 
-## 🔥 核心项目：AWRL6844_HealthDetect
+## 📂 project-code/ - 源代码目录
 
-### 项目概述
+### 1️⃣ AWRL6844_HealthDetect/ - ⭐ 健康检测固件项目
 
-基于 TI MMWAVE_L_SDK 06.01 的健康检测固件项目，从 `mmw_demo` 演进而来。
-
-### 技术架构
+**项目状态**: 🔄 开发中 | **架构**: 三层分离 | **目标**: 呼吸/心跳检测
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     AWRL6844_HealthDetect                   │
-├─────────────────────────────────────────────────────────────┤
-│  Layer 0: System    │  system.xml, shared_memory.ld        │
-│                     │  metaimage_cfg.Release.json          │
-├─────────────────────────────────────────────────────────────┤
-│  Layer 1: Common    │  data_path.h, mmwave_output.h        │
-│                     │  shared_memory.h, health_detect_types.h │
-├─────────────────────┬───────────────────────────────────────┤
-│  Layer 2: MSS (R5F) │  Layer 3: DSS (C66x)                  │
-│  health_detect_main │  health_detect_dss                    │
-│  cli, radar_control │  feature_extract, dsp_utils          │
-│  dpc_control        │                                       │
-│  presence_detect    │                                       │
-│  tlv_output         │                                       │
-└─────────────────────┴───────────────────────────────────────┘
+AWRL6844_HealthDetect/
+├── README.md                                    # 项目说明
+├── 📂 profiles/                                 # 雷达配置文件
+│   ├── health_detect_standard.cfg              # 标准健康检测配置
+│   └── README.md
+│
+└── 📂 src/                                      # 源代码（三层架构）
+    │
+    ├── 📂 common/                               # Layer 1: 共享接口层
+    │   ├── data_path.h                         # 数据通路定义
+    │   ├── health_detect_types.h               # 类型定义
+    │   ├── mmwave_output.h                     # 输出格式定义
+    │   └── shared_memory.h                     # 共享内存接口
+    │
+    ├── 📂 mss/                                  # Layer 2: MSS应用层 (R5F核心)
+    │   ├── 📂 source/
+    │   │   ├── cli.c                           # CLI命令解析
+    │   │   ├── cli.h
+    │   │   ├── dpc_control.c                   # DPC控制接口
+    │   │   ├── dpc_control.h
+    │   │   ├── health_detect_main.c            # ⭐ MSS主程序入口
+    │   │   ├── health_detect_main.h
+    │   │   ├── presence_detect.c               # 存在检测算法
+    │   │   ├── presence_detect.h
+    │   │   ├── radar_control.c                 # 雷达控制逻辑
+    │   │   ├── radar_control.h
+    │   │   ├── tlv_output.c                    # TLV数据输出
+    │   │   └── tlv_output.h
+    │   └── 📂 xwrL684x-evm/
+    │       └── health_detect_6844_mss.projectspec   # CCS MSS项目
+    │
+    ├── 📂 dss/                                  # Layer 3: DSS算法层 (C66x核心)
+    │   ├── 📂 source/
+    │   │   ├── dsp_utils.c                     # DSP工具函数
+    │   │   ├── dsp_utils.h
+    │   │   ├── feature_extract.c               # 特征提取算法
+    │   │   ├── feature_extract.h
+    │   │   ├── health_detect_dss.c             # ⭐ DSS主程序入口
+    │   │   └── health_detect_dss.h
+    │   └── 📂 xwrL684x-evm/
+    │       └── health_detect_6844_dss.projectspec   # CCS DSS项目
+    │
+    └── 📂 system/                               # Layer 0: 系统配置层
+        ├── 📂 config/
+        │   ├── metaimage_cfg.Release.json      # Release镜像配置
+        │   └── metaimage_cfg.Debug.json        # Debug镜像配置
+        ├── health_detect_6844_system.projectspec    # ⭐ CCS System项目
+        ├── makefile_system_ccs_bootimage_gen   # 镜像生成makefile
+        ├── shared_memory.ld                    # 共享内存链接脚本
+        └── system.xml                          # 系统配置XML
 ```
 
-### 开发进度
-
-| 阶段 | 状态 | 说明 |
-|------|------|------|
-| ✅ 架构设计 | 完成 | 三层架构确定 |
-| ✅ 代码框架 | 完成 | 所有源文件创建 |
-| ✅ CCS项目配置 | 完成 | MSS/DSS/System项目 |
-| ✅ 编译验证 | 完成 | 生成.appimage成功 |
-| ✅ 烧录验证 | 完成 | 固件烧录成功 |
-| 🔄 CLI框架重构 | 进行中 | 需对齐SDK标准CLI |
-| ❌ 功能验证 | 待完成 | sensorStart待修复 |
-
-> 📋 详细记录：`项目文档/3-固件工具/09-.../HealthDetect项目重建总结.md` (3100+行)
+**编译流程**:
+1. 编译 MSS 项目 → `health_detect_6844_mss.out`
+2. 编译 DSS 项目 → `health_detect_6844_dss.out`  
+3. 编译 System 项目 → 自动依赖 MSS/DSS → `health_detect_6844_system.release.appimage`
 
 ---
 
-## 🛠️ 技术栈
+### 2️⃣ AWRL6844_InCabin_Demos/ - InCabin 参考项目
 
-### 硬件平台
+**来源**: TI Radar Toolbox | **用途**: 车内检测参考实现
 
-| 组件 | 型号/规格 |
-|------|----------|
-| **雷达芯片** | AWRL6844 (4TX 4RX, 60GHz) |
-| **评估板** | AWRL6844-EVM |
-| **CPU核心** | R5F (MSS) + C66x (DSS) |
-| **Flash** | 2MB QSPI Flash |
-
-### 软件工具
-
-| 工具 | 版本 | 用途 |
-|------|------|------|
-| **MMWAVE_L_SDK** | 06.01.00.01 | TI毫米波SDK |
-| **Radar Toolbox** | 3.30.00.06 | 雷达应用示例 |
-| **Code Composer Studio** | 20.x | IDE开发环境 |
-| **arprog_cmdline** | SDK内置 | ⭐ 固件烧录工具 |
-| **Python** | 3.13+ | 辅助脚本 |
+```
+AWRL6844_InCabin_Demos/
+├── 📂 docs/                                     # 技术文档
+│   ├── AWRL6844_CPD_&_SBR_Point_Cloud_Tuning_Guide.md    # 点云调优指南
+│   ├── AWRL6844_CPD_&_SBR_Point_Cloud_Tuning_Guide.pdf
+│   ├── AWRL6844_CPD_&_SBR_Test_Results.md               # 测试结果
+│   ├── AWRL6844_CPD_&_SBR_Test_Results.pdf
+│   ├── AWRL6844_In-Cabin_Demos_Release_Notes.html       # 发布说明
+│   ├── AWRL6844_In-Cabin_Demos_User_Guide.html          # 用户指南
+│   ├── 📂 Child_Presence_Detection/                     # 儿童存在检测文档
+│   ├── 📂 Intrusion_Detection/                          # 入侵检测文档
+│   └── 📂 Seat_Belt_Reminder/                           # 安全带提醒文档
+│
+├── 📂 firmware/                                 # 固件源码
+│
+├── 📂 prebuilt_binaries/                        # 预编译固件
+│   └── demo_in_cabin_sensing_6844_system.release.appimage   # ⭐ 可直接烧录
+│
+└── 📂 src/                                      # 源代码
+    ├── AWRL6844_InCabin_Demos.theia-workspace  # Theia工作区
+    │
+    ├── 📂 common_mss_dss/                       # MSS/DSS共享代码
+    │   ├── dpc_common.h                        # DPC公共定义
+    │   ├── dpif_mss_dss.h                      # MSS-DSS接口
+    │   ├── mmwLab_config.h                     # mmWave配置
+    │   └── 📂 msg_ipc/                         # IPC消息定义
+    │
+    ├── 📂 mss/                                  # MSS源码
+    │   ├── 📂 source/
+    │   │   ├── mmwave_demo_mss.c               # MSS主程序
+    │   │   ├── mmwave_demo_mss.h
+    │   │   ├── mmw_cli.c                       # CLI实现
+    │   │   ├── mmw_cli.h
+    │   │   ├── mmw_res.h                       # 资源定义
+    │   │   ├── common_test.c / .h              # 测试代码
+    │   │   ├── 📂 alg/                         # 算法模块
+    │   │   ├── 📂 calibrations/                # 校准模块
+    │   │   ├── 📂 dpc/                         # 数据处理链
+    │   │   ├── 📂 dpu/                         # 数据处理单元
+    │   │   ├── 📂 hwa_adapt/                   # HWA适配层
+    │   │   ├── 📂 lvds_streaming/              # LVDS流
+    │   │   ├── 📂 mmwave_control/              # mmWave控制
+    │   │   ├── 📂 power_management/            # 电源管理
+    │   │   ├── 📂 test/                        # 测试代码
+    │   │   └── 📂 utils/                       # 工具函数
+    │   └── 📂 xwrL684x-evm/                    # CCS项目配置
+    │
+    ├── 📂 dss/                                  # DSS源码
+    │   ├── 📂 source/
+    │   │   ├── mmwave_demo_dss.c               # DSS主程序
+    │   │   ├── mmwave_demo_dss.h
+    │   │   ├── 📂 common/                      # 公共代码
+    │   │   ├── 📂 dpc/                         # 数据处理链
+    │   │   ├── 📂 dpu/                         # 数据处理单元
+    │   │   └── 📂 utilities/                   # 工具函数
+    │   └── 📂 xwrL684x-evm/                    # CCS项目配置
+    │
+    └── 📂 system/                               # System配置
+```
 
 ---
 
-## 📚 文档体系
+### 3️⃣ mmw_demo_SDK_reference/ - SDK mmw_demo 参考
 
-### SDK固件研究系列 (16 Parts, 60万+字符)
+**来源**: MMWAVE_L_SDK | **用途**: SDK标准Demo参考
 
-| Part | 主题 | 大小 |
-|------|------|------|
-| Part1 | SDK基础概念与三目录详解 | 21KB |
-| Part2 | 固件校验方法完整指南 | 27KB |
-| Part3 | SDK与固件关系及工作流程 | 19KB |
-| Part4 | 实践案例与常见问题 | 25KB |
-| Part5 | SysConfig工具深度分析 | 26KB |
-| Part6 | 硬件设计文件与SDK关系 | 25KB |
-| Part7 | Radar Academy学习资源 | 25KB |
-| Part8 | Radar Toolbox工具链 | 45KB |
-| Part9 | 跌倒检测完整实现与深度学习 | **97KB** |
-| Part10 | MMWAVE_L_SDK深度解析 | **87KB** |
-| Part11 | mmWave Studio深度解析 | **107KB** |
-| Part12 | arprog与UniFlash对比 | 15KB |
-| Part13 | SDK对比与RTOS深度解析 | - |
-| Part14 | TLV数据格式与工具兼容性 | - |
-| Part15 | CCS System项目依赖编译 | - |
-| Part16 | AWRL6844固件正确烧录方式 | - |
+```
+mmw_demo_SDK_reference/
+├── 📂 prebuilt_binaries/                        # 预编译固件
+│
+├── 📂 profiles/                                 # 雷达配置文件
+│   ├── monitors.cfg                            # 监控配置
+│   ├── profile_2T4R_bpm.cfg                    # 2TX 4RX BPM模式
+│   ├── profile_3T4R_tdm.cfg                    # 3TX 4RX TDM模式
+│   └── profile_4T4R_tdm.cfg                    # 4TX 4RX TDM模式 ⭐
+│
+├── 📂 source/                                   # 源代码
+│   ├── mmwave_demo.c                           # ⭐ 主程序入口
+│   ├── mmwave_demo.h
+│   ├── mmw_cli.c                               # CLI命令实现
+│   ├── mmw_cli.h
+│   ├── mmw_res.h                               # 资源定义
+│   ├── 📂 calibrations/                        # 校准模块
+│   ├── 📂 dpc/                                 # 数据处理链
+│   ├── 📂 lvds_streaming/                      # LVDS数据流
+│   ├── 📂 mmwave_control/                      # mmWave控制
+│   ├── 📂 power_management/                    # 电源管理
+│   └── 📂 test/                                # 测试代码
+│
+└── 📂 xwrL684x-evm/                             # CCS项目配置
+```
 
-### 模块总览
+---
 
-| 编号 | 模块名称 | 主要内容 |
-|------|---------|---------|
-| 01 | AWRL6844固件系统工具 | Flash布局、SBL引导、烧录工具 |
-| 02 | 固件智能管理系统 | 固件匹配算法、GUI工具 |
-| 03 | 固件烧录测试 | 烧录记录、工具对比 |
-| 04 | 烧录进度条测试研究 | 进度条实现、0秒问题 |
-| 05 | 雷达配置参数研究 | 配置深度分析 (46万+字符) |
-| 06 | SDK固件研究 | 16 Parts系列 (60万+字符) |
-| 07 | 跌倒检测研究 | 算法迁移、芯片对比 |
-| 08 | 健康检测实现方案 | 15+文档、完整方案 |
-| 09 | HealthDetect项目重建 | 3100+行完整记录 |
+## 📂 项目文档/ - 核心文档目录
+
+### 1️⃣ 1-需求与设计/
+
+```
+1-需求与设计/
+├── 01-AWRL6844固件系统工具提示词.md            # 固件系统工具需求
+├── 06.雷达配置参数研究提示词.md                # 配置研究需求
+├── 07-跌倒检测研究提示词.md                    # 跌倒检测需求
+├── 08-AWRL6844雷达健康检测实现方案.md          # 健康检测总体方案
+├── AWRL6844_HealthDetect提示词.md              # HealthDetect项目需求
+├── sdk 编译流程.md                              # SDK编译流程说明
+├── 寻找TI 固件项目规律.md                       # 固件项目规律分析
+├── 烧录APP一行启动命令.md                       # 快速烧录命令
+├── 雷达配置文件相关提示词.md                    # 配置文件需求
+└── 📂 image/                                    # 图片资源
+```
+
+---
+
+### 2️⃣ 2-开发记录/
+
+按日期组织的开发日志：
+
+```
+2-开发记录/
+├── README.md                                    # 目录索引
+├── 📂 2025-12-23/                               # 日期目录
+├── 📂 2025-12-24/
+├── 📂 2025-12-29/
+├── 📂 2026-01-05/
+├── 📂 2026-01-06/
+├── 📂 2026-01-07/
+├── 📂 2026-01-08/
+├── 📂 2026-01-09/                               # 最新
+└── 📂 image/                                    # 图片资源
+```
+
+---
+
+### 3️⃣ 3-固件工具/ - ⭐ 核心技术文档
+
+#### 📁 01-AWRL6844固件系统工具/
+
+```
+01-AWRL6844固件系统工具/
+├── README.md                                    # 模块说明
+├── Flash布局说明.md                             # Flash分区详解
+├── 操作指南.md                                  # 操作步骤指南
+├── 支持雷达配置读取的固件列表.md                # 固件兼容性
+├── 版本更新说明-v1.7.1.md                       # 版本历史
+│
+├── 📂 1-SBL_Bootloader/                         # SBL引导程序
+│   ├── README.md
+│   └── sbl.release.appimage                    # ⭐ SBL固件
+│
+├── 📂 2-HelloWorld_App/                         # 测试应用
+│
+├── 📂 3-Tools/                                  # 烧录工具
+│   ├── arprog_cmdline_6844.exe                 # ⭐ 烧录工具
+│   ├── buildImage_creator.exe                  # 镜像构建
+│   ├── flashHeader_creator.exe                 # Flash头生成
+│   ├── metaImage_creator.exe                   # Meta镜像生成
+│   ├── batchstatus.txt
+│   └── README.md
+│
+├── 📂 4-Generated/                              # 生成的文件
+├── 📂 5-Scripts/                                # 脚本文件
+└── 📂 image/                                    # 图片资源
+```
+
+---
+
+#### 📁 02-固件智能管理系统/
+
+```
+02-固件智能管理系统/
+├── README.md                                    # 模块说明
+├── PROJECT_OVERVIEW.md                          # 项目概览
+├── 目录说明.md                                  # 目录结构说明
+├── 项目交付说明.md                              # 交付文档
+│
+├── 应用固件与SBL固件匹配算法.md                 # SBL匹配算法
+├── 应用固件与雷达配置文件匹配算法.md            # ⭐ 配置匹配算法 (53KB)
+├── v4.0实施TODO清单.md                          # v4.0计划
+│
+├── awrl6844_firmware_matcher.py                # ⭐ 固件匹配核心
+├── awrl6844_gui_app.py                         # ⭐ GUI应用程序
+├── test_matcher.py                             # 匹配器测试
+├── test_v4_algorithm.py                        # v4算法测试
+│
+└── 📂 image/                                    # 图片资源
+```
+
+---
+
+#### 📁 03-固件烧录测试/
+
+```
+03-固件烧录测试/
+├── App烧录成功记录_2025-12-19.md                # App烧录记录
+├── SBL烧录成功记录_2025-12-19.md                # SBL烧录记录
+├── AWRL6844烧录测试完整报告_2025-12-19.md       # 完整测试报告
+├── arprog_cmdline_6844与UniFlash详细对比-基于官方E2E论坛.md   # ⭐ 工具对比
+├── Python脚本进度条BUG分析_2025-12-19.md        # Bug分析
+├── app_flash_log.txt                           # App烧录日志
+├── sbl_flash_log.txt                           # SBL烧录日志
+└── batchstatus.txt                             # 批处理状态
+```
+
+---
+
+#### 📁 04-烧录进度条测试研究/
+
+```
+04-烧录进度条测试研究/
+├── README.md                                    # 模块说明
+├── SBL烧录0秒问题分析.md                        # ⭐ 深度分析 (21KB)
+├── test_correct_progress.py                    # 进度测试
+├── test_encoding.ps1                           # 编码测试
+├── test_label_progress.py                      # 标签进度测试
+├── test_progress_output.py                     # 输出测试
+├── test_tkinter_debug.py                       # Tkinter调试
+├── test_tkinter_progress.py                    # Tkinter进度测试
+└── 📂 image/                                    # 图片资源
+```
+
+---
+
+#### 📁 05-雷达配置参数研究/ - ⭐⭐ 46万+字符
+
+```
+05-雷达配置参数研究/
+├── README.md                                    # 模块说明
+├── 雷达配置文件深度分析_v2.0_Part1.md          # ⭐⭐ 284KB 深度分析
+├── 雷达配置文件深度分析_v2.0_Part2.md          # ⭐⭐ 172KB 深度分析
+├── 雷达配置文件深度分析_v1.0_简版.md            # 简化版本
+├── GUI工具使用说明.md                           # GUI说明
+├── TODO_雷达配置参数研究.md                     # TODO列表
+├── 代码注释完善说明.md                          # 注释说明
+├── 升级完成总结.md                              # 升级总结
+│
+├── TI_6844_profile_4T4R_tdm.cfg                # ⭐ 标准配置文件
+├── radar_test_gui.py                           # ⭐ 雷达配置GUI工具
+├── test_radar_fixed.py                         # 测试脚本
+├── create_icon.py                              # 图标生成
+├── verify_v1.1.4.py                            # v1.1.4验证
+├── verify_v1.1.5.py                            # v1.1.5验证
+├── radar_icon.ico                              # 应用图标
+├── radar_icon.png                              # 图标PNG
+│
+├── 📂 image/                                    # 图片资源
+├── 📂 log/                                      # 日志文件
+└── 📂 temp/                                     # 临时文件
+```
+
+---
+
+#### 📁 06-SDK固件研究/ - ⭐⭐⭐ 16 Parts系列 (60万+字符)
+
+```
+06-SDK固件研究/
+├── README.md                                    # 系列索引
+│
+├── Part1-SDK基础概念与三目录详解.md             # SDK基础 (21KB)
+├── Part2-固件校验方法完整指南.md                # 校验指南 (27KB)
+├── Part3-SDK与固件关系及工作流程.md             # 工作流程 (19KB)
+├── Part4-实践案例与常见问题.md                  # 实践案例 (25KB)
+├── Part5-SysConfig工具深度分析.md               # SysConfig (26KB)
+├── Part6-硬件设计文件与SDK关系分析.md           # 硬件设计 (25KB)
+├── Part7-Radar Academy学习资源与SDK关系.md     # 学习资源 (25KB)
+├── Part8-Radar Toolbox工具链与应用实例.md      # Toolbox (45KB)
+├── Part9-跌倒检测完整实现与深度学习.md          # ⭐⭐ 跌倒检测 (97KB)
+├── Part10-MMWAVE_L_SDK深度解析.md               # ⭐⭐ SDK解析 (87KB)
+├── Part11-mmWave Studio深度解析.md              # ⭐⭐ Studio (107KB)
+├── Part12-arprog与UniFlash烧录工具深度对比.md  # 工具对比 (15KB)
+├── Part13-SDK对比与RTOS深度解析.md              # RTOS解析
+├── Part14-TLV数据格式与工具兼容性完整指南.md   # TLV格式
+├── Part15-CCS System项目自动依赖编译机制.md    # 编译机制
+└── Part16-AWRL6844固件正确烧录方式完整指南.md  # 烧录指南
+```
+
+**文档统计**：
+- 总计 **16 个 Part** 文档
+- 累计 **60万+字符**
+- 核心文档：Part9 (97KB)、Part10 (87KB)、Part11 (107KB)
+
+---
+
+#### 📁 07-跌倒检测研究/
+
+```
+07-跌倒检测研究/
+├── README.md                                    # 模块说明
+├── Migration_xWRL6432_to_6844_索引与快速指南.md # ⭐ 迁移索引
+├── Migration_xWRL6432_to_6844_深度总结_Part1.md # 迁移总结1
+├── Migration_xWRL6432_to_6844_深度总结_Part2.md # 迁移总结2
+├── Migration_xWRL6432_to_6844_深度总结_Part3.md # 迁移总结3
+└── 📂 跌倒检测汇总资料/                         # 参考资料
+```
+
+---
+
+#### 📁 08-AWRL6844雷达健康检测实现方案/ - 15+文档
+
+```
+08-AWRL6844雷达健康检测实现方案/
+├── README.md                                    # 方案索引
+│
+├── AWRL6844雷达健康检测-00-能力评估报告.md      # 能力评估
+├── AWRL6844雷达健康检测-01-方案讨论与分析.md    # 方案讨论
+├── AWRL6844雷达健康检测-02-方案确认.md          # 方案确认
+├── AWRL6844雷达健康检测-03-实施目录大纲.md      # 实施大纲
+├── AWRL6844雷达健康检测-04-第1章-环境搭建.md    # 环境搭建
+├── AWRL6844雷达健康检测-05-第2章-标准Demo验证.md # Demo验证
+├── AWRL6844雷达健康检测-06-第3章-架构演进规划.md # 架构规划
+│
+├── AWRL6844雷达健康检测-附录A-配置文件对比分析.md   # 配置对比
+├── AWRL6844雷达健康检测-附录B-SDK源码架构分析.md   # SDK架构
+├── AWRL6844雷达健康检测-附录C-InCabin架构学习参考.md # InCabin参考
+├── AWRL6844雷达健康检测-附录D-CCS与VSCode开发对比.md # IDE对比
+├── AWRL6844雷达健康检测-附录E-设备安装配置信息.md   # 设备配置
+├── AWRL6844雷达健康检测-附录F-TLV数据格式兼容性要求.md # TLV兼容性
+├── AWRL6844雷达健康检测-附录G-雷达配置文件对比分析.md # 配置分析
+│
+├── TLV数据格式快速参考.md                       # TLV快速参考
+└── 📂 旧资料参考使用/                           # 历史资料
+```
+
+---
+
+#### 📁 09-AWRL6844 从mmw_demo演进Health Detection基础功能项目/
+
+```
+09-AWRL6844 从mmw_demo演进Health Detection基础功能项目/
+├── README.md                                    # 项目说明
+├── AWRL6844_HealthDetect需求文档v2.md           # ⭐ 需求文档
+├── HealthDetect项目重建总结.md                  # ⭐⭐ 3100+行完整记录
+├── 📂 image/                                    # 图片资源
+└── 📂 失败经验资料/                             # 失败经验归档
+```
+
+**重点文档**：`HealthDetect项目重建总结.md`
+- 3100+ 行完整开发记录
+- 36个问题的解决过程
+- 完整的编译/烧录/调试经验
+
+---
+
+### 4️⃣ 4-测试实验结果/
+
+```
+4-测试实验结果/
+├── 1.烧录偏移量实际测试结果.md                  # 偏移量测试
+├── 2.雷达配置实际测试结果.md                    # 配置测试
+├── test_config_fixed-1.cfg                     # 测试配置1
+└── test_config_fixed-2.cfg                     # 测试配置2
+```
+
+---
+
+## 📂 知识库/ - 本地参考资料 (⚠️ 不在Git仓库)
+
+```
+知识库/
+├── 📂 雷达模块/                                 # TI官方资料
+│   ├── 📂 IDE/                                 # Code Composer Studio
+│   ├── 📂 MMWAVE-STUDIO-XWRL68XX/              # mmWave Studio
+│   ├── 📂 RADAR-TOOLBOX/                       # Radar Toolbox
+│   ├── 📂 UniFlash 闪存编程工具/                # UniFlash
+│   ├── 📂 技术文档/                            # 数据手册、参考手册
+│   └── 📂 设计文件/                            # 原理图、PCB
+│
+├── 📂 知识库PDF转机器可读文件/                  # ⭐ 50+个技术文档（Markdown）
+│   │
+│   │   # === 3D人员追踪 ===
+│   ├── 3D_people_tracking_demo_implementation_guide.md
+│   ├── 3D_people_tracking_detection_layer_tuning_guide.md
+│   ├── 3D_people_tracking_tracker_layer_tuning_guide.md
+│   │
+│   │   # === AWRL6844 专用文档 ===
+│   ├── awrl6844规格书.md                        # 芯片规格书
+│   ├── AWRL6844EVM-规格书swru630a.md            # EVM规格书
+│   ├── AWRL6844-IWRL6844 评估模块zhcuco8.md     # 评估模块
+│   ├── AWRL6844_CPD_&_SBR_Point_Cloud_Tuning_Guide.md   # 点云调优
+│   ├── AWRL6844_CPD_&_SBR_Test_Results.md       # 测试结果
+│   ├── AWRL6844_Intruder_Detection_Testing.md   # 入侵检测测试
+│   │
+│   │   # === AWRL6432 参考 ===
+│   ├── AWRL6432_2_Row_Coverage_Test_Report.md
+│   ├── AWRL6432_Intruder_Detection_Testing.md
+│   ├── AWRL6432_Truckbed_Radar_Testing.md
+│   │
+│   │   # === 迁移指南 ===
+│   ├── Migration_from_xWRLx432_to_xWRL6844.md   # ⭐ 6432→6844迁移
+│   ├── Migration_from_xWRx843_to_xWRLx432.md    # 843→6432迁移
+│   │
+│   │   # === mmWave Studio ===
+│   ├── mmwave_studio_user_guide.md              # 用户指南
+│   ├── mmwave_studio_user_guide-dual.md         # 双芯片模式
+│   ├── mmwave_studio_user_guide-mono.md         # 单芯片模式
+│   ├── mmwave_studio_release_notes.md           # 发布说明
+│   │
+│   │   # === 算法与调优 ===
+│   ├── AOA_SVC_DPU_Implementation_Details.md    # AOA实现
+│   ├── Beamforming_in_LRPD.md                   # 波束成形
+│   ├── Parameter_Tuning_Guide_for_Intrusion_Detection_Demo.md   # 入侵检测调优
+│   ├── people_counting_customization_guide.md   # 人员计数定制
+│   ├── Tracking_radar_targets_with_multiple_reflection_points.md   # 多反射点追踪
+│   │
+│   │   # === 工具与调试 ===
+│   ├── ADC_data_capture_DCA1000_CLI.md          # ADC数据采集
+│   ├── DCA1000_Debugging_Handbook.md            # DCA1000调试
+│   ├── DCA1000_Quick_Start_Guide.md             # DCA1000快速开始
+│   ├── MMWAVE_CAN_VISUALIZER_User_Guide.md      # CAN可视化
+│   ├── Interference_Lab_Developer's_Guide.md    # 干扰实验室
+│   ├── Interference_Lab_Getting_Started_Guide.md
+│   ├── Interference_Lab_Release_Notes.md
+│   │
+│   │   # === 技术手册 ===
+│   ├── xWRL6844 Software Getting Started Guide.md   # ⭐ 软件入门
+│   ├── xWRL68xx Technical Reference Manual.md      # ⭐ 技术参考手册
+│   ├── TI 低功耗毫米波雷达传感器中的校准 (Rev. B).md  # 校准指南
+│   │
+│   │   # === 硬件设计 ===
+│   ├── PROC182A(01_AWR)_Assy.md                 # 装配图
+│   ├── PROC182A(01_AWR)_Sch.md                  # 原理图
+│   ├── PROC182A(02_IWR)_Assy.md
+│   ├── PROC182A(02_IWR)_Sch.md
+│   ├── PROC182A_3D.md                           # 3D模型
+│   ├── PROC182A_FAB.md                          # 制造文件
+│   ├── PROC182A_PCBlayers.md                    # PCB层
+│   │
+│   │   # === FCC认证 ===
+│   ├── FCC_47_CFR_2.1093_MPE.md
+│   ├── FCC_47_CFR_PART_15_SUBPART_B.md
+│   ├── FCC_47_CFR_PART_15_SUBPART_C.md
+│   │
+│   │   # === 其他 ===
+│   ├── AWR6843_CPD_with_Classification_Setup_Guide.md
+│   ├── radar_memory_Compression_Model_iwr6843_users_guide.md
+│   ├── swrz155勘误表.md                         # 勘误表
+│   ├── 利用單晶片 60GHz mmWave 雷達感測器，減少車艙內感測的複雜性與成本.md
+│   ├── 通过单芯片 60GHz 毫米波雷达传感器，降低车内传感的复杂性和成本.md
+│   └── 📂 images/                               # 文档图片
+│
+├── 📂 C_ti_link/                                # TI Link文档
+├── 📂 Pose_And_Fall_Detection/                  # 姿态与跌倒检测参考
+└── 📂 Refer_data_LEE/                           # 其他参考资料
+```
+
+**获取知识库**：从TI官网下载相关资料
+- [MMWAVE_L_SDK](https://www.ti.com/tool/MMWAVE-L-SDK)
+- [Radar Toolbox](https://www.ti.com/tool/RADAR-TOOLBOX)
+- [mmWave Studio](https://www.ti.com/tool/MMWAVE-STUDIO)
+
+---
+
+## 📂 .github/ - GitHub配置
+
+```
+.github/
+├── copilot-instructions.md                      # ⭐ AI核心工作原则
+├── RULES_SYNC_GUIDE.md                          # 规则同步指南
+│
+├── 📂 instructions/                             # AI编程助手规则
+│   ├── README.md                               # 规则索引
+│   ├── directory-management.instructions.md    # 目录管理规范
+│   ├── emoji-style.instructions.md             # Emoji文档风格
+│   ├── file-operations.instructions.md         # 文件操作规范
+│   ├── file-reading.instructions.md            # 🔴 禁止AI偷懒规则
+│   ├── git-operations.instructions.md          # Git操作规范
+│   └── naming-conventions.instructions.md      # 命名规范
+│
+└── 📂 workflows/                                # GitHub Actions
+```
 
 ---
 
 ## 🚀 快速开始
 
-### 固件烧录（一行命令）
+### 1. 环境准备
 
+```powershell
+# 确认工具安装
+C:\ti\MMWAVE_L_SDK_06_01_00_01\              # SDK
+C:\ti\radar_toolbox_3_30_00_06\              # Radar Toolbox
+C:\ti\ccs\                                    # Code Composer Studio
+```
+
+### 2. 固件烧录（一行命令）
+
+**烧录 SBL (偏移 0x00000)**:
 ```powershell
 & "C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\arprog_cmdline\arprog_cmdline.exe" `
   -p COM5 -d xWRL6844 -a ES1 `
-  -f "path\to\firmware.appimage" `
+  -f "项目文档\3-固件工具\01-AWRL6844固件系统工具\1-SBL_Bootloader\sbl.release.appimage" `
+  -o 0x0 -s 921600 -r
+```
+
+**烧录 App (偏移 0xA0000)**:
+```powershell
+& "C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\arprog_cmdline\arprog_cmdline.exe" `
+  -p COM5 -d xWRL6844 -a ES1 `
+  -f "path\to\your_app.appimage" `
   -o 0xA0000 -s 921600 -r
 ```
 
-### 关键路径
+### 3. 编译 HealthDetect 项目
 
-| 资源 | 路径 |
-|------|------|
-| **SDK根目录** | `C:\ti\MMWAVE_L_SDK_06_01_00_01\` |
-| **Radar Toolbox** | `C:\ti\radar_toolbox_3_30_00_06\` |
-| **烧录工具** | `...\tools\arprog_cmdline\arprog_cmdline.exe` |
+1. 打开 CCS，导入项目：
+   - `project-code/AWRL6844_HealthDetect/src/mss/xwrL684x-evm/`
+   - `project-code/AWRL6844_HealthDetect/src/dss/xwrL684x-evm/`
+   - `project-code/AWRL6844_HealthDetect/src/system/`
+
+2. 编译 System 项目（自动依赖编译 MSS/DSS）
+
+3. 输出：`health_detect_6844_system.release.appimage`
 
 ---
 
-## ⚠️ 注意事项
+## 📊 文档统计
 
-### 知识库目录
-
-`知识库/` 目录包含本地技术资料，**不包含在Git仓库中**。
-
-如需完整知识库，请从TI官网下载：
-- [MMWAVE_L_SDK](https://www.ti.com/tool/MMWAVE-L-SDK)
-- [Radar Toolbox](https://www.ti.com/tool/RADAR-TOOLBOX)
-- [Code Composer Studio](https://www.ti.com/tool/CCSTUDIO)
-
-### 重要提示
-
-> ⚠️ **烧录工具**: AWRL6844请使用 `arprog_cmdline`，不要用 UniFlash
+| 分类 | 文档数 | 字符数 | 说明 |
+|------|--------|--------|------|
+| **SDK固件研究** | 16 Parts | 60万+ | 完整SDK学习系列 |
+| **雷达配置研究** | 3文档 | 46万+ | 配置参数深度分析 |
+| **健康检测方案** | 15+文档 | - | 完整实施方案 |
+| **项目重建记录** | 1文档 | 3100+行 | 开发全过程记录 |
+| **知识库转换** | 50+文档 | - | PDF转Markdown |
 
 ---
 
@@ -460,3 +685,5 @@ TI_Radar_Project/
 <p align="center">
   <sub>📅 最后更新: 2026-01-09</sub>
 </p>
+
+
