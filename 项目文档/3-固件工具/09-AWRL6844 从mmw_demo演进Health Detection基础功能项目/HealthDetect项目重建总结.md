@@ -1,8 +1,8 @@
 ﻿# 📋 AWRL6844 Health Detect 项目重建总结
 
 **日期**: 2026-01-08
-**最后更新**: 2026-01-09 (❌ 问题35：CLI命令处理逻辑不完整)
-**状态**: ❌ 编译成功但SDK Visualizer仍报错 - CLI命令处理逻辑不完整
+**最后更新**: 2026-01-09 (✅ 问题35已修复)
+**状态**: ✅ 问题35已修复，需要重新编译测试
 
 ---
 
@@ -2636,27 +2636,27 @@ int32_t CLI_MMWaveSensorStart (int32_t argc, char* argv[])
 }
 ```
 
-**解决方案选项**：
+**✅ 已修复 (2026-01-09)**：
 
-| 选项 | 描述 | 工作量 | 风险 |
-|-----|------|-------|-----|
-| A. 修复CLI命令处理 | 补全antGeometryBoard等命令的完整实现 | 中 | 中 |
-| B. 直接使用SDK mmw_cli.c | 替换cli.c为SDK的mmw_cli.c | 大 | 高 |
-| C. 先用SDK mmw_demo验证 | 使用SDK固件验证环境正常，再修复 | 小 | 低 |
+修改文件：
+1. `cli.c`:
+   - 添加天线几何配置变量 `GIsAntGeoDef`, `GIsRangePhaseCompDef`, `gApllFreqShiftEnable`
+   - `sensorStart`: 参数检查(argc==5)，检查天线几何配置已定义
+   - `sensorStop`: 参数检查(argc==2)，重置天线几何标志
+   - `antGeometryBoard`: 完整实现，设置`GIsAntGeoDef`和`GIsRangePhaseCompDef`
+   - `apllFreqShiftEn`: 保存APLL频率偏移配置
+   - `channelCfg`: 修正参数检查(argc==4)
+   - `factoryCalibCfg`: 参数检查(argc==6)
+   - `runtimeCalibCfg`: 参数检查(argc==2)
+   - `adcDataSource`: 参数检查(argc==3)
+   - `adcLogging`: 参数检查(argc==2)
+   - `lowPowerCfg`: 参数检查(argc==2)
+   - `adcDataDitherCfg`: 参数检查(argc==2)
+   - `gpAdcMeasConfig`: 参数检查(argc==3)
 
-**推荐方案**：选项C
-
-1. 先烧录SDK mmw_demo固件验证SDK Visualizer正常工作
-2. 确认profile_4T4R_tdm.cfg配置文件可用
-3. 再回来修复HealthDetect固件的CLI命令处理
-
-**待修复文件清单**：
-1. `cli.c` - 需要添加：
-   - 天线几何配置变量(GIsAntGeoDef, GIsRangePhaseCompDef)
-   - antGeometryBoard命令完整实现
-   - sensorStart参数检查(argc==5)
-   - sensorStop参数检查(argc==2)
-   - 完整的MmwStart()流程
+2. `health_detect_main.h`:
+   - 添加 `numTxAntennas`, `numRxAntennas` 字段
+   - 添加 `frameTrigMode`, `chirpStartSigLbEn`, `frameLivMonEn`, `frameTrigTimerVal` 字段
 
 ---
 
@@ -2667,7 +2667,8 @@ int32_t CLI_MMWaveSensorStart (int32_t argc, char* argv[])
 - [x] 重新烧录.appimage（包含UART初始化修复）→ ✅ 烧录成功
 - [x] 🔴 **问题34：修改CLI模块使用mmw_demo标准框架** → ✅ 已修复格式
 - [x] 重新编译（Clean + Build）→ ✅ 2026-01-09编译成功
-- [ ] 🔴 **问题35：修复CLI命令处理逻辑** → ❌ 待修复
+- [x] 🔴 **问题35：修复CLI命令处理逻辑** → ✅ 已修复
+- [ ] 重新编译（Clean + Build）
 - [ ] 重新烧录.appimage
 - [ ] 使用SDK Visualizer验证配置发送
 - [ ] 验证点云数据输出
@@ -2675,8 +2676,7 @@ int32_t CLI_MMWaveSensorStart (int32_t argc, char* argv[])
 ---
 
 > 📌 **最后更新**: 2026-01-09
-> ✅ 已修复34个问题（编译成功）
-> 🎉 **编译成功** - MSS: 209,712 bytes, DSS: 230,656 bytes
-> 🎉 **固件已生成** - `health_detect_6844_system.Release.appimage`
+> ✅ 已修复35个问题
 > ✅ **问题34** - CLI使用L-SDK标准命令格式
-> ❌ **问题35** - **CLI命令处理逻辑不完整，antGeometryBoard等命令只是空实现**
+> ✅ **问题35** - CLI命令处理逻辑已完善（antGeometryBoard/sensorStart/sensorStop等）
+> ⏳ **待验证** - 需要重新编译、烧录、SDK Visualizer测试
