@@ -1265,9 +1265,80 @@ Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src
 
 ---
 
+### 问题22: CCS工作区缺少构建配置文件（2026-01-09）
+
+**错误信息**:
+```
+[91]/cygwin/cat: 'C:/Users/Administrator/workspace_ccstheia/health_detect_6844_mss/Release/../metaimage_cfg.Release.json': No such file or directory
+[95]/cygwin/cp: cannot stat 'memory_hex.cmd': No such file or directory
+[107]/cygwin/cp: cannot stat '../health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig': No such file or directory
+```
+
+**问题分析**:
+
+这是**问题15和20的再次回归**，原因是：
+1. 项目代码目录中有这些文件
+2. 但CCS实际编译的是 `C:\Users\Administrator\workspace_ccstheia\` 目录
+3. 导入项目时只导入了源代码，**没有导入构建配置文件**
+
+**缺失的文件**:
+- `memory_hex.cmd` - MSS/DSS的Hex生成脚本
+- `metaimage_cfg.release.json` - MSS的元镜像配置
+- `metaimage_cfg.release.json` - System的元镜像配置
+
+**根本原因**: 
+
+CCS导入.projectspec时不会自动复制这些构建配置文件到workspace。
+
+**解决方案**:
+
+从参考项目复制所有必需的构建配置文件：
+
+```powershell
+# 1. 复制memory_hex.cmd到MSS和DSS
+Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\memory_hex.cmd" `
+          "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss\"
+
+Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\dss\xwrL684x-evm\c66ss0_freertos\ti-c6000\memory_hex.cmd" `
+          "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss\"
+
+# 2. 复制metaimage配置到MSS
+Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src\mss\xwrL684x-evm\r5fss0-0_freertos\ti-arm-clang\config\metaimage_cfg.release.json" `
+          "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss\"
+
+# 3. 复制metaimage配置到System（需创建config目录）
+New-Item -ItemType Directory -Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\config" -Force
+Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\config\metaimage_cfg.release.json" `
+          "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\config\"
+```
+
+**验证**:
+```powershell
+# 检查文件是否存在
+Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss\memory_hex.cmd"
+Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_mss\metaimage_cfg.release.json"
+Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss\memory_hex.cmd"
+Test-Path "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_system\config\metaimage_cfg.release.json"
+```
+
+**结果**: 所有文件返回 `True`
+
+**注意事项**:
+- 这些文件在项目代码目录中已存在
+- 但必须复制到CCS workspace才能被构建系统使用
+- 每次重新导入项目时都需要执行这个步骤
+
+**下一步**: 
+- Clean + Build MSS → 应该成功生成 `.rig` 文件
+- 然后按顺序编译 DSS 和 System
+
+**状态**: ✅ 已修复（2026-01-09）
+
+---
+
 ## 📊 编译问题汇总表
 
-> 💡 **说明**: 以下是所有21个编译问题的汇总表，便于快速查看问题类型和解决方案。
+> 💡 **说明**: 以下是所有22个编译问题的汇总表，便于快速查看问题类型和解决方案。
 
 | 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
 |---------|---------|------|---------|------|
@@ -1290,8 +1361,9 @@ Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src
 | 问题17 | Config文件名大小写 | 文件名不一致 | Windows兼容 | ✅ 已确认 |
 | 问题18 | API结构体字段不匹配 | 字段名称错误 | 修正字段映射 | ✅ 已修复 |
 | 问题19 | MSS API字段不匹配 | CCS workspace文件旧版本 | 在CCS中手动修复 | ✅ 已修复 |
-| 问题20 | DSS post-build失败回归 | memory_hex.cmd缺失 | 复制到workspace | ⏳ 待执行 |
+| 问题20 | DSS post-build失败回归 | memory_hex.cmd缺失 | 复制到workspace | ✅ 已修复 |
 | 问题21 | System .rig文件缺失 | MSS/DSS未生成 | 按顺序编译 | ⏳ 待验证 |
+| 问题22 | CCS工作区缺少构建配置文件 | 导入项目未含配置文件 | 复制memory_hex.cmd和metaimage配置 | ✅ 已修复 |
 
 ---
 
@@ -1308,8 +1380,8 @@ Copy-Item "D:\7.project\TI_Radar_Project\project-code\AWRL6844_InCabin_Demos\src
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **21** |
-| **待处理问题** | **2 (问题20,21)** |
+| **修复的编译问题** | **22** |
+| **待处理问题** | **1 (问题21)** |
 
 ### ✅ 完成状态
 
