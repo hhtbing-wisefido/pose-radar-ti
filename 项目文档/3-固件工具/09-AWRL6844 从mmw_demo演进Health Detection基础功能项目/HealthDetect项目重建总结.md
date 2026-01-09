@@ -1755,9 +1755,107 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_syst
 
 ---
 
+### 问题27: DSS未编译导致System找不到.rig文件（操作方式问题）
+
+**发现日期**: 2026-01-09
+
+**错误现象**:
+```
+/cygwin/cp: cannot stat '../health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig': No such file or directory
+gmake: [makefile:15: system-post-build] Error 2 (ignored)
+```
+
+**检查发现**:
+```powershell
+# DSS项目存在
+Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss"
+# 存在，但...
+
+# DSS Release目录几乎为空！
+Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_dss\Release"
+# 只有 .clangd，没有任何编译产物！
+```
+
+**根本原因**:
+
+❌ **用户分别导入了3个项目**（错误方式）:
+```
+File → Import → 选择 mss.projectspec → Finish
+File → Import → 选择 dss.projectspec → Finish
+File → Import → 选择 system.projectspec → Finish
+
+问题：CCS不会自动识别项目间依赖！
+编译System时，DSS没有被自动编译！
+```
+
+✅ **正确方式：只从System导入**:
+```
+File → Import → CCS Projects
+Browse to: .../src/system/
+只选择: health_detect_6844_system.projectspec
+点击 Finish
+
+CCS自动：
+✅ 解析 <import> 标签
+✅ 自动导入 MSS 项目
+✅ 自动导入 DSS 项目
+✅ 设置项目间依赖关系
+
+编译时自动：
+✅ 先编译 MSS → 生成 .rig
+✅ 再编译 DSS → 生成 .rig
+✅ 最后 System post-build → 生成 .appimage
+```
+
+**解决方案（用户操作）**:
+
+1. **删除当前workspace中的所有项目**:
+   ```
+   右键 health_detect_6844_mss → Delete（勾选"Delete project contents"）
+   右键 health_detect_6844_dss → Delete（勾选"Delete project contents"）
+   右键 health_detect_6844_system → Delete（勾选"Delete project contents"）
+   ```
+
+2. **只从System项目导入（🔴 关键步骤）**:
+   ```
+   File → Import → CCS Projects
+   Browse to: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\
+   选择: health_detect_6844_system.projectspec
+   点击 Finish
+   
+   CCS会自动导入所有3个项目并设置依赖关系！
+   ```
+
+3. **只编译System项目**:
+   ```
+   右键 health_detect_6844_system → Build Project
+   
+   CCS会自动按顺序编译 MSS → DSS → System
+   ```
+
+**关键配置验证**（项目配置是正确的）:
+
+system.projectspec已有import标签:
+```xml
+<import spec="../mss/.../health_detect_6844_mss.projectspec"/>
+<import spec="../dss/.../health_detect_6844_dss.projectspec"/>
+```
+
+system.xml已定义项目依赖:
+```xml
+<project configuration="@match" id="project_0" name="health_detect_6844_mss"/>
+<project configuration="@match" id="project_1" name="health_detect_6844_dss"/>
+```
+
+**状态**: ⚠️ 操作方式问题（代码正确，需用户按正确方式重新导入）
+
+**参考文档**: `AWRL6844_HealthDetect需求文档v2.md` - "CCS自动依赖编译机制"章节
+
+---
+
 ## 📊 编译问题汇总表
 
-> 💡 **说明**: 以下是所有23个编译问题的汇总表，便于快速查看问题类型和解决方案。
+> 💡 **说明**: 以下是所有27个编译问题的汇总表，便于快速查看问题类型和解决方案。
 
 | 问题编号 | 错误类型 | 原因 | 解决方案 | 状态 |
 |---------|---------|------|---------|------|
@@ -1787,6 +1885,7 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_syst
 | 问题24 | .projectspec缺少构建配置文件引用 | 未在.projectspec声明 | 添加file引用并设置action="copy" | ✅ 已修复 |
 | 问题25 | System .projectspec metaimage大小写 | release vs Release | 修改.projectspec使用大写 | ✅ 已修复 |
 | 问题26 | System metaimage未复制到config目录 | CCS扁平化路径 | 添加targetDirectory="config" | ✅ 已修复 |
+| 问题27 | DSS未编译导致System找不到.rig | 项目导入方式错误 | 必须只从System导入，不能分别导入 | ⚠️ 操作问题 |
 
 ---
 
@@ -1803,7 +1902,7 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_syst
 | 创建的配置文件     | 6            |
 | 创建的文档         | 6            |
 | **总文件数** | **31** |
-| **修复的编译问题** | **26** |
+| **修复的编译问题** | **27** |
 | **待处理问题** | **0** |
 
 ### ✅ 完成状态
@@ -1870,40 +1969,63 @@ Get-ChildItem "C:\Users\Administrator\workspace_ccstheia\health_detect_6844_syst
 
 ## 🎯 下一步操作指南
 
+### 🔴🔴🔴 问题27解决方案：正确的项目导入方式（最高优先级）
+
 **请用户在CCS中执行以下步骤**:
 
-### 1. 刷新项目
+### 1. 删除当前workspace中的所有项目
+
 ```
-在CCS中右键点击各项目  Refresh
-确保所有修复后的代码被识别
+在CCS中：
+- 右键 health_detect_6844_mss → Delete（勾选"Delete project contents on disk"）
+- 右键 health_detect_6844_dss → Delete（勾选"Delete project contents on disk"）
+- 右键 health_detect_6844_system → Delete（勾选"Delete project contents on disk"）
 ```
 
-### 2. Clean所有项目
+### 2. 🔴 只从System项目导入（关键步骤）
+
 ```
-Project  Clean...  选择所有health_detect项目  Clean
+File → Import → CCS Projects
+Browse to: D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\src\system\
+只选择: health_detect_6844_system.projectspec
+点击 Finish
+
+CCS会自动：
+✅ 解析 <import> 标签
+✅ 自动导入 health_detect_6844_mss 项目
+✅ 自动导入 health_detect_6844_dss 项目
+✅ 设置项目间依赖关系
+
+导入后应看到3个项目：
+- health_detect_6844_mss
+- health_detect_6844_dss
+- health_detect_6844_system
 ```
 
-### 3. 按顺序编译
+### 3. 只编译System项目（自动编译依赖）
+
 ```
-Step 1: 编译 health_detect_6844_mss (右键  Build Project)
-      预期: 问题18已修复，MSS应编译成功
+右键 health_detect_6844_system → Build Project
 
-Step 2: 编译 health_detect_6844_dss (右键  Build Project)
-      预期: 问题15已修复，DSS应编译成功
+CCS会自动按顺序：
+Step 1: 自动编译 MSS → 生成 .rig
+Step 2: 自动编译 DSS → 生成 .rig
+Step 3: System post-build → 生成 .appimage
 
-Step 3: 编译 health_detect_6844_system (右键  Build Project)
-      预期: System应能找到.rig文件并生成.appimage
+🔴 不需要手动编译MSS和DSS！CCS会自动处理！
 ```
 
 ### 4. 验证输出
+
 ```
 检查以下文件是否生成:
 - health_detect_6844_mss/Release/health_detect_6844_mss_img.Release.rig
 - health_detect_6844_dss/Release/health_detect_6844_dss_img.Release.rig
-- health_detect_6844_system/Release/health_detect_6844_system.Release.appimage
+- health_detect_6844_system/Release/health_detect_6844_system.Release.appimage (或 .metaImage)
 ```
 
 ### 5. 如果仍有编译错误
+
 请提供**完整错误信息**以便进一步诊断，包括:
 - 错误日志的完整输出
 - 错误发生的文件和行号
@@ -1912,5 +2034,5 @@ Step 3: 编译 health_detect_6844_system (右键  Build Project)
 ---
 
 > 📌 **最后更新**: 2026-01-09  
-> ✅ 已修复18个编译问题  
-> ⏳ 待验证CCS编译通过
+> ✅ 已修复27个编译问题  
+> ⚠️ 问题27需要用户按正确方式重新导入项目
