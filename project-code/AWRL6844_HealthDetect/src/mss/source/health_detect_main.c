@@ -252,10 +252,20 @@ int32_t HealthDetect_init(void)
 {
     int32_t status = 0;
 
+    /* ======== 问题29修复: 添加驱动初始化 ======== */
+    /* Open peripheral drivers (UART, GPIO, etc.) */
+    Drivers_open();
+    Board_driversOpen();
+
     DebugP_log("Health Detection: Initializing...\r\n");
 
     /* Clear MCB */
     memset(&gHealthDetectMCB, 0, sizeof(HealthDetect_MCB_t));
+
+    /* ======== 问题29修复: 设置UART句柄 ======== */
+    /* Set UART handles for CLI and data output */
+    gHealthDetectMCB.uartHandle = gUartHandle[0];      /* CLI/Command UART */
+    gHealthDetectMCB.uartLogHandle = gUartHandle[1];   /* Logging UART (if configured) */
 
     /* Set initial state */
     gHealthDetectMCB.state = HEALTH_DETECT_STATE_INIT;

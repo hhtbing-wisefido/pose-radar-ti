@@ -2252,12 +2252,68 @@ project-code/AWRL6844_HealthDetect/profiles/
 7. 逐行发送 health_detect_simple.cfg 中的命令
 ```
 
-### 9. ⏳ 待验证功能 (2026-01-09)
+### 9. 🔴 问题29：UART驱动未初始化 (2026-01-09)
 
-- [ ] 通过串口终端发送配置命令
-- [ ] 验证固件CLI响应正常
+**问题现象**：
+```
+SDK Visualizer报错：
+"Error in Setting up device - Please try again"
+
+即使使用正确的配置文件格式也无法通信
+```
+
+**根本原因**：
+```
+❌ health_detect_main.c 中缺少 Drivers_open() 调用
+❌ gHealthDetectMCB.uartHandle 从未被初始化
+❌ 固件无法通过UART与PC通信
+```
+
+**代码对比**：
+```c
+// ❌ HealthDetect (问题代码)
+int32_t HealthDetect_init(void)
+{
+    // 没有调用 Drivers_open()
+    // 没有设置 uartHandle
+}
+
+// ✅ InCabin_Demos (正确代码)
+void demo_in_cabin_sensing_6844_mss(void* args)
+{
+    Drivers_open();                              // 初始化驱动
+    Board_driversOpen();                         // 初始化板级驱动
+    gMmwMssMCB.commandUartHandle = gUartHandle[0];  // 设置UART句柄
+}
+```
+
+**修复方案**：
+```c
+// 在 HealthDetect_init() 开头添加：
+Drivers_open();
+Board_driversOpen();
+gHealthDetectMCB.uartHandle = gUartHandle[0];
+gHealthDetectMCB.uartLogHandle = gUartHandle[1];
+```
+
+**修改的文件**：
+- `project-code/AWRL6844_HealthDetect/src/mss/source/health_detect_main.c`
+
+**🔴 需要用户操作**：
+```
+1. 在CCS中删除workspace中的项目
+2. 重新从 project-code/AWRL6844_HealthDetect 导入
+3. 重新编译生成 .appimage
+4. 重新烧录固件
+```
+
+### 10. ⏳ 待验证功能 (2026-01-09)
+
+- [ ] 重新编译固件（包含问题29修复）
+- [ ] 重新烧录.appimage
+- [ ] 验证串口通信正常
+- [ ] 发送配置命令
 - [ ] 验证点云数据输出
-- [ ] 验证呼吸/心跳检测功能
 
 ---
 
@@ -2265,4 +2321,5 @@ project-code/AWRL6844_HealthDetect/profiles/
 > ✅ 已修复29个编译问题  
 > 🎉 **编译成功** - 成功生成可烧录的.appimage固件  
 > 🎉 **烧录成功** - 固件已烧录到AWRL6844-EVM  
-> 🔴 **问题28** - CLI命令格式不兼容，需使用health_detect_simple.cfg
+> 🔴 **问题28** - CLI命令格式不兼容，需使用health_detect_simple.cfg  
+> 🔴 **问题29** - UART驱动未初始化，需重新编译烧录
