@@ -449,40 +449,52 @@ int32_t RadarControl_start(void)
     /* 注意：使用本地变量判断，因为oneTimeConfigDone还未设置 */
     if (saveRestoreMode == 1)  /* SAVE模式 = 第一次启动 = 需要校准 */
     {
-        /* 第一次启动：执行工厂校准 */
-        DebugP_log("RadarControl: Performing factory calibration...\r\n");
-        
-        /* 🔴 关键修复：设置校准配置到gMmWaveCfg（SDK标准流程）*/
-        gMmWaveCfg.calibCfg.saveEnable = gHealthDetectMCB.calibCfg.saveEnable;
-        gMmWaveCfg.calibCfg.restoreEnable = gHealthDetectMCB.calibCfg.restoreEnable;
-        gMmWaveCfg.calibCfg.rxGain = gHealthDetectMCB.calibCfg.rxGain;
-        gMmWaveCfg.calibCfg.txBackoffSel = gHealthDetectMCB.calibCfg.txBackoffSel;
-        gMmWaveCfg.calibCfg.flashOffset = gHealthDetectMCB.calibCfg.flashOffset;
-        gMmWaveCfg.calibCfg.monitorsFlashOffset = gHealthDetectMCB.calibCfg.monitorsFlashOffset;
-        
-        /* 🔴 关键修复：设置工厂校准数据缓冲区指针（SDK要求）*/
-        /* MMWave_factoryCalib需要此指针来存储/恢复校准结果 */
-        gMmWaveCfg.calibCfg.ptrFactoryCalibData = &gHealthDetectMCB.factoryCalibData;
-        
-        DebugP_log("RadarControl: CalibCfg - saveEnable=%d, restoreEnable=%d, flashOffset=0x%x\r\n",
-                   gMmWaveCfg.calibCfg.saveEnable, 
-                   gMmWaveCfg.calibCfg.restoreEnable,
-                   gMmWaveCfg.calibCfg.flashOffset);
-        
-        retVal = MMWave_factoryCalib(gMmWaveHandle, &gMmWaveCfg, &errCode);
-        if (retVal != 0)
+        /* 🟢 第9轮修复：检查calibCfg是否通过CLI命令配置 */
+        /* flashOffset非0表示用户发送了factoryCalibCfg命令 */
+        if (gHealthDetectMCB.calibCfg.flashOffset != 0)
         {
-            DebugP_log("RadarControl: MMWave_factoryCalib failed, errCode=%d\r\n", errCode);
-            /* 解码错误用于调试 */
-            MMWave_ErrorLevel errorLevel;
-            int16_t mmWaveErrorCode;
-            int16_t subsysErrorCode;
-            MMWave_decodeError(errCode, &errorLevel, &mmWaveErrorCode, &subsysErrorCode);
-            DebugP_log("  errorLevel=%d, mmWaveErrorCode=%d, subsysErrorCode=%d\r\n", 
-                       errorLevel, mmWaveErrorCode, subsysErrorCode);
-            return errCode;
+            /* 已配置：执行工厂校准 */
+            DebugP_log("RadarControl: Performing factory calibration...\r\n");
+            
+            /* 设置校准配置到gMmWaveCfg（SDK标准流程）*/
+            gMmWaveCfg.calibCfg.saveEnable = gHealthDetectMCB.calibCfg.saveEnable;
+            gMmWaveCfg.calibCfg.restoreEnable = gHealthDetectMCB.calibCfg.restoreEnable;
+            gMmWaveCfg.calibCfg.rxGain = gHealthDetectMCB.calibCfg.rxGain;
+            gMmWaveCfg.calibCfg.txBackoffSel = gHealthDetectMCB.calibCfg.txBackoffSel;
+            gMmWaveCfg.calibCfg.flashOffset = gHealthDetectMCB.calibCfg.flashOffset;
+            gMmWaveCfg.calibCfg.monitorsFlashOffset = gHealthDetectMCB.calibCfg.monitorsFlashOffset;
+            
+            /* 设置工厂校准数据缓冲区指针（SDK要求）*/
+            /* MMWave_factoryCalib需要此指针来存储/恢复校准结果 */
+            gMmWaveCfg.calibCfg.ptrFactoryCalibData = &gHealthDetectMCB.factoryCalibData;
+            
+            DebugP_log("RadarControl: CalibCfg - saveEnable=%d, restoreEnable=%d, rxGain=%d, flashOffset=0x%x\r\n",
+                       gMmWaveCfg.calibCfg.saveEnable, 
+                       gMmWaveCfg.calibCfg.restoreEnable,
+                       gMmWaveCfg.calibCfg.rxGain,
+                       gMmWaveCfg.calibCfg.flashOffset);
+            
+            retVal = MMWave_factoryCalib(gMmWaveHandle, &gMmWaveCfg, &errCode);
+            if (retVal != 0)
+            {
+                DebugP_log("RadarControl: MMWave_factoryCalib failed, errCode=%d\r\n", errCode);
+                /* 解码错误用于调试 */
+                MMWave_ErrorLevel errorLevel;
+                int16_t mmWaveErrorCode;
+                int16_t subsysErrorCode;
+                MMWave_decodeError(errCode, &errorLevel, &mmWaveErrorCode, &subsysErrorCode);
+                DebugP_log("  errorLevel=%d, mmWaveErrorCode=%d, subsysErrorCode=%d\r\n", 
+                           errorLevel, mmWaveErrorCode, subsysErrorCode);
+                return errCode;
+            }
+            DebugP_log("RadarControl: Factory calibration completed\r\n");
         }
-        DebugP_log("RadarControl: Factory calibration completed\r\n");
+        else
+        {
+            /* 🟢 未配置：跳过工厂校准（用户未发送factoryCalibCfg命令）*/
+            DebugP_log("RadarControl: Factory calibration skipped (not configured via CLI)\r\n");
+            DebugP_log("  Note: Use 'factoryCalibCfg' command if calibration is required\r\n");
+        }
     }
     else
     {
