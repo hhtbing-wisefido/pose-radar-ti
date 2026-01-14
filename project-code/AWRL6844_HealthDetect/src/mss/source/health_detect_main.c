@@ -264,8 +264,8 @@ int32_t HealthDetect_init(void)
 
     /* ======== 问题29修复: 设置UART句柄 ======== */
     /* Set UART handles for CLI and data output */
-    gHealthDetectMCB.uartHandle = gUartHandle[0];      /* CLI/Command UART */
-    gHealthDetectMCB.uartLogHandle = gUartHandle[1];   /* Logging UART (if configured) */
+    gHealthDetectMCB.commandUartHandle = gUartHandle[0];      /* CLI/Command UART */
+    gHealthDetectMCB.loggingUartHandle = gUartHandle[1];   /* Logging UART (if configured) */
 
     /* Set initial state */
     gHealthDetectMCB.state = HEALTH_DETECT_STATE_INIT;
@@ -307,7 +307,7 @@ int32_t HealthDetect_init(void)
     }
 
     /* Initialize TLV output */
-    status = TLV_init(gHealthDetectMCB.uartHandle);
+    status = TLV_init(gHealthDetectMCB.commandUartHandle);
     if (status != 0)
     {
         DebugP_log("Error: TLV_init failed [%d]\r\n", status);

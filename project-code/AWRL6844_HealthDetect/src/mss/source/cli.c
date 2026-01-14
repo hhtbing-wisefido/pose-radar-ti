@@ -931,12 +931,12 @@ static int32_t CLI_readLine(char *buffer, uint32_t maxLen)
     while (idx < maxLen - 1)
     {
         /* Read one character using L-SDK 6.x UART_Transaction pattern */
-        if (gHealthDetectMCB.uartHandle != NULL)
+        if (gHealthDetectMCB.commandUartHandle != NULL)
         {
             UART_Transaction_init(&trans);
             trans.buf = &ch;
             trans.count = 1;
-            UART_read(gHealthDetectMCB.uartHandle, &trans);
+            UART_read(gHealthDetectMCB.commandUartHandle, &trans);
         }
         else
         {
@@ -988,12 +988,12 @@ int32_t CLI_write(const char *format, ...)
     len = vsnprintf(gCliOutputBuf, CLI_OUTPUT_BUF_SIZE, format, args);
     va_end(args);
 
-    if (len > 0 && gHealthDetectMCB.uartHandle != NULL)
+    if (len > 0 && gHealthDetectMCB.commandUartHandle != NULL)
     {
         UART_Transaction_init(&trans);
         trans.buf = gCliOutputBuf;
         trans.count = len;
-        UART_write(gHealthDetectMCB.uartHandle, &trans);
+        UART_write(gHealthDetectMCB.commandUartHandle, &trans);
     }
 
     /* Also output to debug console */

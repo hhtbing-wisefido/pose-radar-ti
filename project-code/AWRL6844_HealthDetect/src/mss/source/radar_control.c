@@ -125,7 +125,7 @@ int32_t RadarControl_init(void)
     }
 
     /* Store handle in MCB */
-    gHealthDetectMCB.mmWaveHandle = gMmWaveHandle;
+    gHealthDetectMCB.ctrlHandle = gMmWaveHandle;
     gRadarInitialized = 1;
 
     DebugP_log("RadarControl: Initialized\r\n");

@@ -3,13 +3,13 @@
  * @brief Health Detection Main Application Header
  *
  * Reference: mmw_demo_SDK_reference/source/mmwave_demo.h
- * Reference: AWRL6844_InCabin_Demos/src/mss/source/mmwave_demo_mss.h
  * Adapted for: Health Detection three-layer architecture
  *
  * RTOS: FreeRTOS (L-SDK mandatory)
  * Note: L-SDK uses FreeRTOS, NOT TI-RTOS/BIOS
  *
  * Created: 2026-01-08
+ * Updated: 2026-01-14 - MCB结构完全对齐SDK标准（问题36修复）
  */
 
 #ifndef HEALTH_DETECT_MAIN_H
@@ -21,6 +21,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 /* FreeRTOS Includes */
 #include <FreeRTOS.h>
@@ -37,11 +38,15 @@ extern "C" {
 #include <drivers/uart.h>
 #include <drivers/hwa.h>
 #include <drivers/edma.h>
+#include <drivers/adcbuf.h>
 
 /* Common Includes */
 #include "common/data_path.h"
 #include "common/health_detect_types.h"
 #include "common/mmwave_output.h"
+
+/* CLI Includes - 需要CLI相关的结构定义 */
+#include <common/syscommon.h>
 
 /*===========================================================================*/
 /*                         Task Configuration                                 */
@@ -72,6 +77,22 @@ extern "C" {
 #define MAIN_TASK_STACK_SIZE        (16384U / sizeof(StackType_t))
 
 /*===========================================================================*/
+/*                         APLL Configuration                                 */
+/*===========================================================================*/
+
+/** @brief APLL频率 - 400MHz */
+#define APLL_FREQ_400MHZ            (400.0f)
+
+/** @brief APLL频率 - 396MHz (频率偏移模式) */
+#define APLL_FREQ_396MHZ            (396.0f)
+
+/** @brief APLL校准数据 - 保存模式 */
+#define SAVE_APLL_CALIB_DATA        (1U)
+
+/** @brief APLL校准数据 - 恢复模式 */
+#define RESTORE_APLL_CALIB_DATA     (0U)
+
+/*===========================================================================*/
 /*                         System State                                       */
 /*===========================================================================*/
 
@@ -90,13 +111,13 @@ typedef enum HealthDetect_State_e
 } HealthDetect_State_e;
 
 /*===========================================================================*/
-/*                         CLI Configuration                                  */
+/*                         CLI Configuration Types                            */
 /*===========================================================================*/
 
 /**
  * @brief GUI Monitor Selection Structure (L-SDK standard)
  */
-typedef struct GuiMonitor_t
+typedef struct CLI_GuiMonSel_t
 {
     uint8_t     pointCloud;             /**< Enable point cloud output */
     uint8_t     rangeProfile;           /**< Enable range profile output */
@@ -104,102 +125,237 @@ typedef struct GuiMonitor_t
     uint8_t     rangeAzimuthHeatMap;    /**< Enable range-azimuth heatmap */
     uint8_t     rangeDopplerHeatMap;    /**< Enable range-Doppler heatmap */
     uint8_t     statsInfo;              /**< Enable statistics info */
-} GuiMonitor_t;
+} CLI_GuiMonSel;
 
 /**
- * @brief CLI Configuration Structure
- * Holds all configuration received via CLI commands
+ * @brief CFAR configuration structure
  */
-typedef struct HealthDetect_CliCfg_t
+typedef struct CLI_CfarCfg_t
 {
-    /* Radar Configuration */
-    Profile_Config_t        profileCfg;         /**< Profile configuration */
-    Chirp_Config_t          chirpCfg;           /**< Chirp configuration */
-    Frame_Config_t          frameCfg;           /**< Frame configuration */
+    uint8_t     averageMode;            /**< Average mode */
+    uint8_t     winLen;                 /**< Window length */
+    uint8_t     guardLen;               /**< Guard length */
+    uint8_t     noiseDiv;               /**< Noise divisor shift */
+    uint8_t     cyclicMode;             /**< Cyclic mode */
+    float       thresholdScale;         /**< Threshold scale */
+    uint8_t     peakGroupingEn;         /**< Peak grouping enable */
+} CLI_CfarCfg;
 
-    /* Detection Configuration */
-    CFAR_Range_Config_t     cfarRangeCfg;       /**< CFAR range config */
-    CFAR_Doppler_Config_t   cfarDopplerCfg;     /**< CFAR Doppler config */
-    AOA_Config_t            aoaCfg;             /**< AOA config */
+/**
+ * @brief CFAR FOV configuration
+ */
+typedef struct CLI_CfarFovCfg_t
+{
+    float       min;                    /**< Minimum value (meters or m/s) */
+    float       max;                    /**< Maximum value (meters or m/s) */
+} CLI_CfarFovCfg;
 
-    /* Health Detection Configuration */
-    PresenceDetect_Config_t presenceCfg;        /**< Presence detection config */
-    DetectionZone_t         zones[HEALTH_DETECT_MAX_ZONES]; /**< Detection zones */
+/**
+ * @brief AOA configuration structure
+ */
+typedef struct CLI_AoaCfg_t
+{
+    uint16_t    numAngleBins;           /**< Number of angle bins */
+    float       elevSearchStep;         /**< Elevation search step */
+    float       azimSearchStep;         /**< Azimuth search step */
+    float       elevMin;                /**< Minimum elevation */
+    float       elevMax;                /**< Maximum elevation */
+    float       azimMin;                /**< Minimum azimuth */
+    float       azimMax;                /**< Maximum azimuth */
+} CLI_AoaCfg;
 
-    /* Channel Configuration */
-    uint16_t                rxChannelEn;        /**< RX channel enable mask */
-    uint16_t                txChannelEn;        /**< TX channel enable mask */
-
-    /* Antenna Configuration */
-    uint8_t                 numTxAntennas;      /**< Number of TX antennas */
-    uint8_t                 numRxAntennas;      /**< Number of RX antennas */
-
-    /* Sensor Start Configuration (L-SDK standard) */
-    uint8_t                 frameTrigMode;      /**< Frame trigger mode */
-    uint8_t                 chirpStartSigLbEn;  /**< Chirp start signal loopback enable */
-    uint8_t                 frameLivMonEn;      /**< Frame live monitor enable */
-    uint32_t                frameTrigTimerVal;  /**< Frame trigger timer value */
-
-    /* GUI Monitor Configuration (L-SDK standard) */
-    GuiMonitor_t            guiMonitor;         /**< GUI monitor selection */
-
-    /* Configuration Flags */
-    uint8_t                 isProfileCfgPending;
-    uint8_t                 isChirpCfgPending;
-    uint8_t                 isFrameCfgPending;
-    uint8_t                 isCfarCfgPending;
-} HealthDetect_CliCfg_t;
+/**
+ * @brief APLL Calibration Result Structure
+ */
+typedef struct APLL_CalResult_t
+{
+    uint32_t    valid;                  /**< Calibration result valid flag */
+    uint32_t    data[16];               /**< Calibration data (implementation specific) */
+} APLL_CalResult;
 
 /*===========================================================================*/
-/*                         Master Control Block                               */
+/*                         Master Control Block (对齐SDK标准)                 */
 /*===========================================================================*/
 
 /**
  * @brief Health Detection Master Control Block
- * Main application control structure
+ * 
+ * 参考: mmw_demo_SDK_reference/source/mmwave_demo.h MmwDemo_MSS_MCB
+ * 说明: 保持与SDK标准MCB高度一致，确保所有SDK API调用正确
  */
 typedef struct HealthDetect_MCB_t
 {
-    /* System State */
-    HealthDetect_State_e    state;              /**< Current system state */
-    uint32_t                frameNum;           /**< Current frame number */
-    uint32_t                errorCode;          /**< Last error code */
+    /*! ========== UART Handles (SDK标准) ========== */
+    
+    /*! @brief UART Logging Handle */
+    UART_Handle                 loggingUartHandle;
 
-    /* mmWave Control */
-    MMWave_Handle           mmWaveHandle;       /**< mmWave control handle */
-    uint8_t                 isSensorStarted;    /**< Sensor started flag */
-    uint8_t                 isSensorStopped;    /**< Sensor stopped flag */
+    /*! @brief UART Command Rx/Tx Handle (CLI使用) */
+    UART_Handle                 commandUartHandle;
 
-    /* Driver Handles */
-    UART_Handle             uartHandle;         /**< UART handle for CLI/output */
-    UART_Handle             uartLogHandle;      /**< UART handle for logging */
-    HWA_Handle              hwaHandle;          /**< HWA handle */
-    EDMA_Handle             edmaHandle;         /**< EDMA handle */
+    /*! ========== mmWave Control (SDK标准) ========== */
+    
+    /*! @brief mmWave control handle (用于配置BSS) */
+    MMWave_Handle               ctrlHandle;
 
-    /* Configuration */
-    HealthDetect_CliCfg_t   cliCfg;             /**< CLI configuration */
+    /*! @brief ADC buffer handle */
+    ADCBuf_Handle               adcBuffHandle;
 
-    /* DPC Results */
-    DPC_Result_t            dpcResult;          /**< DPC processing result */
-    HealthDetect_Features_t healthFeatures;     /**< Health detection features */
-    PresenceDetect_Result_t presenceResult;     /**< Presence detection result */
+    /*! @brief EDMA driver handle (用于CBUFF) */
+    EDMA_Handle                 edmaHandle;
 
-    /* Statistics */
-    uint32_t                framePeriodUs;      /**< Measured frame period (us) */
-    uint32_t                interFrameTimeUs;   /**< Inter-frame processing time */
-    uint32_t                transmitTimeUs;     /**< Data transmit time */
+    /*! @brief Number of EDMA event Queues (tc) */
+    uint8_t                     numEdmaEventQueues;
 
-    /* FreeRTOS Objects */
-    TaskHandle_t            dpcTaskHandle;      /**< DPC task handle */
-    TaskHandle_t            tlvTaskHandle;      /**< TLV task handle */
-    SemaphoreHandle_t       dpcSemHandle;       /**< DPC semaphore handle */
-    SemaphoreHandle_t       tlvSemHandle;       /**< TLV semaphore handle */
+    /*! ========== Semaphore Objects (SDK标准) ========== */
+    
+    /*! @brief Semaphore Object to pend demo init task */
+    SemaphoreP_Object           demoInitTaskCompleteSemHandle;
 
-    /* Memory Buffers */
-    uint8_t                 *l3RamPtr;          /**< L3 RAM pointer */
-    uint32_t                l3RamSize;          /**< L3 RAM size */
-    uint8_t                 *localRamPtr;       /**< Local RAM pointer */
-    uint32_t                localRamSize;       /**< Local RAM size */
+    /*! @brief Semaphore Object to pend CLI init task */
+    SemaphoreP_Object           cliInitTaskCompleteSemHandle;
+
+    /*! @brief Semaphore Object for TLV task */
+    SemaphoreP_Object           tlvSemHandle;
+
+    /*! @brief Semaphore Object for DPC task config done */
+    SemaphoreP_Object           dpcTaskConfigDoneSemHandle;
+
+    /*! @brief Semaphore Object for UART task config done */
+    SemaphoreP_Object           uartTaskConfigDoneSemHandle;
+
+    /*! ========== Sensor Control (SDK标准) ========== */
+    
+    /*! @brief Tracks the number of sensor start */
+    uint32_t                    sensorStartCount;
+
+    /*! @brief Tracks the number of sensor stop */
+    uint32_t                    sensorStopCount;
+
+    /*! @brief Sensor started flag */
+    uint8_t                     isSensorStarted;
+
+    /*! @brief Sensor stopped flag */
+    uint8_t                     isSensorStopped;
+
+    /*! ========== MMWave Configuration (SDK标准) ========== */
+    
+    /**
+     * @brief MMWave configuration which includes frameCfg, profileTimeCfg, profileComCfg.
+     */
+    MMWave_Cfg                  mmWaveCfg;
+
+    /**
+     * @brief Configuration to open DFP
+     */
+    MMWave_OpenCfg              mmwOpenCfg;
+
+    /*! ========== CLI Configuration (SDK标准 + HealthDetect扩展) ========== */
+    
+    /**
+     * @brief 完整CLI配置结构（包含所有CLI命令配置）
+     * 注意：为保持代码兼容性，保留cliCfg嵌套结构
+     */
+    struct {
+        /* 雷达配置 */
+        Profile_Config_t        profileCfg;         /**< Profile configuration */
+        Chirp_Config_t          chirpCfg;           /**< Chirp configuration */
+        Frame_Config_t          frameCfg;           /**< Frame configuration */
+
+        /* 检测配置 */
+        CFAR_Range_Config_t     cfarRangeCfg;       /**< CFAR range config */
+        CFAR_Doppler_Config_t   cfarDopplerCfg;     /**< CFAR Doppler config */
+        AOA_Config_t            aoaCfg;             /**< AOA config */
+
+        /* 健康检测配置 */
+        PresenceDetect_Config_t presenceCfg;        /**< Presence detection config */
+        DetectionZone_t         zones[HEALTH_DETECT_MAX_ZONES]; /**< Detection zones */
+
+        /* 通道配置 */
+        uint16_t                rxChannelEn;        /**< RX channel enable mask */
+        uint16_t                txChannelEn;        /**< TX channel enable mask */
+        uint8_t                 numTxAntennas;      /**< Number of TX antennas */
+        uint8_t                 numRxAntennas;      /**< Number of RX antennas */
+
+        /* Sensor Start配置 (L-SDK standard) */
+        uint8_t                 frameTrigMode;      /**< Frame trigger mode */
+        uint8_t                 chirpStartSigLbEn;  /**< Chirp start signal loopback enable */
+        uint8_t                 frameLivMonEn;      /**< Frame live monitor enable */
+        uint32_t                frameTrigTimerVal;  /**< Frame trigger timer value */
+
+        /* GUI Monitor配置 (L-SDK standard) */
+        CLI_GuiMonSel           guiMonitor;         /**< GUI monitor selection */
+
+        /* 配置标志 */
+        uint8_t                 isProfileCfgPending;
+        uint8_t                 isChirpCfgPending;
+        uint8_t                 isFrameCfgPending;
+        uint8_t                 isCfarCfgPending;
+    } cliCfg;
+
+    /*! ========== Radar Parameters (从配置计算得出) ========== */
+    
+    /*! @brief Chirping center frequency */
+    float                       centerFreq;
+
+    /*! @brief ADC sampling rate in MHz */
+    float                       adcSamplingRate;
+
+    /*! @brief Number of range bins */
+    uint32_t                    numRangeBins;
+
+    /*! @brief Number of Doppler bins */
+    uint32_t                    numDopplerBins;
+
+    /*! ========== APLL Configuration (SDK标准，问题36关键) ========== */
+    
+    /*! @brief APLL frequency shift enable flag */
+    uint8_t                     apllFreqShiftEnable;
+
+    /*! @brief Flag to control one-time configuration in low power mode */
+    uint8_t                     oneTimeConfigDone;
+
+    /*! @brief Default APLL calibration result (400MHz) */
+    APLL_CalResult              defaultApllCalRes;
+
+    /*! @brief Down-shifted APLL calibration result (396MHz) */
+    APLL_CalResult              downShiftedApllCalRes;
+
+    /*! ========== Statistics and Timing ========== */
+    
+    uint32_t                    frameNum;           /**< Current frame number */
+    uint32_t                    framePeriodUs;      /**< Measured frame period (us) */
+    uint32_t                    interFrameTimeUs;   /**< Inter-frame processing time */
+    uint32_t                    transmitTimeUs;     /**< Data transmit time */
+
+    /*! ========== FreeRTOS Objects ========== */
+    
+    TaskHandle_t                dpcTaskHandle;      /**< DPC task handle */
+    TaskHandle_t                tlvTaskHandle;      /**< TLV task handle */
+    TaskHandle_t                cliTaskHandle;      /**< CLI task handle */
+
+    /*! ========== Health Detection Results (运行时数据) ========== */
+    
+    /*! @brief Health detection features */
+    HealthDetect_Features_t     healthFeatures;
+
+    /*! @brief Presence detection result */
+    PresenceDetect_Result_t     presenceResult;
+
+    /*! @brief DPC processing result */
+    DPC_Result_t                dpcResult;
+
+    /*! ========== System State ========== */
+    
+    HealthDetect_State_e        state;              /**< Current system state */
+    uint32_t                    errorCode;          /**< Last error code */
+
+    /*! ========== Memory Buffers ========== */
+    
+    uint8_t                     *l3RamPtr;          /**< L3 RAM pointer */
+    uint32_t                    l3RamSize;          /**< L3 RAM size */
+    uint8_t                     *localRamPtr;       /**< Local RAM pointer */
+    uint32_t                    localRamSize;       /**< Local RAM size */
 
 } HealthDetect_MCB_t;
 
@@ -227,7 +383,7 @@ void health_detect_main(void *args);
 int32_t HealthDetect_init(void);
 
 /**
- * @brief Start the sensor
+ * @brief Start the sensor (参考SDK MmwStart流程)
  * @return 0 on success, error code on failure
  */
 int32_t HealthDetect_sensorStart(void);
@@ -237,6 +393,14 @@ int32_t HealthDetect_sensorStart(void);
  * @return 0 on success, error code on failure
  */
 int32_t HealthDetect_sensorStop(void);
+
+/**
+ * @brief Configure and Enable APLL (参考SDK MmwDemo_configAndEnableApll)
+ * @param apllFreqMHz APLL frequency in MHz (400.0 or 396.0)
+ * @param saveRestoreCalData SAVE_APLL_CALIB_DATA or RESTORE_APLL_CALIB_DATA
+ * @return 0 on success, error code on failure
+ */
+int32_t HealthDetect_configAndEnableApll(float apllFreqMHz, uint8_t saveRestoreCalData);
 
 /**
  * @brief DPC processing task
