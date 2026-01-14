@@ -446,7 +446,12 @@ int32_t RadarControl_start(void)
     
     DebugP_log("RadarControl: APLL configured at %.1f MHz\r\n", apllFreq);
 
-    /* Step 3: Turn on RF power for TX/RX channels */
+    /* Step 3: Factory Calibration (SDK Standard - 可选) */
+    /* 注意：L-SDK的工厂校准API可能与H-SDK不同，暂时跳过 */
+    /* 如果需要，使用：rlRfFactoryCalDataRestore() 和 rlRfRunTimeCalibEnable() */
+    DebugP_log("RadarControl: Factory calibration skipped (L-SDK optional)\r\n");
+
+    /* Step 4: Turn on RF power for TX/RX channels */
     retVal = MMWave_FecssRfPwrOnOff(gMmWaveCfg.txEnbl, gMmWaveCfg.rxEnbl, &errCode);
     if (retVal != 0)
     {
@@ -457,7 +462,12 @@ int32_t RadarControl_start(void)
     DebugP_log("RadarControl: RF power enabled (tx=0x%04X, rx=0x%04X)\r\n", 
                gMmWaveCfg.txEnbl, gMmWaveCfg.rxEnbl);
 
-    /* Step 4: Open mmWave device (if not already open) */
+    /* Step 5: Monitor Configuration (SDK Standard - 可选) */
+    /* 注意：监控器配置在L-SDK中是可选的，通过CLI命令配置 */
+    /* 如果需要，使用：MMWave_configMonitors() */
+    DebugP_log("RadarControl: Monitor configuration skipped (configured via CLI if needed)\r\n");
+
+    /* Step 6: Open mmWave device (if not already open) */
     if (!gRadarOpened)
     {
         if (MMWave_open(gMmWaveHandle, &gMmWaveCfg, &errCode) < 0)
@@ -469,7 +479,7 @@ int32_t RadarControl_start(void)
         DebugP_log("RadarControl: MMWave opened\r\n");
     }
 
-    /* Step 5: Configure mmWave */
+    /* Step 7: Configure mmWave */
     if (MMWave_config(gMmWaveHandle, &gMmWaveCfg, &errCode) < 0)
     {
         DebugP_log("RadarControl: MMWave_config failed, errCode=%d\r\n", errCode);
@@ -477,17 +487,17 @@ int32_t RadarControl_start(void)
     }
     DebugP_log("RadarControl: MMWave configured\r\n");
 
-    /* Step 6: Start mmWave sensor */
+    /* Step 8: Start mmWave sensor */
     if (MMWave_start(gMmWaveHandle, &gMmWaveCfg.strtCfg, &errCode) < 0)
     {
         DebugP_log("RadarControl: MMWave_start failed, errCode=%d\r\n", errCode);
         return errCode;
     }
 
-    DebugP_log("RadarControl: Started successfully!\r\n");
+    /* 增加传感器启动计数 */
+    gHealthDetectMCB.sensorStartCount++;
 
-    return 0;
-}
+    DebugP_log("RadarControl: Started successfully! (count=%d)\r\n", gHealthDetectMCB.sensorStartCount);
 
 /**
  * @brief Stop radar sensor
@@ -507,7 +517,13 @@ int32_t RadarControl_stop(void)
         return errCode;
     }
 
-    DebugP_log("RadarControl: Stopped\r\n");
+    /* 增加传感器停止计数 */
+    gHealthDetectMCB.sensorStopCount++;
+
+    DebugP_log("RadarControl: Stopped (count=%d)\r\n", gHealthDetectMCB.sensorStopCount);
+
+    return 0;
+}   DebugP_log("RadarControl: Stopped\r\n");
 
     return 0;
 }
