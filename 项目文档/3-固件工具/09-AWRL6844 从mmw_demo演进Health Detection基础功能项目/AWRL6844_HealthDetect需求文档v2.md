@@ -1,9 +1,9 @@
-# 📋 AWRL6844 Health Detection 项目需求文档 v2.6
+# 📋 AWRL6844 Health Detection 项目需求文档 v2.7
 
 **项目路径**: `D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect`
 **创建日期**: 2026-01-08
 **更新日期**: 2026-01-09
-**版本**: v2.6（新增TLV和CLI兼容性强制要求）
+**版本**: v2.7（新增配置文件与代码实现对应的核心原则）
 
 ---
 
@@ -100,6 +100,153 @@ Get-ChildItem "D:\7.project\TI_Radar_Project\project-code\AWRL6844_HealthDetect\
 
 **为什么InCabin_Demos使用小写？**
 InCabin_Demos的文件名也是小写，但他们可能使用了不同的构建方式或有额外的大小写转换逻辑。我们的项目直接使用makefile，必须严格匹配CCS的PROFILE大小写。
+
+---
+
+## 🔴🔴🔴 核心原则：配置文件与代码实现必须对应（2026-01-09新增）
+
+> ⭐ **来源**: 第6轮运行时错误修复 - sensorStart失败（错误码-204476470）
+>
+> **核心原则**: 配置文件中的每一个命令都必须有对应的代码实现和硬件执行API
+
+### 🔴 惨痛教训：配置文件 ≠ 代码自动执行
+
+**错误认知**：
+- ❌ "配置文件发送后，mmWave会自动执行这些命令"
+- ❌ "只要CLI解析了命令并存储到MCB，就足够了"
+- ❌ "sensorStart会自动触发所有配置的执行"
+
+**正确认知**：
+- ✅ 配置文件命令只是存储参数到MCB
+- ✅ 必须在代码中显式调用对应的MMWave API
+- ✅ CLI解析 + 硬件API调用 = 完整实现
+
+**实际案例**（2026-01-09）：
+```
+配置文件：factoryCalibCfg 1 0 44 2 0x1ff000  ← 发送到CLI
+          ↓
+CLI解析：存储到 gMCB.calibCfg.saveEnable=1     ← 参数已存储
+          ↓
+代码执行：❌ 缺少 MMWave_factoryCalib() 调用   ← 未执行硬件操作！
+          ↓
+结果：    sensorStart失败，错误码-204476470
+```
+
+### 🔴 配置文件命令 vs 代码实现对照表（强制检查）
+
+基于 `profiles/health_detect_standard.cfg` 的完整命令对照：
+
+| 配置命令 | CLI处理函数 | 硬件执行API | 执行位置 | 状态 |
+|---------|-----------|------------|---------|------|
+| **sensorStop** | CLI_cmdSensorStop | MMWave_stop() | radar_control.c | ✅ 已实现 |
+| **channelCfg** | CLI_cmdChannelCfg | MMWave_config(ChannelCfg) | radar_control.c | ✅ 已实现 |
+| **apllFreqShiftEn** | (存储到MCB) | 无需API，配置参数 | - | ✅ 已实现 |
+| **chirpComnCfg** | CLI_cmdChirpComnCfg | MMWave_config(ChirpCfg) | radar_control.c | ✅ 已实现 |
+| **chirpTimingCfg** | CLI_cmdChirpTimingCfg | MMWave_config(ChirpCfg) | radar_control.c | ✅ 已实现 |
+| **adcDataDitherCfg** | (存储到MCB) | 无需API，配置参数 | - | ✅ 已实现 |
+| **frameCfg** | CLI_cmdFrameCfg | MMWave_config(FrameCfg) | radar_control.c | ✅ 已实现 |
+| **gpAdcMeasConfig** | (存储到MCB) | 无需API，配置参数 | - | ✅ 已实现 |
+| **guiMonitor** | CLI_cmdGuiMonitor | 无需API，GUI控制 | - | ✅ 已实现 |
+| **cfarProcCfg** | CLI_cmdCfarProcCfg | DPC配置 | dpc_coordinator.c | ✅ 已实现 |
+| **cfarFovCfg** | CLI_cmdCfarFovCfg | DPC配置 | dpc_coordinator.c | ✅ 已实现 |
+| **aoaProcCfg** | CLI_cmdAoaProcCfg | DPC配置 | dpc_coordinator.c | ✅ 已实现 |
+| **aoaFovCfg** | CLI_cmdAoaFovCfg | DPC配置 | dpc_coordinator.c | ✅ 已实现 |
+| **clutterRemoval** | CLI_cmdClutterRemoval | DPC配置 | dpc_coordinator.c | ✅ 已实现 |
+| **factoryCalibCfg** | CLI_cmdFactoryCalib | **MMWave_factoryCalib()** | radar_control.c | 🟢 已修复 |
+| **runtimeCalibCfg** | CLI_cmdRuntimeCalib | 自动执行（BSS） | - | ✅ 已实现 |
+| **antGeometryBoard** | (存储到MCB) | 无需API，配置参数 | - | ✅ 已实现 |
+| **adcDataSource** | (调试命令) | 无需API，调试用 | - | ✅ 已实现 |
+| **adcLogging** | (调试命令) | 无需API，调试用 | - | ✅ 已实现 |
+| **lowPowerCfg** | CLI_cmdLowPowerCfg | 无需API，配置参数 | - | ✅ 已实现 |
+| **sensorStart** | CLI_cmdSensorStart | **MMWave_start()** | radar_control.c | ✅ 已实现 |
+
+**标注说明**：
+- 🟢 **已修复**：第6轮错误，缺少MMWave_factoryCalib()调用，现已添加
+- ✅ **已实现**：代码中正确实现了对应功能
+- ⚠️ **需检查**：需要验证是否完整实现
+
+### 🔴 强制检查清单（生成配置文件后必须执行）
+
+**后续生成配置文件后，必须执行以下检查**：
+
+#### ☑ Step 1: 列出配置文件中所有命令
+```powershell
+# 提取所有命令（忽略注释和空行）
+Get-Content profiles\*.cfg | Where-Object {$_ -notmatch '^%' -and $_ -notmatch '^\s*$'} | ForEach-Object {($_ -split '\s+')[0]} | Sort-Object -Unique
+```
+
+#### ☑ Step 2: 检查每个命令是否有CLI处理函数
+
+在 `cli.c` 中搜索：
+```c
+CLI_addTable(gMmwCLICommandTable, ...);  // 命令表
+
+// 示例：检查 factoryCalibCfg 命令
+{
+    "factoryCalibCfg",
+    CLI_cmdFactoryCalib,
+    "..."
+},
+```
+
+#### ☑ Step 3: 检查是否有对应的硬件执行API
+
+在 `radar_control.c` 的 `RadarControl_start()` 中检查：
+
+| 命令类型 | 执行位置 | 必须调用的API |
+|---------|---------|--------------|
+| **雷达配置类** | RadarControl_start() | MMWave_config() |
+| **工厂校准类** | RadarControl_start() | **MMWave_factoryCalib()** |
+| **传感器启动类** | RadarControl_start() | MMWave_start() |
+| **DPC配置类** | DpcCoordinator_config() | DPM_ioctl(DPC_OBJDET_IOCTL_...) |
+
+#### ☑ Step 4: 验证API调用顺序（参考SDK标准流程）
+
+**SDK标准MMWave启动流程**（来自mmw_demo.c的MmwStart）：
+```
+1. ADCBuf配置
+2. 工厂校准（如果factoryCalibCfg.saveEnable=1）← 第6轮缺少
+3. APLL配置
+4. RF电源配置
+5. 工厂校准（如果factoryCalibCfg.restoreEnable=0）← 第6轮缺少
+6. MMWave_open()
+7. MMWave_config()
+8. MMWave_start()
+```
+
+**检查代码是否遵循此顺序**！
+
+#### ☑ Step 5: 错误处理验证
+
+所有MMWave API调用必须包含错误解码：
+```c
+// ✅ 正确示例
+retVal = MMWave_factoryCalib(handle, &cfg, &errCode);
+if (retVal != 0) {
+    MMWave_ErrorLevel errorLevel;
+    int16_t mmWaveErrorCode, subsysErrorCode;
+    MMWave_decodeError(errCode, &errorLevel, &mmWaveErrorCode, &subsysErrorCode);
+    DebugP_log("Error: errorLevel=%d, mmWaveErrorCode=%d, subsysErrorCode=%d\r\n",
+               errorLevel, mmWaveErrorCode, subsysErrorCode);
+    return errCode;
+}
+```
+
+### 📋 检查表模板（新配置文件时使用）
+
+```
+配置文件：____________________
+生成日期：____________________
+
+[ ] 已提取所有命令列表
+[ ] 每个命令都有CLI处理函数
+[ ] 所有硬件相关命令都有对应的MMWave API调用
+[ ] API调用顺序符合SDK标准流程
+[ ] 所有API调用都有错误处理和解码
+[ ] 特别检查：factoryCalibCfg → MMWave_factoryCalib()
+[ ] 已编译验证无警告
+[ ] 已烧录测试sensorStart成功
+```
 
 ---
 

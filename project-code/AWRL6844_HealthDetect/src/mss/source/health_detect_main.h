@@ -35,6 +35,7 @@ extern "C" {
 
 /* mmWave SDK Includes */
 #include <control/mmwave/mmwave.h>
+#include <control/mmwavelink/mmwavelink.h>  /* For T_RL_API_FECSS_FACT_CAL_DATA */
 #include <drivers/uart.h>
 #include <drivers/hwa.h>
 #include <drivers/edma.h>
@@ -80,11 +81,8 @@ extern "C" {
 /*                         APLL Configuration                                 */
 /*===========================================================================*/
 
-/** @brief APLL频率 - 400MHz */
-#define APLL_FREQ_400MHZ            (400.0f)
-
-/** @brief APLL频率 - 396MHz (频率偏移模式) */
-#define APLL_FREQ_396MHZ            (396.0f)
+/* Note: APLL_FREQ_400MHZ and APLL_FREQ_396MHZ are already defined in SDK mmwave.h */
+/* We only define our custom SAVE/RESTORE modes here */
 
 /** @brief APLL校准数据 - 保存模式 */
 #define SAVE_APLL_CALIB_DATA        (1U)
@@ -165,13 +163,12 @@ typedef struct CLI_AoaCfg_t
 } CLI_AoaCfg;
 
 /**
- * @brief APLL Calibration Result Structure
+ * @brief APLL Calibration Result
+ * 
+ * Note: SDK API MMWave_GetApllCalResult/MMWave_SetApllCalResult expects uint32_t*
+ * The APLL calibration result is a single uint32_t value in L-SDK 6.x
  */
-typedef struct APLL_CalResult_t
-{
-    uint32_t    valid;                  /**< Calibration result valid flag */
-    uint32_t    data[16];               /**< Calibration data (implementation specific) */
-} APLL_CalResult;
+typedef uint32_t APLL_CalResult;
 
 /*===========================================================================*/
 /*                         Master Control Block (对齐SDK标准)                 */
@@ -323,6 +320,21 @@ typedef struct HealthDetect_MCB_t
 
     /*! @brief Down-shifted APLL calibration result (396MHz) */
     APLL_CalResult              downShiftedApllCalRes;
+
+    /*! ========== Factory Calibration (SDK标准，问题37关键) ========== */
+    
+    /*! @brief Factory calibration configuration (from CLI factoryCalibCfg command) */
+    struct {
+        uint8_t                 saveEnable;          /**< 1: Save calibration data to Flash */
+        uint8_t                 restoreEnable;       /**< 1: Restore from Flash, 0: Perform new calibration */
+        uint8_t                 rxGain;              /**< RX gain setting for calibration */
+        uint8_t                 txBackoffSel;        /**< TX backoff code selection */
+        uint32_t                flashOffset;         /**< Flash offset for calibration data */
+        uint32_t                monitorsFlashOffset; /**< Flash offset for monitor data (optional) */
+    } calibCfg;
+
+    /*! @brief Factory calibration data buffer (allocated at init) */
+    T_RL_API_FECSS_FACT_CAL_DATA factoryCalibData;
 
     /*! ========== Statistics and Timing ========== */
     

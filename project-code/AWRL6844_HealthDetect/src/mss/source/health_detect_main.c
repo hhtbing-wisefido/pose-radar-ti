@@ -358,7 +358,7 @@ int32_t HealthDetect_sensorStart(void)
     DebugP_log("Health Detection: Starting sensor...\r\n");
 
     /* Configure radar with CLI settings */
-    status = RadarControl_config(&gHealthDetectMCB.cliCfg);
+    status = RadarControl_config(&gHealthDetectMCB);
     if (status != 0)
     {
         DebugP_log("Error: RadarControl_config failed [%d]\r\n", status);

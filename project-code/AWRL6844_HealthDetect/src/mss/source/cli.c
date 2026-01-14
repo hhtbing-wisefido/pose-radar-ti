@@ -641,16 +641,58 @@ static int32_t CLI_cmdClutterRemoval(int32_t argc, char *argv[])
 
 /**
  * @brief Process factoryCalibCfg command (L-SDK standard)
- * L-SDK format: factoryCalibCfg <calibEnable> <txBackoffSel> <txBackoffdB> <txBackoffTempGrad> <flashOffset>
+ * L-SDK format: factoryCalibCfg <saveEnable> <restoreEnable> <rxGain> <txBackoffSel> <flashOffset> [monitorsFlashOffset]
+ * 
+ * @details SDK standard参数（与mmw_demo一致）：
+ *   - saveEnable: 1=保存校准数据到Flash, 0=不保存
+ *   - restoreEnable: 1=从Flash恢复, 0=执行新校准
+ *   - rxGain: RX增益设置
+ *   - txBackoffSel: TX回退码选择
+ *   - flashOffset: 校准数据Flash偏移（十六进制，如0x1ff000）
+ *   - monitorsFlashOffset: 监控数据Flash偏移（可选）
  */
 static int32_t CLI_cmdFactoryCalibCfg(int32_t argc, char *argv[])
 {
-    if (argc != 6)
+    if (argc < 6 || argc > 7)
     {
         CLI_write("Error: Invalid usage of the CLI command\n");
+        CLI_write("Usage: factoryCalibCfg <saveEnable> <restoreEnable> <rxGain> <txBackoffSel> <flashOffset> [monitorsFlashOffset]\n");
         return -1;
     }
-    /* Factory calibration - store but don't process yet */
+    
+    /* 保存配置到MCB（SDK标准流程）*/
+    gHealthDetectMCB.calibCfg.saveEnable = (uint8_t)atoi(argv[1]);
+    gHealthDetectMCB.calibCfg.restoreEnable = (uint8_t)atoi(argv[2]);
+    gHealthDetectMCB.calibCfg.rxGain = (uint8_t)atoi(argv[3]);
+    gHealthDetectMCB.calibCfg.txBackoffSel = (uint8_t)atoi(argv[4]);
+    
+    /* 解析Flash偏移（支持十六进制格式，如0x1ff000）*/
+    if (strncmp(argv[5], "0x", 2) == 0 || strncmp(argv[5], "0X", 2) == 0)
+    {
+        sscanf(argv[5], "%x", &gHealthDetectMCB.calibCfg.flashOffset);
+    }
+    else
+    {
+        gHealthDetectMCB.calibCfg.flashOffset = (uint32_t)atoi(argv[5]);
+    }
+    
+    /* 可选的监控器Flash偏移 */
+    if (argc == 7)
+    {
+        if (strncmp(argv[6], "0x", 2) == 0 || strncmp(argv[6], "0X", 2) == 0)
+        {
+            sscanf(argv[6], "%x", &gHealthDetectMCB.calibCfg.monitorsFlashOffset);
+        }
+        else
+        {
+            gHealthDetectMCB.calibCfg.monitorsFlashOffset = (uint32_t)atoi(argv[6]);
+        }
+    }
+    else
+    {
+        gHealthDetectMCB.calibCfg.monitorsFlashOffset = 0;
+    }
+    
     return 0;
 }
 

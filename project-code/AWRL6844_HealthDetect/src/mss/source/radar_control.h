@@ -48,10 +48,10 @@ int32_t RadarControl_close(void);
 
 /**
  * @brief Configure radar with CLI settings
- * @param cliCfg Pointer to CLI configuration
+ * @param pMCB Pointer to HealthDetect MCB (contains cliCfg)
  * @return 0 on success, error code on failure
  */
-int32_t RadarControl_config(HealthDetect_CliCfg_t *cliCfg);
+int32_t RadarControl_config(HealthDetect_MCB_t *pMCB);
 
 /**
  * @brief Start radar sensor

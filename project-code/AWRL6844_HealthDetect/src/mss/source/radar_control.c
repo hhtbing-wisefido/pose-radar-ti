@@ -211,9 +211,9 @@ int32_t RadarControl_close(void)
  * Note: In L-SDK 6.x, there are no separate MMWave_addProfile, MMWave_addChirp,
  * MMWave_setFrameCfg functions. Configuration is done through MMWave_Cfg structure.
  */
-int32_t RadarControl_config(HealthDetect_CliCfg_t *cliCfg)
+int32_t RadarControl_config(HealthDetect_MCB_t *pMCB)
 {
-    if (cliCfg == NULL)
+    if (pMCB == NULL)
     {
         return -1;
     }
@@ -222,31 +222,31 @@ int32_t RadarControl_config(HealthDetect_CliCfg_t *cliCfg)
 
     /* Configure profile common parameters - match SDK struct fields */
     /* SDK: digOutputSampRate (uint8_t), numOfAdcSamples (uint16_t) */
-    gMmWaveCfg.profileComCfg.digOutputSampRate = (uint8_t)(cliCfg->profileCfg.digOutSampleRate / 1000);
-    gMmWaveCfg.profileComCfg.numOfAdcSamples = cliCfg->profileCfg.numAdcSamples;
+    gMmWaveCfg.profileComCfg.digOutputSampRate = (uint8_t)(pMCB->cliCfg.profileCfg.digOutSampleRate / 1000);
+    gMmWaveCfg.profileComCfg.numOfAdcSamples = pMCB->cliCfg.profileCfg.numAdcSamples;
     gMmWaveCfg.profileComCfg.digOutputBitsSel = 0; /* 0: 16-bit, 2: 14-bit */
     gMmWaveCfg.profileComCfg.dfeFirSel = 0;
-    gMmWaveCfg.profileComCfg.chirpRampEndTimeus = cliCfg->profileCfg.rampEndTimeUs;
+    gMmWaveCfg.profileComCfg.chirpRampEndTimeus = pMCB->cliCfg.profileCfg.rampEndTimeUs;
     gMmWaveCfg.profileComCfg.chirpRxHpfSel = 0; /* 0: 175kHz corner */
     gMmWaveCfg.profileComCfg.chirpTxMimoPatSel = 0;
 
     /* Configure profile timing parameters - match SDK struct fields */
     /* SDK: chirpIdleTimeus, chirpAdcStartTime (uint16_t), chirpSlope, startFreqGHz */
-    gMmWaveCfg.profileTimeCfg.chirpIdleTimeus = cliCfg->profileCfg.idleTimeUs;
-    gMmWaveCfg.profileTimeCfg.chirpAdcStartTime = (uint16_t)cliCfg->profileCfg.adcStartTimeUs;
+    gMmWaveCfg.profileTimeCfg.chirpIdleTimeus = pMCB->cliCfg.profileCfg.idleTimeUs;
+    gMmWaveCfg.profileTimeCfg.chirpAdcStartTime = (uint16_t)pMCB->cliCfg.profileCfg.adcStartTimeUs;
     gMmWaveCfg.profileTimeCfg.chirpTxStartTimeus = 0.0f; /* Typically 0 */
-    gMmWaveCfg.profileTimeCfg.chirpSlope = cliCfg->profileCfg.freqSlopeConst;
-    gMmWaveCfg.profileTimeCfg.startFreqGHz = cliCfg->profileCfg.startFreqGHz;
+    gMmWaveCfg.profileTimeCfg.chirpSlope = pMCB->cliCfg.profileCfg.freqSlopeConst;
+    gMmWaveCfg.profileTimeCfg.startFreqGHz = pMCB->cliCfg.profileCfg.startFreqGHz;
 
     /* Configure frame parameters */
-    gMmWaveCfg.frameCfg.numOfChirpsInBurst = (cliCfg->frameCfg.chirpEndIdx - cliCfg->frameCfg.chirpStartIdx + 1);
-    gMmWaveCfg.frameCfg.numOfBurstsInFrame = cliCfg->frameCfg.numLoops;
-    gMmWaveCfg.frameCfg.numOfFrames = cliCfg->frameCfg.numFrames;
-    gMmWaveCfg.frameCfg.framePeriodicityus = (uint32_t)(cliCfg->frameCfg.framePeriodMs * 1000.0f);
+    gMmWaveCfg.frameCfg.numOfChirpsInBurst = (pMCB->cliCfg.frameCfg.chirpEndIdx - pMCB->cliCfg.frameCfg.chirpStartIdx + 1);
+    gMmWaveCfg.frameCfg.numOfBurstsInFrame = pMCB->cliCfg.frameCfg.numLoops;
+    gMmWaveCfg.frameCfg.numOfFrames = pMCB->cliCfg.frameCfg.numFrames;
+    gMmWaveCfg.frameCfg.framePeriodicityus = (uint32_t)(pMCB->cliCfg.frameCfg.framePeriodMs * 1000.0f);
 
     /* Configure TX/RX enable - use fields from CliCfg channelCfg command */
-    gMmWaveCfg.txEnbl = cliCfg->txChannelEn;
-    gMmWaveCfg.rxEnbl = cliCfg->rxChannelEn;
+    gMmWaveCfg.txEnbl = pMCB->cliCfg.txChannelEn;
+    gMmWaveCfg.rxEnbl = pMCB->cliCfg.rxChannelEn;
     
     /* Store APLL frequency (400MHz default, 396MHz if shift enabled) */
     gMmWaveCfg.apllFreqMHz = 400.0f;  /* Default 400MHz */
@@ -319,8 +319,8 @@ int32_t RadarControl_configAndEnableApll(float apllFreqMHz, uint8_t saveRestoreC
             DebugP_log("RadarControl: Restoring 400MHz calibration data\r\n");
         }
 
-        /* 恢复校准数据到APLL (SDK Standard) */
-        retVal = MMWave_RestoreApllCalData(ptrApllCalRes);
+        /* 恢复校准数据到APLL (SDK Standard API: MMWave_SetApllCalResult) */
+        retVal = MMWave_SetApllCalResult(ptrApllCalRes);  /* ptrApllCalRes is now uint32_t* */
         if (retVal != 0)
         {
             DebugP_log("Error: APLL restore calibration failed [retVal=%d]\r\n", retVal);
@@ -356,8 +356,8 @@ int32_t RadarControl_configAndEnableApll(float apllFreqMHz, uint8_t saveRestoreC
             DebugP_log("RadarControl: Saving 400MHz calibration data\r\n");
         }
 
-        /* 保存APLL校准数据 (SDK Standard) */
-        retVal = MMWave_SaveApllCalData(ptrApllCalRes);
+        /* 保存APLL校准数据 (SDK Standard API: MMWave_GetApllCalResult) */
+        retVal = MMWave_GetApllCalResult(ptrApllCalRes);  /* ptrApllCalRes is now uint32_t* */
         if (retVal != 0)
         {
             DebugP_log("Error: APLL save calibration failed [retVal=%d]\r\n", retVal);
@@ -441,15 +441,56 @@ int32_t RadarControl_start(void)
         return retVal;
     }
     
-    /* 标记已完成一次配置（后续可以RESTORE校准数据） */
-    gHealthDetectMCB.oneTimeConfigDone = 1;
-    
     DebugP_log("RadarControl: APLL configured at %.1f MHz\r\n", apllFreq);
 
-    /* Step 3: Factory Calibration (SDK Standard - 可选) */
-    /* 注意：L-SDK的工厂校准API可能与H-SDK不同，暂时跳过 */
-    /* 如果需要，使用：rlRfFactoryCalDataRestore() 和 rlRfRunTimeCalibEnable() */
-    DebugP_log("RadarControl: Factory calibration skipped (L-SDK optional)\r\n");
+    /* Step 3: Factory Calibration (SDK Standard - 关键步骤！) */
+    /* 参考：mmw_demo/calibrations/factory_cal.c 的 mmwDemo_factoryCal() */
+    /* 工厂校准必须在MMWave_open之前调用 */
+    /* 注意：使用本地变量判断，因为oneTimeConfigDone还未设置 */
+    if (saveRestoreMode == 1)  /* SAVE模式 = 第一次启动 = 需要校准 */
+    {
+        /* 第一次启动：执行工厂校准 */
+        DebugP_log("RadarControl: Performing factory calibration...\r\n");
+        
+        /* 🔴 关键修复：设置校准配置到gMmWaveCfg（SDK标准流程）*/
+        gMmWaveCfg.calibCfg.saveEnable = gHealthDetectMCB.calibCfg.saveEnable;
+        gMmWaveCfg.calibCfg.restoreEnable = gHealthDetectMCB.calibCfg.restoreEnable;
+        gMmWaveCfg.calibCfg.rxGain = gHealthDetectMCB.calibCfg.rxGain;
+        gMmWaveCfg.calibCfg.txBackoffSel = gHealthDetectMCB.calibCfg.txBackoffSel;
+        gMmWaveCfg.calibCfg.flashOffset = gHealthDetectMCB.calibCfg.flashOffset;
+        gMmWaveCfg.calibCfg.monitorsFlashOffset = gHealthDetectMCB.calibCfg.monitorsFlashOffset;
+        
+        /* 🔴 关键修复：设置工厂校准数据缓冲区指针（SDK要求）*/
+        /* MMWave_factoryCalib需要此指针来存储/恢复校准结果 */
+        gMmWaveCfg.calibCfg.ptrFactoryCalibData = &gHealthDetectMCB.factoryCalibData;
+        
+        DebugP_log("RadarControl: CalibCfg - saveEnable=%d, restoreEnable=%d, flashOffset=0x%x\r\n",
+                   gMmWaveCfg.calibCfg.saveEnable, 
+                   gMmWaveCfg.calibCfg.restoreEnable,
+                   gMmWaveCfg.calibCfg.flashOffset);
+        
+        retVal = MMWave_factoryCalib(gMmWaveHandle, &gMmWaveCfg, &errCode);
+        if (retVal != 0)
+        {
+            DebugP_log("RadarControl: MMWave_factoryCalib failed, errCode=%d\r\n", errCode);
+            /* 解码错误用于调试 */
+            MMWave_ErrorLevel errorLevel;
+            int16_t mmWaveErrorCode;
+            int16_t subsysErrorCode;
+            MMWave_decodeError(errCode, &errorLevel, &mmWaveErrorCode, &subsysErrorCode);
+            DebugP_log("  errorLevel=%d, mmWaveErrorCode=%d, subsysErrorCode=%d\r\n", 
+                       errorLevel, mmWaveErrorCode, subsysErrorCode);
+            return errCode;
+        }
+        DebugP_log("RadarControl: Factory calibration completed\r\n");
+    }
+    else
+    {
+        DebugP_log("RadarControl: Factory calibration skipped (warm start)\r\n");
+    }
+
+    /* 标记已完成一次配置（后续可以RESTORE校准数据） */
+    gHealthDetectMCB.oneTimeConfigDone = 1;
 
     /* Step 4: Turn on RF power for TX/RX channels */
     retVal = MMWave_FecssRfPwrOnOff(gMmWaveCfg.txEnbl, gMmWaveCfg.rxEnbl, &errCode);
@@ -498,6 +539,9 @@ int32_t RadarControl_start(void)
     gHealthDetectMCB.sensorStartCount++;
 
     DebugP_log("RadarControl: Started successfully! (count=%d)\r\n", gHealthDetectMCB.sensorStartCount);
+    
+    return 0;
+}
 
 /**
  * @brief Stop radar sensor
@@ -521,9 +565,6 @@ int32_t RadarControl_stop(void)
     gHealthDetectMCB.sensorStopCount++;
 
     DebugP_log("RadarControl: Stopped (count=%d)\r\n", gHealthDetectMCB.sensorStopCount);
-
-    return 0;
-}   DebugP_log("RadarControl: Stopped\r\n");
 
     return 0;
 }
