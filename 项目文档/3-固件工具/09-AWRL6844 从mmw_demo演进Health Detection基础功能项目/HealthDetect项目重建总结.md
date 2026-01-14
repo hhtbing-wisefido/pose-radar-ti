@@ -1,8 +1,105 @@
 ﻿# 📋 AWRL6844 Health Detect 项目重建总结
 
 **日期**: 2026-01-08
-**最后更新**: 2026-01-15 02:00 (🟢 **第7轮修复完成！工厂校准配置问题**)
-**状态**: ✅ 第7轮修复完成（ptrFactoryCalibData配置），待重新编译验证
+**最后更新**: 2026-01-15 02:30 (🟢 **第8轮修复完成！头文件路径问题**)
+**状态**: ✅ 第8轮修复完成（mmwavelink.h路径），待重新编译验证
+
+---
+
+## 🟢 第八轮修复：头文件路径错误（2026-01-15）✅ 已修复
+
+### ⚠️ 编译错误（第7轮修复后）
+
+**错误现象**：
+```
+fatal error: 'control/mmwavelink/mmwavelink.h' file not found
+   38 | #include <control/mmwavelink/mmwavelink.h>
+```
+
+**错误影响范围**：
+- ❌ cli.c - 编译失败
+- ❌ dpc_control.c - 编译失败
+- ❌ tlv_output.c - 编译失败
+- ❌ radar_control.c - 编译失败
+- ❌ health_detect_main.c - 编译失败
+
+### 🔍 根本原因分析
+
+**问题根源**：第7轮修复时头文件包含路径错误
+
+**错误路径**：
+```c
+#include <control/mmwavelink/mmwavelink.h>  // ❌ 错误
+```
+
+**SDK实际路径搜索结果**：
+```powershell
+Get-ChildItem -Path "C:\ti\MMWAVE_L_SDK_06_01_00_01" -Recurse -Filter "mmwavelink.h"
+# 结果：
+C:\ti\MMWAVE_L_SDK_06_01_00_01\firmware\mmwave_dfp\mmwavelink\mmwavelink.h
+```
+
+**正确路径**：
+```c
+#include <mmwavelink/mmwavelink.h>  // ✅ 正确
+```
+
+### ✅ 修复方案
+
+**修复文件**：`health_detect_main.h` (Line 38)
+
+**修复前**：
+```c
+#include <control/mmwavelink/mmwavelink.h>  /* For T_RL_API_FECSS_FACT_CAL_DATA */
+```
+
+**修复后**：
+```c
+#include <mmwavelink/mmwavelink.h>  /* For T_RL_API_FECSS_FACT_CAL_DATA */
+```
+
+### 📊 修复完成状态
+
+**修改文件汇总**：
+
+| 文件 | 修改内容 | 行数 | 状态 |
+|-----|---------|------|------|
+| `health_detect_main.h` | 修正头文件包含路径 | Line 38 | ✅ 完成 |
+
+**验证状态**：⏸️ 待重新编译验证
+
+### 🎓 核心经验教训
+
+**第8轮发现的问题**：
+
+1. **头文件路径必须与SDK一致**
+   - ❌ 错误：假设路径在 `control/mmwavelink/`
+   - ✅ 正确：搜索SDK确认实际路径 `mmwavelink/`
+
+2. **添加新头文件的正确流程**
+   ```
+   1. 搜索SDK找到头文件实际位置
+   2. 确认编译器包含路径配置
+   3. 使用相对于包含路径的正确路径
+   4. 编译验证
+   ```
+
+3. **SDK目录结构理解**
+   - `control/` - mmWave控制API（mmwave.h在此）
+   - `mmwavelink/` - RadarLink底层API（直接在firmware/mmwave_dfp下）
+   - `drivers/` - 驱动API
+
+### 🔍 为什么第7轮没发现
+
+**原因分析**：
+- 第7轮修复时只修改了代码，未编译验证
+- 直接推送到GitHub，编译器未运行
+- 假设了头文件路径而未搜索确认
+
+**预防措施**：
+- ✅ 添加新头文件时必须先搜索SDK
+- ✅ 修复后立即本地编译验证
+- ✅ 编译通过后再提交Git
 
 ---
 
@@ -401,7 +498,7 @@ gHealthDetectMCB.oneTimeConfigDone = 1;  // 设置在校准之后
 
 ## 📊 问题36修复进度总览
 
-### 整体进度：100% ✅ 编译成功！（第6-7轮运行时问题已修复，待重新编译）
+### 整体进度：100% ✅ 第8轮编译错误已修复，待重新编译验证
 
 | 阶段 | 任务 | 状态 | 完成度 | 验证状态 | 时间 |
 |-----|------|------|--------|---------|------|
@@ -412,7 +509,8 @@ gHealthDetectMCB.oneTimeConfigDone = 1;  // 设置在校准之后
 | 4️⃣ | Sensor启动流程完善 | ✅ 完成 | 100% | ✅ 代码已验证 | 2026-01-14 21:30-22:00 |
 | 5️⃣ | 编译测试与验证 | ✅ **成功！** | 100% | ✅ 生成.appimage | 2026-01-14 22:30 - 2026-01-15 00:45 |
 | 6️⃣ | 运行时错误修复1 | ✅ **完成** | 100% | ✅ 添加factoryCalib调用 | 2026-01-15 00:45-01:30 |
-| 7️⃣ | 运行时错误修复2 | 🟢 **已修复** | 100% | ⏸️ 待重新编译 | 2026-01-15 01:30-02:00 |
+| 7️⃣ | 运行时错误修复2 | ✅ **完成** | 100% | ✅ ptrFactoryCalibData配置 | 2026-01-15 01:30-02:00 |
+| 8️⃣ | 编译错误修复 | 🟢 **已修复** | 100% | ⏸️ 待重新编译 | 2026-01-15 02:00-02:30 |
 
 ---
 

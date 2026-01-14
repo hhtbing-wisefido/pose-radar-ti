@@ -35,7 +35,7 @@ extern "C" {
 
 /* mmWave SDK Includes */
 #include <control/mmwave/mmwave.h>
-#include <control/mmwavelink/mmwavelink.h>  /* For T_RL_API_FECSS_FACT_CAL_DATA */
+#include <mmwavelink/mmwavelink.h>  /* For T_RL_API_FECSS_FACT_CAL_DATA */
 #include <drivers/uart.h>
 #include <drivers/hwa.h>
 #include <drivers/edma.h>
