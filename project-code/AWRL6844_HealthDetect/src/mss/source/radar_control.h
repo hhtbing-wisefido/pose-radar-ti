@@ -78,6 +78,21 @@ MMWave_Handle RadarControl_getHandle(void);
 MMWave_Cfg* RadarControl_getCfg(void);
 
 /**
+ * @brief Configure and Enable APLL (SDK Standard)
+ * 参考: mmw_demo_SDK_reference/source/mmwave_demo.c line 395-450
+ * 
+ * 🔴 关键修复（问题36）：
+ * - 完整的APLL配置流程
+ * - 支持校准数据保存/恢复
+ * - 支持396MHz/400MHz频率切换
+ * 
+ * @param apllFreqMHz APLL frequency in MHz (396.0 or 400.0)
+ * @param saveRestoreCalData 0=RESTORE校准数据, 1=SAVE校准数据
+ * @return 0 on success, error code on failure
+ */
+int32_t RadarControl_configAndEnableApll(float apllFreqMHz, uint8_t saveRestoreCalData);
+
+/**
  * @brief Check if radar is initialized
  * @return 1 if initialized, 0 otherwise
  */

@@ -260,6 +260,117 @@ int32_t RadarControl_config(HealthDetect_CliCfg_t *cliCfg)
 }
 
 /**
+ * @brief Configure and Enable APLL (SDK Standard)
+ * 参考: mmw_demo_SDK_reference/source/mmwave_demo.c line 395-450
+ * 
+ * 🔴 关键修复（问题36）：
+ * - 完整实现SDK的APLL配置流程
+ * - 支持校准数据保存/恢复（SAVE_APLL_CALIB_DATA/RESTORE_APLL_CALIB_DATA）
+ * - 支持396MHz和400MHz频率
+ * - 错误处理和恢复机制
+ * 
+ * APLL配置3种场景：
+ * 1. 冷启动+频率偏移：saveRestoreCalData=SAVE, apllFreqMHz=396
+ * 2. 热启动（恢复校准）：saveRestoreCalData=RESTORE, apllFreqMHz=396/400
+ * 3. 冷启动+无偏移：saveRestoreCalData=SAVE, apllFreqMHz=400
+ * 
+ * @param apllFreqMHz APLL frequency in MHz (396.0 or 400.0)
+ * @param saveRestoreCalData 0=RESTORE校准数据, 1=SAVE校准数据
+ * @return 0 on success, error code on failure
+ */
+int32_t RadarControl_configAndEnableApll(float apllFreqMHz, uint8_t saveRestoreCalData)
+{
+    int32_t retVal = 0;
+    int32_t errCode;
+    APLL_CalResult* ptrApllCalRes = NULL;
+    
+    DebugP_log("RadarControl: Configuring APLL at %.1f MHz (saveRestore=%d)...\r\n", 
+               apllFreqMHz, saveRestoreCalData);
+
+    /* Step 1: 关闭APLL (SDK Standard) */
+    retVal = MMWave_FecssDevClockCtrl(&gMmWaveCfg.initCfg, 
+                                       MMWAVE_APLL_CLOCK_DISABLE, &errCode);
+    if (retVal != 0)
+    {
+        DebugP_log("Error: APLL disable failed [errCode=%d]\r\n", errCode);
+        return -1;
+    }
+
+    /* Step 2: 配置APLL寄存器 (SDK Standard) */
+    retVal = MMWave_ConfigApllReg(apllFreqMHz);
+    if (retVal != 0)
+    {
+        DebugP_log("Error: APLL register config failed [retVal=%d]\r\n", retVal);
+        return -1;
+    }
+
+    /* Step 3: 处理校准数据 (SDK Standard) */
+    if (saveRestoreCalData == 0)  /* RESTORE模式 */
+    {
+        /* 根据频率选择校准数据 */
+        if (apllFreqMHz == 396.0f)
+        {
+            ptrApllCalRes = &gHealthDetectMCB.downShiftedApllCalRes;
+            DebugP_log("RadarControl: Restoring 396MHz calibration data\r\n");
+        }
+        else  /* 400.0f */
+        {
+            ptrApllCalRes = &gHealthDetectMCB.defaultApllCalRes;
+            DebugP_log("RadarControl: Restoring 400MHz calibration data\r\n");
+        }
+
+        /* 恢复校准数据到APLL (SDK Standard) */
+        retVal = MMWave_RestoreApllCalData(ptrApllCalRes);
+        if (retVal != 0)
+        {
+            DebugP_log("Error: APLL restore calibration failed [retVal=%d]\r\n", retVal);
+            return -1;
+        }
+    }
+    else  /* SAVE模式 */
+    {
+        DebugP_log("RadarControl: Will save calibration after APLL enable\r\n");
+    }
+
+    /* Step 4: 启用APLL (SDK Standard) */
+    retVal = MMWave_FecssDevClockCtrl(&gMmWaveCfg.initCfg, 
+                                       MMWAVE_APLL_CLOCK_ENABLE, &errCode);
+    if (retVal != 0)
+    {
+        DebugP_log("Error: APLL enable failed [errCode=%d]\r\n", errCode);
+        return -1;
+    }
+
+    /* Step 5: 如果是SAVE模式，保存校准数据 (SDK Standard) */
+    if (saveRestoreCalData == 1)
+    {
+        /* 根据频率选择存储位置 */
+        if (apllFreqMHz == 396.0f)
+        {
+            ptrApllCalRes = &gHealthDetectMCB.downShiftedApllCalRes;
+            DebugP_log("RadarControl: Saving 396MHz calibration data\r\n");
+        }
+        else  /* 400.0f */
+        {
+            ptrApllCalRes = &gHealthDetectMCB.defaultApllCalRes;
+            DebugP_log("RadarControl: Saving 400MHz calibration data\r\n");
+        }
+
+        /* 保存APLL校准数据 (SDK Standard) */
+        retVal = MMWave_SaveApllCalData(ptrApllCalRes);
+        if (retVal != 0)
+        {
+            DebugP_log("Error: APLL save calibration failed [retVal=%d]\r\n", retVal);
+            return -1;
+        }
+    }
+
+    DebugP_log("RadarControl: APLL configured and enabled successfully\r\n");
+    
+    return 0;
+}
+
+/**
  * @brief Start radar sensor
  * 
  * L-SDK 6.x: Uses MMWave_start(handle, MMWave_StrtCfg*, errCode*)
@@ -302,32 +413,38 @@ int32_t RadarControl_start(void)
     
     DebugP_log("RadarControl: ADCBuf configured, %d bytes per channel\r\n", chanDataSizeAligned16);
 
-    /* Step 2: Configure APLL (like SDK MmwDemo_configAndEnableApll) */
-    /* Turn off APLL first */
-    retVal = MMWave_FecssDevClockCtrl(&gMmWaveCfg.initCfg, 0, &errCode);  /* 0 = disable */
-    if (retVal != 0)
+    /* Step 2: Configure APLL (SDK Standard - 问题36修复) */
+    /* 使用新的RadarControl_configAndEnableApll()函数 */
+    float apllFreq;
+    uint8_t saveRestoreMode;
+    
+    /* 确定APLL频率和校准模式 */
+    if (gHealthDetectMCB.apllFreqShiftEnable == 1)
     {
-        DebugP_log("RadarControl: APLL disable failed, errCode=%d\r\n", errCode);
-        /* Continue anyway - may not be critical */
+        /* 启用频率偏移：使用396MHz */
+        apllFreq = 396.0f;
+        /* 如果是第一次配置，SAVE校准数据；否则RESTORE */
+        saveRestoreMode = (gHealthDetectMCB.oneTimeConfigDone == 0) ? 1 : 0;
+    }
+    else
+    {
+        /* 不启用频率偏移：使用400MHz */
+        apllFreq = 400.0f;
+        /* 如果是第一次配置，SAVE校准数据；否则RESTORE */
+        saveRestoreMode = (gHealthDetectMCB.oneTimeConfigDone == 0) ? 1 : 0;
     }
     
-    /* Configure APLL registers for 400MHz */
-    retVal = MMWave_ConfigApllReg(400.0f);
+    retVal = RadarControl_configAndEnableApll(apllFreq, saveRestoreMode);
     if (retVal != 0)
     {
-        DebugP_log("RadarControl: APLL config failed, retVal=%d\r\n", retVal);
-        /* Continue anyway */
+        DebugP_log("RadarControl: APLL configuration failed [retVal=%d]\r\n", retVal);
+        return retVal;
     }
     
-    /* Turn on APLL */
-    retVal = MMWave_FecssDevClockCtrl(&gMmWaveCfg.initCfg, 1, &errCode);  /* 1 = enable */
-    if (retVal != 0)
-    {
-        DebugP_log("RadarControl: APLL enable failed, errCode=%d\r\n", errCode);
-        /* Continue anyway */
-    }
+    /* 标记已完成一次配置（后续可以RESTORE校准数据） */
+    gHealthDetectMCB.oneTimeConfigDone = 1;
     
-    DebugP_log("RadarControl: APLL configured at 400MHz\r\n");
+    DebugP_log("RadarControl: APLL configured at %.1f MHz\r\n", apllFreq);
 
     /* Step 3: Turn on RF power for TX/RX channels */
     retVal = MMWave_FecssRfPwrOnOff(gMmWaveCfg.txEnbl, gMmWaveCfg.rxEnbl, &errCode);
