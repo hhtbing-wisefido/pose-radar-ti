@@ -1,8 +1,158 @@
 ﻿# 📋 AWRL6844 Health Detect 项目重建总结
 
 **日期**: 2026-01-08
-**最后更新**: 2026-01-15 02:30 (🟢 **第8轮修复完成！头文件路径问题**)
-**状态**: ✅ 第8轮修复完成（mmwavelink.h路径），待重新编译验证
+**最后更新**: 2026-01-15 03:15 (🔴 **第9轮问题诊断！工厂校准仍失败**)
+**状态**: ❌ 第9轮运行时错误（编译OK，烧录OK，sensorStart失败-203621554）
+
+---
+
+## 🔴 第九轮问题：工厂校准仍然失败（2026-01-15）⚠️ 诊断中
+
+### ⚠️ 运行时错误（第三次sensorStart失败）
+
+**阶段状态**：
+- ✅ CCS编译：成功（第8轮头文件路径修复生效）
+- ✅ 固件烧录：成功（使用SDK Visualizer）
+- ❌ 配置发送：**sensorStart失败**
+
+**错误现象**：
+```
+> sensorStart 0 0 0 0
+sensorStart 0 0 0 0
+
+Error: Failed to start sensor [-203621554]
+
+Error -203621554
+
+mmwDemo:/>
+```
+
+**测试配置**：`health_detect_standard.cfg`
+
+**关键发现**：
+- 🔴 **错误码与第7轮完全相同：-203621554 (0xF3DCFB4E)**
+- 🔴 **第7轮和第8轮修复未能解决根本问题**
+- 🔴 **所有配置命令发送成功，唯独sensorStart失败**
+
+### 🔍 错误码分析
+
+**错误码详细解码**：
+
+| 字段 | 值（十进制） | 值（十六进制） | 说明 |
+|-----|------------|---------------|------|
+| 完整错误码 | -203621554 | 0xF3DCFB4E | RadarSS返回值 |
+| errorLevel | 243 | 0xF3 | 严重错误级别 |
+| mmWaveErrorCode | 56571 | 0xDCFB | mmWaveLink错误子码 |
+| subsysErrorCode | 78 | 0x4E | 子系统特定错误 |
+
+**与第6轮错误对比**：
+
+| 轮次 | 错误码 | mmWaveErrorCode | subsysErrorCode | 原因 | 修复状态 |
+|-----|--------|----------------|-----------------|------|---------|
+| 第6轮 | -204476470 | 52462 (0xCCEF) | 202 (0xCA) | 未调用MMWave_factoryCalib() | ✅ 已修复 |
+| 第7轮 | -203621554 | 56571 (0xDCFB) | 78 (0x4E) | ptrFactoryCalibData配置错误 | ⚠️ 疑似未解决 |
+| **第9轮** | **-203621554** | **56571 (0xDCFB)** | **78 (0x4E)** | **与第7轮相同！** | ❌ 未解决 |
+
+### 🔍 第9轮根本原因分析（推测）
+
+**可能的问题**：
+
+#### 假设1：factoryCalibData内存未正确初始化
+
+**第7轮修复添加了**：
+```c
+// health_detect_main.h
+T_RL_API_FECSS_FACT_CAL_DATA factoryCalibData;
+```
+
+**可能的问题**：
+- ❌ MCB中的factoryCalibData是否正确初始化为0？
+- ❌ 在调用MMWave_factoryCalib()前是否清零？
+- ❌ 结构体大小是否匹配SDK预期？
+
+#### 假设2：ptrFactoryCalibData指针赋值错误
+
+**第7轮修复添加了**：
+```c
+// radar_control.c
+gMmWaveCfg.calibCfg.ptrFactoryCalibData = &gHealthDetectMCB.factoryCalibData;
+```
+
+**可能的问题**：
+- ❌ 指针赋值时MCB是否已完全初始化？
+- ❌ factoryCalibData的地址是否有效（跨核访问问题）？
+- ❌ 是否在错误的时间点赋值？
+
+#### 假设3：calibCfg其他字段配置错误
+
+**CLI命令**：`factoryCalibCfg 1 0 44 2 0x1ff000`
+
+**映射到calibCfg**：
+```c
+saveEnable = 1          // 保存到Flash
+restoreEnable = 0       // 不从Flash恢复（执行新校准）
+rxGain = 44             // RX增益
+txBackoffSel = 2        // TX回退选择
+flashOffset = 0x1ff000  // Flash偏移
+```
+
+**可能的问题**：
+- ❌ rxGain值44是否在有效范围？
+- ❌ txBackoffSel值2是否正确？
+- ❌ flashOffset 0x1ff000是否与EVM Flash布局冲突？
+- ❌ 是否需要设置monitorsFlashOffset？
+
+#### 假设4：factoryCalibData结构体字段缺失
+
+**SDK期望的结构**：`T_RL_API_FECSS_FACT_CAL_DATA`
+
+**可能的问题**：
+- ❌ SDK可能期望factoryCalibData中包含特定初始值
+- ❌ 某些关键字段未设置导致校准失败
+- ❌ 结构体版本不匹配
+
+### 📋 第9轮调查计划
+
+**下一步行动**：
+
+1. **读取mmwavelink.h确认T_RL_API_FECSS_FACT_CAL_DATA结构**
+   - 确认所有必填字段
+   - 确认初始化要求
+   - 确认大小和版本
+
+2. **检查第7轮修复的代码实际执行情况**
+   - 确认calibCfg是否被CLI正确设置
+   - 确认ptrFactoryCalibData指针是否有效
+   - 确认MMWave_factoryCalib()是否被调用
+
+3. **对比mmw_demo中的工厂校准实现**
+   - 检查mmw_demo如何处理factoryCalibData
+   - 对比CLI命令参数有效范围
+   - 确认是否有额外的初始化步骤
+
+4. **检查Flash布局**
+   - 确认0x1ff000偏移是否安全
+   - 确认Flash大小足够
+   - 确认不会覆盖固件区域
+
+### 🔄 第9轮状态总览
+
+**已完成**：
+- ✅ 第8轮头文件路径修复（编译通过）
+- ✅ 固件烧录成功
+- ✅ 配置命令发送成功（23条命令全部accepted）
+- ✅ 错误码记录和分析
+
+**待执行**：
+- ⏸️ 读取SDK文档确认T_RL_API_FECSS_FACT_CAL_DATA要求
+- ⏸️ 检查第7轮代码是否真正生效
+- ⏸️ 对比mmw_demo实现
+- ⏸️ 确定根本原因并修复
+
+**当前障碍**：
+- 🔴 错误码-203621554含义不明确（SDK文档不足）
+- 🔴 无法确定是哪个字段配置错误
+- 🔴 可能需要深入调试radarSS内部状态
 
 ---
 
@@ -498,7 +648,7 @@ gHealthDetectMCB.oneTimeConfigDone = 1;  // 设置在校准之后
 
 ## 📊 问题36修复进度总览
 
-### 整体进度：100% ✅ 第8轮编译错误已修复，待重新编译验证
+### 整体进度：🔴 第9轮运行时错误诊断中（工厂校准仍失败）
 
 | 阶段 | 任务 | 状态 | 完成度 | 验证状态 | 时间 |
 |-----|------|------|--------|---------|------|
@@ -510,7 +660,15 @@ gHealthDetectMCB.oneTimeConfigDone = 1;  // 设置在校准之后
 | 5️⃣ | 编译测试与验证 | ✅ **成功！** | 100% | ✅ 生成.appimage | 2026-01-14 22:30 - 2026-01-15 00:45 |
 | 6️⃣ | 运行时错误修复1 | ✅ **完成** | 100% | ✅ 添加factoryCalib调用 | 2026-01-15 00:45-01:30 |
 | 7️⃣ | 运行时错误修复2 | ✅ **完成** | 100% | ✅ ptrFactoryCalibData配置 | 2026-01-15 01:30-02:00 |
-| 8️⃣ | 编译错误修复 | 🟢 **已修复** | 100% | ⏸️ 待重新编译 | 2026-01-15 02:00-02:30 |
+| 8️⃣ | 编译错误修复 | ✅ **完成** | 100% | ✅ 编译通过+烧录成功 | 2026-01-15 02:00-02:30 |
+| 9️⃣ | 运行时错误诊断3 | 🔴 **进行中** | 30% | ❌ sensorStart失败-203621554 | 2026-01-15 03:00-进行中 |
+
+**第9轮关键发现**：
+- ✅ CCS编译成功（第8轮修复生效）
+- ✅ 固件烧录成功
+- ✅ 配置命令发送成功（23条全部accepted）
+- ❌ **sensorStart失败，错误码与第7轮相同（-203621554）**
+- 🔴 **说明第7轮和第8轮的修复未完全解决工厂校准问题**
 
 ---
 
