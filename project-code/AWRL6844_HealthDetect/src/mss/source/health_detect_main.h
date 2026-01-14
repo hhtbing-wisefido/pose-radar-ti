@@ -207,22 +207,25 @@ typedef struct HealthDetect_MCB_t
     /*! @brief Number of EDMA event Queues (tc) */
     uint8_t                     numEdmaEventQueues;
 
-    /*! ========== Semaphore Objects (SDK标准) ========== */
+    /*! ========== Semaphore Objects (FreeRTOS) ========== */
     
-    /*! @brief Semaphore Object to pend demo init task */
+    /*! @brief Semaphore Handle for DPC task (FreeRTOS) */
+    SemaphoreHandle_t           dpcSemHandle;
+
+    /*! @brief Semaphore Handle for TLV task (FreeRTOS) */
+    SemaphoreHandle_t           tlvSemHandle;
+
+    /*! 
+     * @brief 注意：SDK使用DPL SemaphoreP_Object，但L-SDK FreeRTOS项目
+     *        使用FreeRTOS原生SemaphoreHandle_t类型
+     *        以下字段预留给未来CLI初始化等SDK标准流程使用
+     */
+    #if 0
     SemaphoreP_Object           demoInitTaskCompleteSemHandle;
-
-    /*! @brief Semaphore Object to pend CLI init task */
     SemaphoreP_Object           cliInitTaskCompleteSemHandle;
-
-    /*! @brief Semaphore Object for TLV task */
-    SemaphoreP_Object           tlvSemHandle;
-
-    /*! @brief Semaphore Object for DPC task config done */
     SemaphoreP_Object           dpcTaskConfigDoneSemHandle;
-
-    /*! @brief Semaphore Object for UART task config done */
     SemaphoreP_Object           uartTaskConfigDoneSemHandle;
+    #endif
 
     /*! ========== Sensor Control (SDK标准) ========== */
     
