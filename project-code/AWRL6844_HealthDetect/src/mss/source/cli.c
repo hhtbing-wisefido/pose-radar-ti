@@ -1152,6 +1152,55 @@ void CLI_run(void)
 }
 
 /**
+ * @brief CLI Open Function (SDK Standard)
+ * 参考: mmw_demo_SDK_reference/source/mmw_cli.c line 2288-2340
+ * 
+ * 🔴 关键修复（问题36）：
+ * - 实现SDK标准的CLI_open()流程
+ * - 支持mmWave扩展命令（enableMMWaveExtension=1U时）
+ * - 不需要创建单独的CLI任务（使用阻塞式CLI_run()）
+ * 
+ * @param ptrCLICfg CLI Configuration (SDK standard)
+ * @return 0 on success, <0 on error
+ */
+int32_t CLI_open(CLI_Cfg* ptrCLICfg)
+{
+    /* Validate configuration */
+    if (ptrCLICfg == NULL)
+    {
+        DebugP_log("Error: CLI_open - NULL configuration\n");
+        return -1;
+    }
+
+    /* Copy configuration to global MCB */
+    memcpy(&gCLI.cfg, ptrCLICfg, sizeof(CLI_Cfg));
+
+    /* Validate UART handle */
+    if (gCLI.cfg.UartHandle == NULL)
+    {
+        DebugP_log("Error: CLI_open - NULL UART handle\n");
+        return -1;
+    }
+
+    /* If mmWave extension enabled, validate mmWave handle */
+    if (gCLI.cfg.enableMMWaveExtension == 1U)
+    {
+        if (gCLI.cfg.mmWaveHandle == NULL)
+        {
+            DebugP_log("Error: CLI_open - NULL mmWave handle but extension enabled\n");
+            return -1;
+        }
+        DebugP_log("CLI: mmWave extension enabled (SDK Visualizer compatible)\n");
+    }
+
+    /* Mark as initialized */
+    gCLI.isInitialized = 1;
+
+    DebugP_log("CLI: Opened successfully\n");
+    return 0;
+}
+
+/**
  * @brief Open radar configuration
  */
 int32_t CLI_openRadar(void)

@@ -21,6 +21,23 @@ extern "C" {
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+
+/* mmWave SDK Includes */
+#include <control/mmwave/mmwave.h>
+
+/* Driver Includes */
+#include <drivers/uart.h>
+
+/*===========================================================================*/
+/*                         Forward Declarations                              */
+/*===========================================================================*/
+
+/**
+ * @brief CLI Configuration Structure (Forward Declaration)
+ * 完整定义在cli.c中 - 遵循SDK封装原则
+ */
+typedef struct CLI_Cfg_t CLI_Cfg;
 
 /*===========================================================================*/
 /*                         CLI Configuration                                  */
@@ -44,6 +61,20 @@ extern "C" {
  * @return 0 on success, error code on failure
  */
 int32_t CLI_init(void);
+
+/**
+ * @brief Open CLI with configuration (SDK Standard)
+ * 参考: mmw_demo_SDK_reference/source/mmw_cli.h
+ * 
+ * 🔴 关键修复（问题36）：
+ * - SDK标准的CLI_open()接口
+ * - 支持mmWave扩展命令配置
+ * - SDK Visualizer兼容性必需
+ * 
+ * @param ptrCLICfg Pointer to CLI configuration
+ * @return 0 on success, error code on failure
+ */
+int32_t CLI_open(CLI_Cfg* ptrCLICfg);
 
 /**
  * @brief Run CLI (blocking)
