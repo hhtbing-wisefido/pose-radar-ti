@@ -10,6 +10,7 @@
  * Note: L-SDK uses FreeRTOS, NOT TI-RTOS/BIOS
  *
  * Created: 2026-01-08
+ * Updated: 2026-01-14 - 添加SDK标准CLI_MCB和enableMMWaveExtension支持（问题36修复）
  */
 
 /**************************************************************************
@@ -29,10 +30,90 @@
 /* Driver Includes */
 #include <drivers/uart.h>
 
+/* mmWave SDK Includes */
+#include <control/mmwave/mmwave.h>
+
 /* Application Includes */
 #include <source/cli.h>
 #include <source/health_detect_main.h>
 #include <source/radar_control.h>
+
+/**************************************************************************
+ *************************** CLI MCB Definition (SDK标准) *****************
+ **************************************************************************/
+
+/**
+ * @brief CLI Configuration Structure (SDK Standard)
+ * 参考: mmw_demo_SDK_reference/source/mmw_cli.c 第2093-2110行
+ */
+typedef struct CLI_Cfg_t
+{
+    /**
+     * @brief CLI Prompt string
+     */
+    const char*         cliPrompt;
+
+    /**
+     * @brief CLI Banner string
+     */
+    const char*         cliBanner;
+
+    /**
+     * @brief UART Handle for CLI communication
+     */
+    UART_Handle         UartHandle;
+
+    /**
+     * @brief Task Priority for CLI task
+     */
+    uint32_t            taskPriority;
+
+    /**
+     * @brief mmWave Handle (for mmWave extension commands)
+     */
+    MMWave_Handle       mmWaveHandle;
+
+    /**
+     * @brief Enable mmWave Extension flag
+     * 🔴 关键：必须设为1以支持SDK Visualizer
+     */
+    uint8_t             enableMMWaveExtension;
+
+    /**
+     * @brief Use Polled Mode for UART
+     */
+    bool                usePolledMode;
+
+} CLI_Cfg;
+
+/**
+ * @brief CLI Master Control Block (SDK Standard)
+ * 参考: mmw_demo_SDK_reference/source/mmw_cli.c 第79行
+ */
+typedef struct CLI_MCB_t
+{
+    /**
+     * @brief CLI Configuration
+     */
+    CLI_Cfg             cfg;
+
+    /**
+     * @brief Number of CLI commands registered
+     */
+    uint32_t            numCLICommands;
+
+    /**
+     * @brief CLI Initialized flag
+     */
+    uint8_t             isInitialized;
+
+} CLI_MCB;
+
+/**
+ * @brief Global CLI MCB (SDK Standard)
+ * 🔴 关键：SDK要求的全局CLI控制块
+ */
+CLI_MCB     gCLI;
 
 /**************************************************************************
  *************************** Local Definitions ****************************
@@ -1009,9 +1090,30 @@ int32_t CLI_write(const char *format, ...)
  * "******************************************\r\n"
  * "xWRL684x MMW Demo XX.XX.XX.XX\r\n"
  * "******************************************\r\n"
+ * 
+ * 🔴 关键修复（问题36）：
+ * - 初始化gCLI全局MCB
+ * - 设置enableMMWaveExtension=1U（SDK Visualizer必需）
+ * - 配置mmWaveHandle指向ctrlHandle
  */
 int32_t CLI_init(void)
 {
+    /* ========== SDK标准初始化（问题36修复） ========== */
+    
+    /* Initialize the CLI MCB */
+    memset((void*)&gCLI, 0, sizeof(CLI_MCB));
+
+    /* Populate the CLI configuration (SDK Standard) */
+    gCLI.cfg.cliPrompt              = CLI_PROMPT;
+    gCLI.cfg.cliBanner              = "xWRL684x Health Detection Demo 01.00.00.01";
+    gCLI.cfg.UartHandle             = gHealthDetectMCB.commandUartHandle;
+    gCLI.cfg.taskPriority           = CLI_TASK_PRIORITY;
+    gCLI.cfg.mmWaveHandle           = gHealthDetectMCB.ctrlHandle;
+    gCLI.cfg.enableMMWaveExtension  = 1U;  /* 🔴 关键！SDK Visualizer必需 */
+    gCLI.cfg.usePolledMode          = true;
+
+    /* Mark as initialized */
+    gCLI.isInitialized = 1;
     gCliInitialized = 1;
 
     /* Standard mmw_demo banner format - required for SDK Visualizer */
@@ -1020,6 +1122,8 @@ int32_t CLI_init(void)
     CLI_write("xWRL684x MMW Demo 06.01.00.01\r\n");
     CLI_write("******************************************\r\n");
     CLI_write("\r\n");
+
+    DebugP_log("CLI: Initialized with enableMMWaveExtension=1U\r\n");
 
     return 0;
 }
