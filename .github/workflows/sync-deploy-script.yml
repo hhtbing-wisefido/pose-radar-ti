@@ -1,0 +1,61 @@
+# 🔄 自动同步部署脚本和说明书到公开 Gist
+# 
+# 触发条件：
+#   1. ✅ 自动触发：当部署脚本或说明书文件更新时（主要方式）
+#   2. ⚙️ 手动触发：通过 GitHub Actions 页面手动运行（备用方式）
+#
+# 功能：将部署脚本同步到公开 Gist，方便用户直接下载使用
+# 状态：✅ 必须保留 - GIST_TOKEN 和 GIST_ID 已配置
+
+name: Sync Deploy Files to Gist
+
+on:
+  push:
+    paths:
+      - 'project-code/server/owl-website-docker-deploy.sh'
+      - 'project-code/server/wisefido网站一键DOCKER部署与迁移说明书.md'
+    branches:
+      - main
+  workflow_dispatch:  # 允许手动触发（备用）
+
+jobs:
+  sync-to-gist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sync Deploy Script to Gist
+        uses: popsiclestick/gist-sync-action@v1.2.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gist_url: https://gist.github.com/${{ secrets.GIST_ID }}
+          gist_title: owl-website-docker-deploy.sh
+          gist_description: "WiseFido Owl Website Docker 部署脚本与说明书 (自动同步自私有仓库)"
+          github_file: project-code/server/owl-website-docker-deploy.sh
+
+      - name: Sync Deploy Doc to Gist
+        uses: popsiclestick/gist-sync-action@v1.2.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gist_url: https://gist.github.com/${{ secrets.GIST_ID }}
+          gist_title: wisefido网站一键DOCKER部署与迁移说明书.md
+          gist_description: "WiseFido Owl Website Docker 部署脚本与说明书 (自动同步自私有仓库)"
+          github_file: project-code/server/wisefido网站一键DOCKER部署与迁移说明书.md
+
+      - name: Generate sync summary
+        run: |
+          echo "## 🔄 部署文件已同步到 Gist" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 已同步文件" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ \`owl-website-docker-deploy.sh\` - Docker一键部署脚本" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ \`wisefido网站一键DOCKER部署与迁移说明书.md\` - 部署说明文档" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Gist 地址" >> $GITHUB_STEP_SUMMARY
+          echo "用户可通过以下命令直接下载：" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "wget https://gist.githubusercontent.com/${{ github.repository_owner }}/${{ secrets.GIST_ID }}/raw/owl-website-docker-deploy.sh" >> $GITHUB_STEP_SUMMARY
+          echo "chmod +x owl-website-docker-deploy.sh" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+

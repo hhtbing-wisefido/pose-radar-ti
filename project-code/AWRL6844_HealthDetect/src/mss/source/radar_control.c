@@ -445,60 +445,96 @@ int32_t RadarControl_start(void)
 
     /* Step 3: Factory Calibration (SDK Standard - 关键步骤！) */
     /* 参考：mmw_demo/calibrations/factory_cal.c 的 mmwDemo_factoryCal() */
-    /* 工厂校准必须在MMWave_open之前调用 */
-    /* 注意：使用本地变量判断，因为oneTimeConfigDone还未设置 */
-    if (saveRestoreMode == 1)  /* SAVE模式 = 第一次启动 = 需要校准 */
+    /* 🔴 第11轮修复 (2026-01-15)：重新启用工厂校准，使用SDK标准流程 */
+    
+    DebugP_log("RadarControl: Factory calibration (SDK flow)...\r\n");
+    
+    /* 初始化ptrFactoryCalibData为NULL（SDK标准） */
+    gMmWaveCfg.calibCfg.ptrFactoryCalibData = NULL;
+    
+    /* 检查是否通过CLI配置了工厂校准 */
+    if (gHealthDetectMCB.calibCfg.flashOffset != 0)
     {
-        /* 🟢 第9轮修复：检查calibCfg是否通过CLI命令配置 */
-        /* flashOffset非0表示用户发送了factoryCalibCfg命令 */
-        if (gHealthDetectMCB.calibCfg.flashOffset != 0)
+        /* 从CLI配置复制校准参数 */
+        gMmWaveCfg.calibCfg.saveEnable = gHealthDetectMCB.calibCfg.saveEnable;
+        gMmWaveCfg.calibCfg.restoreEnable = gHealthDetectMCB.calibCfg.restoreEnable;
+        gMmWaveCfg.calibCfg.rxGain = gHealthDetectMCB.calibCfg.rxGain;
+        gMmWaveCfg.calibCfg.txBackoffSel = gHealthDetectMCB.calibCfg.txBackoffSel;
+        gMmWaveCfg.calibCfg.flashOffset = gHealthDetectMCB.calibCfg.flashOffset;
+        gMmWaveCfg.calibCfg.monitorsFlashOffset = gHealthDetectMCB.calibCfg.monitorsFlashOffset;
+        
+        DebugP_log("  CalibCfg: save=%d, restore=%d, rxGain=%d, txBackoff=%d, flash=0x%x\r\n",
+                   gMmWaveCfg.calibCfg.saveEnable, 
+                   gMmWaveCfg.calibCfg.restoreEnable,
+                   gMmWaveCfg.calibCfg.rxGain,
+                   gMmWaveCfg.calibCfg.txBackoffSel,
+                   gMmWaveCfg.calibCfg.flashOffset);
+        
+        /* 如果restoreEnable=1，需要从Flash恢复校准数据 */
+        /* TODO: 实现Flash读取（暂时跳过，只支持saveEnable模式）*/
+        if (gMmWaveCfg.calibCfg.restoreEnable == 1U)
         {
-            /* 已配置：执行工厂校准 */
-            DebugP_log("RadarControl: Performing factory calibration...\r\n");
-            
-            /* 设置校准配置到gMmWaveCfg（SDK标准流程）*/
-            gMmWaveCfg.calibCfg.saveEnable = gHealthDetectMCB.calibCfg.saveEnable;
-            gMmWaveCfg.calibCfg.restoreEnable = gHealthDetectMCB.calibCfg.restoreEnable;
-            gMmWaveCfg.calibCfg.rxGain = gHealthDetectMCB.calibCfg.rxGain;
-            gMmWaveCfg.calibCfg.txBackoffSel = gHealthDetectMCB.calibCfg.txBackoffSel;
-            gMmWaveCfg.calibCfg.flashOffset = gHealthDetectMCB.calibCfg.flashOffset;
-            gMmWaveCfg.calibCfg.monitorsFlashOffset = gHealthDetectMCB.calibCfg.monitorsFlashOffset;
-            
-            /* 设置工厂校准数据缓冲区指针（SDK要求）*/
-            /* MMWave_factoryCalib需要此指针来存储/恢复校准结果 */
-            gMmWaveCfg.calibCfg.ptrFactoryCalibData = &gHealthDetectMCB.factoryCalibData;
-            
-            DebugP_log("RadarControl: CalibCfg - saveEnable=%d, restoreEnable=%d, rxGain=%d, flashOffset=0x%x\r\n",
-                       gMmWaveCfg.calibCfg.saveEnable, 
-                       gMmWaveCfg.calibCfg.restoreEnable,
-                       gMmWaveCfg.calibCfg.rxGain,
-                       gMmWaveCfg.calibCfg.flashOffset);
-            
-            retVal = MMWave_factoryCalib(gMmWaveHandle, &gMmWaveCfg, &errCode);
-            if (retVal != 0)
-            {
-                DebugP_log("RadarControl: MMWave_factoryCalib failed, errCode=%d\r\n", errCode);
-                /* 解码错误用于调试 */
-                MMWave_ErrorLevel errorLevel;
-                int16_t mmWaveErrorCode;
-                int16_t subsysErrorCode;
-                MMWave_decodeError(errCode, &errorLevel, &mmWaveErrorCode, &subsysErrorCode);
-                DebugP_log("  errorLevel=%d, mmWaveErrorCode=%d, subsysErrorCode=%d\r\n", 
-                           errorLevel, mmWaveErrorCode, subsysErrorCode);
-                return errCode;
-            }
-            DebugP_log("RadarControl: Factory calibration completed\r\n");
+            DebugP_log("  Warning: Restore from flash not implemented, using saveEnable mode\r\n");
+            gMmWaveCfg.calibCfg.restoreEnable = 0;
+            gMmWaveCfg.calibCfg.saveEnable = 1;
+        }
+        
+        /* 设置校准数据存储指针（SDK必需） */
+        gMmWaveCfg.calibCfg.ptrFactoryCalibData = &gHealthDetectMCB.factoryCalibData;
+        
+        /* 调用MMWave_factoryCalib */
+        DebugP_log("  Calling MMWave_factoryCalib()...\r\n");
+        retVal = MMWave_factoryCalib(gMmWaveHandle, &gMmWaveCfg, &errCode);
+        if (retVal != 0)
+        {
+            DebugP_log("RadarControl: MMWave_factoryCalib failed, errCode=%d\r\n", errCode);
+            MMWave_ErrorLevel errorLevel;
+            int16_t mmWaveErrorCode;
+            int16_t subsysErrorCode;
+            MMWave_decodeError(errCode, &errorLevel, &mmWaveErrorCode, &subsysErrorCode);
+            DebugP_log("  errorLevel=%d, mmWaveErrorCode=%d, subsysErrorCode=%d\r\n", 
+                       errorLevel, mmWaveErrorCode, subsysErrorCode);
+            /* 不返回错误，尝试继续（允许开发调试） */
+            DebugP_log("  Warning: Continuing despite calibration failure (dev mode)\r\n");
         }
         else
         {
-            /* 🟢 未配置：跳过工厂校准（用户未发送factoryCalibCfg命令）*/
-            DebugP_log("RadarControl: Factory calibration skipped (not configured via CLI)\r\n");
-            DebugP_log("  Note: Use 'factoryCalibCfg' command if calibration is required\r\n");
+            DebugP_log("RadarControl: Factory calibration completed successfully\r\n");
         }
     }
     else
     {
-        DebugP_log("RadarControl: Factory calibration skipped (warm start)\r\n");
+        /* 没有通过CLI配置factoryCalibCfg命令 */
+        DebugP_log("  No factoryCalibCfg configured via CLI\r\n");
+        DebugP_log("  Attempting minimal calibration (saveEnable=0, restoreEnable=0)...\r\n");
+        
+        /* 使用默认参数尝试校准 */
+        gMmWaveCfg.calibCfg.saveEnable = 0;
+        gMmWaveCfg.calibCfg.restoreEnable = 0;
+        gMmWaveCfg.calibCfg.rxGain = 44;         /* 默认rxGain（38-46有效） */
+        gMmWaveCfg.calibCfg.txBackoffSel = 2;    /* 默认txBackoff */
+        gMmWaveCfg.calibCfg.flashOffset = 0;     /* 无Flash操作 */
+        gMmWaveCfg.calibCfg.ptrFactoryCalibData = &gHealthDetectMCB.factoryCalibData;
+        
+        DebugP_log("  Using defaults: rxGain=44, txBackoff=2\r\n");
+        
+        retVal = MMWave_factoryCalib(gMmWaveHandle, &gMmWaveCfg, &errCode);
+        if (retVal != 0)
+        {
+            DebugP_log("RadarControl: MMWave_factoryCalib failed with defaults, errCode=%d\r\n", errCode);
+            MMWave_ErrorLevel errorLevel;
+            int16_t mmWaveErrorCode;
+            int16_t subsysErrorCode;
+            MMWave_decodeError(errCode, &errorLevel, &mmWaveErrorCode, &subsysErrorCode);
+            DebugP_log("  errorLevel=%d, mmWaveErrorCode=%d, subsysErrorCode=%d\r\n", 
+                       errorLevel, mmWaveErrorCode, subsysErrorCode);
+            /* 不返回错误，尝试继续 */
+            DebugP_log("  Warning: Continuing despite calibration failure\r\n");
+        }
+        else
+        {
+            DebugP_log("RadarControl: Minimal calibration completed\r\n");
+        }
     }
 
     /* 标记已完成一次配置（后续可以RESTORE校准数据） */

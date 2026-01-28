@@ -33,11 +33,14 @@ applyTo: "**"              # Glob 模式，定义应用范围
 
 | 文件 | 描述 | 应用范围 | 优先级 |
 |------|------|----------|--------|
-| `file-reading.instructions.md` | 🔴🔴🔴 **严禁AI偷懒不读文件** | 所有文件 | **最高** |
+| `00-encoding-protection.instructions.md` | 🔴🔴🔴 **编码保护v3.0 - 最高优先级强制执行** | 所有文件 | **0 - 最高** |
+| `file-reading.instructions.md` | 🔴🔴🔴 **严禁AI偷懒不读文件** | 所有文件 | **1 - 极高** |
 | `file-operations.instructions.md` | 文件操作强制规则 | 所有文件 | 高 |
 | `directory-management.instructions.md` | 目录结构管理 | 所有文件 | 高 |
 | `naming-conventions.instructions.md` | 文件命名标准 | 所有文件 | 中 |
 | `git-operations.instructions.md` | Git操作规范 | 所有文件 | 高 |
+| `task-verification.instructions.md` | 任务完成验证规则 | 所有文件 | 高 |
+| `encoding-check.instructions.md` | 编码检查规则 | 所有文件 | 高 |
 | `emoji-style.instructions.md` | Markdown 文档风格 | 所有 .md 文件 | 低 |
 
 ## 🔄 与 Windsurf 规则的关系
