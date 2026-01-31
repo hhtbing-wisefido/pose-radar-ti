@@ -1,8 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ti AWRL6844 固件系统工具 v2.4.4 - subprocess配置回退版
+Ti AWRL6844 固件系统工具 v2.4.6 - 扫描列表显示修复版
 主入口文件 - 多标签页集成系统
+
+更新日志 v2.4.6:
+- 🐛 修复扫描后应用固件和SBL固件列表不显示的问题
+  * 原因：update_filter_options中SBL/Config筛选器未解绑事件，
+    调用current(0)时触发筛选事件导致列表被清空
+  * 修复：解绑所有筛选器事件，更新选项后重新绑定
+- 🔧 统一所有筛选器（应用固件/SBL/雷达配置）的事件解绑和重绑定逻辑
+- 构建日期：2026-01-29
+
+更新日志 v2.4.5:
+- 🔴 修复EXE模式下多个关键问题：
+  * 修复筛选器事件解绑后未重新绑定导致筛选器失效
+  * 修复多进程检测在EXE模式下无法正常工作（使用EXE名而非脚本名）
+  * 修复烧录工具路径在EXE模式下指向release目录的问题
+  * 添加更多调试日志用于问题追踪
+- 构建日期：2026-01-29
 
 更新日志 v2.4.4:
 - 🔄 回退subprocess配置到bufsize=0
@@ -123,8 +139,8 @@ import threading
 from datetime import datetime
 
 # 版本信息
-VERSION = "2.4.2"
-BUILD_DATE = "2025-12-20"
+VERSION = "2.4.6"
+BUILD_DATE = "2026-01-29"
 AUTHOR = "Benson@Wisefido"
 
 # 导入标签页模块
@@ -170,10 +186,10 @@ def verify_firmware_file(file_path):
     """验证固件文件的完整性"""
     if not os.path.exists(file_path):
         return False, "文件不存在"
-    
+
     if os.path.getsize(file_path) == 0:
         return False, "文件大小为0"
-    
+
     # 读取文件头部验证格式
     try:
         with open(file_path, 'rb') as f:
@@ -182,36 +198,36 @@ def verify_firmware_file(file_path):
                 return False, "文件头不完整"
     except Exception as e:
         return False, f"读取文件失败: {str(e)}"
-    
+
     return True, "文件验证通过"
 
 def check_firmware_compatibility(file_path, device='AWRL6844'):
     """
     检查固件是否与设备匹配 (v1.0.5需求1)
-    
+
     判别方法：
     1. 文件名检查：是否包含设备型号关键字
     2. Meta Header检查：解析固件元数据
     3. SDK工具检查：是否使用正确的烧录工具
-    
+
     Returns:
         tuple: (is_compatible, reason, details)
     """
     reasons = []
     details = []
     is_compatible = True
-    
+
     filename = os.path.basename(file_path).lower()
-    
+
     # 检查1: 文件名是否包含设备型号
     device_keywords = {
         'AWRL6844': ['6844', 'awrl6844', 'iwrl6844'],
         'AWRL6432': ['6432', 'awrl6432', 'iwrl6432']
     }
-    
+
     keywords = device_keywords.get(device, [])
     filename_match = any(kw in filename for kw in keywords)
-    
+
     if filename_match:
         reasons.append(f"✅ 文件名包含{device}型号标识")
         details.append(f"文件名: {filename}")
@@ -220,7 +236,7 @@ def check_firmware_compatibility(file_path, device='AWRL6844'):
         reasons.append(f"⚠️ 文件名未包含{device}型号标识")
         details.append(f"文件名: {filename}")
         details.append(f"期望关键字: {', '.join(keywords)}")
-    
+
     # 检查2: 分析固件结构
     try:
         info = analyze_appimage_structure(file_path)
@@ -231,7 +247,7 @@ def check_firmware_compatibility(file_path, device='AWRL6844'):
             else:
                 is_compatible = False
                 reasons.append("❌ Meta Header无效")
-            
+
             if info['has_sbl_header'] and info['has_app_header']:
                 reasons.append("✅ 包含SBL和App镜像")
                 details.append(f"SBL大小: {info['sbl_size']} 字节")
@@ -244,35 +260,35 @@ def check_firmware_compatibility(file_path, device='AWRL6844'):
     except Exception as e:
         is_compatible = False
         reasons.append(f"❌ 固件分析失败: {str(e)}")
-    
+
     # 检查3: SDK工具检查
     if device == 'AWRL6844':
         expected_tool = 'arprog_cmdline_6844.exe'
         reasons.append(f"✅ 使用烧录工具: {expected_tool}")
         details.append(f"设备: {device}")
-    
+
     # 汇总结果
     reason_text = "\n".join(reasons)
     details_text = "\n".join(details)
-    
+
     return is_compatible, reason_text, details_text
 
 def analyze_appimage_structure(file_path):
     """
     分析appimage文件结构
-    
+
     ⚠️ 重要说明：
     - .appimage文件内部的Meta Header记录的是【文件内相对偏移】
     - Flash烧录偏移是烧录参数，不是固件文件属性，应由用户在烧录时配置
     - 本函数返回固件文件本身的信息和Meta Header中的镜像描述符
-    
+
     AppImage文件结构：
     - Meta Header (512字节): 包含Magic、版本、各核镜像信息
     - 实际镜像数据: R5F + DSP + RF固件
-    
+
     Args:
         file_path: 固件文件路径
-    
+
     Returns:
         dict: 包含文件结构信息和镜像描述符（不包含Flash偏移量）
     """
@@ -280,37 +296,37 @@ def analyze_appimage_structure(file_path):
         with open(file_path, 'rb') as f:
             # 读取Meta Header (至少512字节，按TI官方定义)
             meta_header = f.read(512)
-            
+
             if len(meta_header) < 512:
                 return None
-            
+
             import struct
-            
+
             # Offset 0x00: Magic Number (4字节) - 应为 0x5254534D ("MSTR")
             magic = struct.unpack('<I', meta_header[0:4])[0]
-            
+
             # Offset 0x04: 版本信息 (4字节)
             version = struct.unpack('<I', meta_header[4:8])[0]
-            
+
             # Offset 0x08: 镜像数量信息
             num_images_raw = struct.unpack('<I', meta_header[8:12])[0]
             num_images = (num_images_raw >> 16, num_images_raw & 0xFFFF)
-            
+
             # 获取文件总大小
             f.seek(0, 2)
             total_size = f.tell()
-            
+
             # 解析镜像描述符
             # TI格式: [CRC32] [加载地址] [镜像大小] [文件内偏移]
             images = []
-            
+
             # 镜像1 (R5F) - 0x40
             img1_start = 0x40
             img1_crc = struct.unpack('<I', meta_header[img1_start:img1_start+4])[0]
             img1_addr = struct.unpack('<I', meta_header[img1_start+4:img1_start+8])[0]
             img1_size = struct.unpack('<I', meta_header[img1_start+8:img1_start+12])[0]
             img1_offset = struct.unpack('<I', meta_header[img1_start+12:img1_start+16])[0]
-            
+
             # 验证镜像1数据合理性
             if img1_size > 0 and img1_offset + img1_size <= total_size:
                 images.append({
@@ -320,14 +336,14 @@ def analyze_appimage_structure(file_path):
                     'size': img1_size,
                     'load_addr': f'0x{img1_addr:08X}'
                 })
-            
+
             # 镜像2 (DSP) - 0x50
             img2_start = 0x50
             img2_crc = struct.unpack('<I', meta_header[img2_start:img2_start+4])[0]
             img2_addr = struct.unpack('<I', meta_header[img2_start+4:img2_start+8])[0]
             img2_size = struct.unpack('<I', meta_header[img2_start+8:img2_start+12])[0]
             img2_offset = struct.unpack('<I', meta_header[img2_start+12:img2_start+16])[0]
-            
+
             # 验证镜像2数据合理性（文件内偏移+大小不超过文件总大小）
             if img2_size > 0 and img2_offset > 0 and img2_offset + img2_size <= total_size:
                 images.append({
@@ -337,14 +353,14 @@ def analyze_appimage_structure(file_path):
                     'size': img2_size,
                     'load_addr': f'0x{img2_addr:08X}'
                 })
-            
+
             # 镜像3 (BSS/Data) - 0x60 - 通常是BSS段，可能不占用文件空间
             img3_start = 0x60
             img3_crc = struct.unpack('<I', meta_header[img3_start:img3_start+4])[0]
             img3_addr = struct.unpack('<I', meta_header[img3_start+4:img3_start+8])[0]
             img3_size = struct.unpack('<I', meta_header[img3_start+8:img3_start+12])[0]
             img3_offset = struct.unpack('<I', meta_header[img3_start+12:img3_start+16])[0]
-            
+
             # BSS段：只在有效偏移且在文件范围内时才添加
             if img3_size > 0 and img3_offset > 0 and img3_offset + img3_size <= total_size:
                 images.append({
@@ -363,11 +379,11 @@ def analyze_appimage_structure(file_path):
                     'size': img3_size,
                     'load_addr': f'0x{img3_addr:08X}'
                 })
-            
+
             # 判断文件类型（根据大小和文件名）
             filename = os.path.basename(file_path).lower()
             is_sbl = 'sbl' in filename or total_size < 200*1024
-            
+
             if is_sbl:
                 # SBL固件
                 info = {
@@ -396,9 +412,9 @@ def analyze_appimage_structure(file_path):
                     'has_app_header': True,
                     'file_type': 'APP'
                 }
-            
+
             return info
-        
+
     except Exception as e:
         print(f"分析appimage结构失败: {e}")
         return None
@@ -406,17 +422,17 @@ def analyze_appimage_structure(file_path):
 def check_sbl_exists(port, baudrate=115200, timeout=3):
     """
     通过串口通信判断SBL是否存在 (v1.1.0新功能)
-    
+
     原理：
     1. 如果板载有SBL，SBL会在启动时通过串口输出信息
     2. 尝试打开串口并读取数据，如果有响应则说明SBL存在
     3. 发送一些常见命令尝试触发SBL响应
-    
+
     Args:
         port: 串口号（如COM3）
         baudrate: 波特率（默认115200）
         timeout: 超时时间（秒）
-    
+
     Returns:
         tuple: (sbl_exists, message, details)
         - sbl_exists: bool - SBL是否存在
@@ -427,14 +443,14 @@ def check_sbl_exists(port, baudrate=115200, timeout=3):
         # 打开串口
         ser = serial.Serial(port, baudrate, timeout=1)
         time.sleep(0.5)  # 等待串口稳定
-        
+
         # 清空缓冲区
         ser.reset_input_buffer()
         ser.reset_output_buffer()
-        
+
         details = []
         has_response = False
-        
+
         # 方法1: 读取启动时的输出（如果板子刚上电）
         details.append("=== 检测启动输出 ===")
         time.sleep(0.5)
@@ -449,15 +465,15 @@ def check_sbl_exists(port, baudrate=115200, timeout=3):
             except (UnicodeDecodeError, AttributeError) as e:
                 details.append(f"收到非文本数据: {len(data)} 字节")
                 has_response = True
-        
+
         # 方法2: 发送换行符尝试触发响应
         details.append("\n=== 尝试命令触发 ===")
         test_commands = [b'\r\n', b'\n', b'help\r\n', b'?\r\n']
-        
+
         for cmd in test_commands:
             ser.write(cmd)
             time.sleep(0.3)
-            
+
             if ser.in_waiting > 0:
                 data = ser.read(ser.in_waiting)
                 try:
@@ -467,23 +483,23 @@ def check_sbl_exists(port, baudrate=115200, timeout=3):
                 except (UnicodeDecodeError, AttributeError) as e:
                     details.append(f"命令 {cmd} 响应: {len(data)} 字节")
                     has_response = True
-        
+
         # 方法3: 检查端口是否可以正常打开（最基本的检测）
         if not has_response:
             details.append("\n=== 基础检测 ===")
             details.append("✓ 串口可以正常打开")
             details.append("✓ 设备已连接")
             details.append("⚠ 未收到SBL输出（可能SBL已运行完毕或未上电复位）")
-        
+
         ser.close()
-        
+
         details_text = "\n".join(details)
-        
+
         if has_response:
             return True, "✅ 检测到SBL存在（串口有响应）", details_text
         else:
             return False, "⚠️ 未检测到SBL响应\n请将SOP开关调整为功能模式[0 1]（非烧录模式[0 0]）并按RESET重启设备后重试", details_text
-        
+
     except serial.SerialException as e:
         return False, f"❌ 串口打开失败: {str(e)}", f"端口: {port}\n错误: {str(e)}"
     except Exception as e:
@@ -495,21 +511,21 @@ def check_sbl_exists(port, baudrate=115200, timeout=3):
 
 class PreFlashCheckDialog(tk.Toplevel):
     """烧录前检查对话框"""
-    
+
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
         self.title("烧录前检查")
         self.result = False
         self.create_widgets()
-        
+
     def create_widgets(self):
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill=tk.BOTH, expand=True)
-        
-        ttk.Label(frame, text="⚠️ 请确认以下事项：", 
+
+        ttk.Label(frame, text="⚠️ 请确认以下事项：",
                  font=('Arial', 12, 'bold')).pack(pady=10)
-        
+
         checks = [
             "✓ 固件文件已正确选择",
             "✓ 设备已通过USB连接到电脑",
@@ -517,32 +533,32 @@ class PreFlashCheckDialog(tk.Toplevel):
             "✓ 串口没有被其他程序占用",
             "✓ 已保存当前工作"
         ]
-        
+
         for check in checks:
             ttk.Label(frame, text=check, font=('Arial', 10)).pack(anchor=tk.W, pady=5)
-        
+
         button_frame = ttk.Frame(frame)
         button_frame.pack(pady=20)
-        
-        ttk.Button(button_frame, text="确认开始", 
+
+        ttk.Button(button_frame, text="确认开始",
                   command=self.on_ok).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="取消", 
+        ttk.Button(button_frame, text="取消",
                   command=self.on_cancel).pack(side=tk.LEFT, padx=5)
-        
+
         self.transient(self.parent)
         self.grab_set()
-        
+
     def on_ok(self):
         self.result = True
         self.destroy()
-        
+
     def on_cancel(self):
         self.result = False
         self.destroy()
 
 class SBLCheckDialog(tk.Toplevel):
     """SBL检测对话框 (v1.1.0)"""
-    
+
     def __init__(self, parent, port, baudrate=115200):
         super().__init__(parent)
         self.parent = parent
@@ -550,49 +566,49 @@ class SBLCheckDialog(tk.Toplevel):
         self.port = port
         self.baudrate = baudrate
         self.geometry("600x500")
-        
+
         # 设置窗口可调整大小
         self.resizable(True, True)
-        
+
         # 设置窗口居中显示在主窗口上
         self.update_idletasks()
-        
+
         # 获取父窗口的位置和大小
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
         parent_width = parent.winfo_width()
         parent_height = parent.winfo_height()
-        
+
         # 计算对话框应该显示的位置（居中在父窗口上）
         dialog_width = 600
         dialog_height = 500
         x = parent_x + (parent_width - dialog_width) // 2
         y = parent_y + (parent_height - dialog_height) // 2
-        
+
         # 设置窗口位置
         self.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
-        
+
         self.create_widgets()
         self.start_check()
-        
+
     def create_widgets(self):
         # 标题
         title_frame = ttk.Frame(self, padding=10)
         title_frame.pack(fill=tk.X)
-        
+
         ttk.Label(
             title_frame,
             text="🔍 SBL存在性检测",
             font=('Arial', 14, 'bold')
         ).pack()
-        
+
         ttk.Label(
             title_frame,
             text=f"检测端口: {self.port} @ {self.baudrate} bps",
             font=('Arial', 9),
             foreground='gray'
         ).pack()
-        
+
         # 状态标签
         self.status_label = ttk.Label(
             self,
@@ -601,7 +617,7 @@ class SBLCheckDialog(tk.Toplevel):
             foreground='blue'
         )
         self.status_label.pack(pady=10)
-        
+
         # 详细信息区域
         detail_frame = ttk.LabelFrame(
             self,
@@ -609,7 +625,7 @@ class SBLCheckDialog(tk.Toplevel):
             padding=10
         )
         detail_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        
+
         self.detail_text = scrolledtext.ScrolledText(
             detail_frame,
             height=15,
@@ -620,11 +636,11 @@ class SBLCheckDialog(tk.Toplevel):
             wrap=tk.WORD
         )
         self.detail_text.pack(fill=tk.BOTH, expand=True)
-        
+
         # 按钮
         button_frame = ttk.Frame(self)
         button_frame.pack(pady=10)
-        
+
         self.close_btn = ttk.Button(
             button_frame,
             text="关闭",
@@ -632,36 +648,36 @@ class SBLCheckDialog(tk.Toplevel):
             command=self.destroy
         )
         self.close_btn.pack()
-        
+
         self.transient(self.parent)
         self.grab_set()
-    
+
     def start_check(self):
         """启动检测线程"""
         thread = threading.Thread(target=self.check_thread, daemon=True)
         thread.start()
-    
+
     def check_thread(self):
         """检测线程"""
         self.log("开始检测SBL...\n")
         self.log(f"端口: {self.port}\n")
         self.log(f"波特率: {self.baudrate}\n")
         self.log("-" * 50 + "\n\n")
-        
+
         # 执行检测
         exists, message, details = check_sbl_exists(self.port, self.baudrate)
-        
+
         # 更新UI
         self.status_label.config(
             text=message,
             foreground='green' if exists else 'orange'
         )
-        
+
         self.log("\n" + "=" * 50 + "\n")
         self.log(f"检测结果: {message}\n")
         self.log("=" * 50 + "\n\n")
         self.log(details + "\n")
-        
+
         if exists:
             self.log("\n✅ 结论: 板载已有SBL，可以只烧录App更新应用\n")
         else:
@@ -669,10 +685,10 @@ class SBLCheckDialog(tk.Toplevel):
             self.log("   1. 请将SOP开关调整为功能模式 [S8=OFF, S7=ON]\n")
             self.log("   2. 按RESET按钮重启设备\n")
             self.log("   3. 如仍无响应，建议执行完整烧录（SBL + App）\n")
-        
+
         # 启用关闭按钮
         self.close_btn.config(state=tk.NORMAL)
-    
+
     def log(self, message):
         """添加日志"""
         if not self.detail_text.winfo_exists():
@@ -683,7 +699,7 @@ class SBLCheckDialog(tk.Toplevel):
 
 class SerialMonitorDialog(tk.Toplevel):
     """串口监视器对话框"""
-    
+
     def __init__(self, parent, port, baudrate=115200):
         super().__init__(parent)
         self.title(f"串口监视器 - {port}")
@@ -693,30 +709,30 @@ class SerialMonitorDialog(tk.Toplevel):
         self.running = False
         self.create_widgets()
         self.start_monitoring()
-        
+
     def create_widgets(self):
         # 输出区域
         self.output_text = scrolledtext.ScrolledText(
-            self, height=30, width=100, 
+            self, height=30, width=100,
             bg='black', fg='#00ff00',
             font=('Consolas', 9)
         )
         self.output_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+
         # 控制按钮
         button_frame = ttk.Frame(self)
         button_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        ttk.Button(button_frame, text="清空", 
+
+        ttk.Button(button_frame, text="清空",
                   command=self.clear_output).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="关闭", 
+        ttk.Button(button_frame, text="关闭",
                   command=self.close).pack(side=tk.RIGHT, padx=5)
-        
+
     def start_monitoring(self):
         """启动串口监视"""
         try:
             self.serial_port = serial.Serial(
-                self.port, self.baudrate, 
+                self.port, self.baudrate,
                 timeout=0.1
             )
             self.running = True
@@ -725,7 +741,7 @@ class SerialMonitorDialog(tk.Toplevel):
             self.log(f"✓ 已连接到 {self.port}\n")
         except Exception as e:
             self.log(f"✗ 连接失败: {str(e)}\n")
-            
+
     def monitor_loop(self):
         """监视循环"""
         while self.running:
@@ -742,18 +758,18 @@ class SerialMonitorDialog(tk.Toplevel):
                 if self.running:
                     self.log(f"\n✗ 读取错误: {str(e)}\n")
                 break
-                
+
     def log(self, message):
         """添加日志"""
         if not self.output_text.winfo_exists():
             return
         self.output_text.insert(tk.END, message)
         self.output_text.see(tk.END)
-        
+
     def clear_output(self):
         """清空输出"""
         self.output_text.delete(1.0, tk.END)
-        
+
     def close(self):
         """关闭监视器"""
         self.running = False
@@ -770,12 +786,17 @@ class SerialMonitorDialog(tk.Toplevel):
 
 class FlashToolGUI:
     """固件烧录工具主GUI类 - v1.0.8模块化版本"""
-    
+
     def __init__(self, root):
         self.root = root
         self.root.title(f"Ti AWRL6844 固件系统工具 v{VERSION}")
         self.root.geometry("1000x700")
-        
+
+        print(f"\n[DEBUG] FlashToolGUI.__init__() 开始")
+        print(f"[DEBUG] sys.frozen = {getattr(sys, 'frozen', False)}")
+        print(f"[DEBUG] sys.executable = {sys.executable}")
+        print(f"[DEBUG] __file__ = {__file__ if not getattr(sys, 'frozen', False) else 'N/A'}")
+
         # 加载高端专业图标 🎨
         try:
             icon_path = Path(__file__).parent / "flash_tool_icon.ico"
@@ -786,55 +807,79 @@ class FlashToolGUI:
                 print(f"⚠️ 图标文件未找到: {icon_path}")
         except Exception as e:
             print(f"⚠️ 图标加载失败: {e}")
-        
+
         # 强制窗口置顶并获得焦点
         self.root.lift()
         self.root.focus_force()
         self.root.attributes('-topmost', True)
         self.root.after(100, lambda: self.root.attributes('-topmost', False))
-        
+
         # 版本信息（供标签页模块验证）
         self.VERSION = VERSION
         self.BUILD_DATE = BUILD_DATE
-        
+
         # 设备配置
         self.device_config = DEVICE_CONFIGS['AWRL6844']
-        
+
         # 状态变量
         self.sbl_file = tk.StringVar()  # SBL固件文件
         self.app_file = tk.StringVar()  # 应用固件文件
         self.flash_tool_path = ""  # 烧录工具路径（改为字符串）
         self.sbl_port = tk.StringVar()
         self.app_port = tk.StringVar()
-        
+
         # 烧录状态
         self.flashing = False
         self.flash_thread = None
         self.flash_process = None  # 当前烧录进程
         self.stop_flashing = False  # 停止烧录标志
-        
+
         # 创建界面
+        print(f"[DEBUG] 开始创建 GUI 组件")
         self.create_widgets()
-        
+        print(f"[DEBUG] GUI 组件创建完成")
+
         # 初始化默认固件路径（使用动态相对路径）- 必须在界面创建后
+        print(f"[DEBUG] 开始初始化默认固件路径")
         self._init_default_firmware_paths()
-        
+        print(f"[DEBUG] 固件路径初始化完成")
+
         # 初始化端口
+        print(f"[DEBUG] 开始刷新端口列表")
         self.refresh_ports()
-        
+        print(f"[DEBUG] 端口列表刷新完成")
+
         # 检测烧录工具
+        print(f"[DEBUG] 开始检测烧录工具")
         self.check_flash_tool()
-    
+        print(f"[DEBUG] 烧录工具检测完成")
+        print(f"[DEBUG] FlashToolGUI.__init__() 结束\n")
+
     def _init_default_firmware_paths(self):
         """初始化默认固件路径（动态相对路径，项目移动后自动适配）"""
+        print(f"\n[DEBUG] _init_default_firmware_paths() 开始")
         try:
-            # 获取当前脚本的绝对路径
-            script_dir = Path(__file__).resolve().parent
-            
+            # 获取基础目录 - EXE模式下使用exe所在目录的父目录
+            if getattr(sys, 'frozen', False):
+                # PyInstaller EXE模式：exe在 6-Distribution/，需要回到父目录
+                # D:\...\6-Distribution\exe -> D:\...\01-AWRL6844固件系统工具\
+                base_dir = Path(sys.executable).resolve().parent.parent
+                print(f"[DEBUG] EXE模式: exe路径 = {sys.executable}")
+                print(f"[DEBUG] EXE模式: base_dir = {base_dir}")
+            else:
+                # 脚本模式：使用脚本所在目录的父目录(5-Scripts的父目录)
+                base_dir = Path(__file__).resolve().parent.parent
+                print(f"[DEBUG] 脚本模式: base_dir = {base_dir}")
+
             # 构建固件文件的相对路径
-            sbl_path = script_dir.parent / "1-SBL_Bootloader" / "sbl.release.appimage"
-            app_path = script_dir.parent / "2-HelloWorld_App" / "hello_world_system.release.appimage"
-            
+            sbl_path = base_dir / "1-SBL_Bootloader" / "sbl.release.appimage"
+            app_path = base_dir / "2-HelloWorld_App" / "hello_world_system.release.appimage"
+
+            print(f"[DEBUG] 预期SBL路径: {sbl_path}")
+            print(f"[DEBUG] 预期App路径: {app_path}")
+            print(f"[DEBUG] SBL存在: {sbl_path.exists()}")
+            print(f"[DEBUG] App存在: {app_path.exists()}")
+
             # 检查SBL文件是否存在并设置
             if sbl_path.exists():
                 self.sbl_file.set(str(sbl_path))
@@ -848,7 +893,7 @@ class FlashToolGUI:
                 self.sbl_file.set("")
                 if hasattr(self, 'sbl_status_label'):
                     self.sbl_status_label.config(text="❌ 未找到", fg="red")
-                
+
             # 检查App文件是否存在并设置
             if app_path.exists():
                 self.app_file.set(str(app_path))
@@ -862,88 +907,88 @@ class FlashToolGUI:
                 self.app_file.set("")
                 if hasattr(self, 'app_status_label'):
                     self.app_status_label.config(text="❌ 未找到", fg="red")
-                
+
         except Exception as e:
             # 初始化失败时使用空值
             self.sbl_file.set("")
             self.app_file.set("")
             self.log(f"⚠️ 自动加载固件失败: {str(e)}\n", "WARN")
-        
+
     def create_widgets(self):
         """创建界面组件 - 使用模块化标签页"""
-        
+
         # 顶部标题
         title_frame = ttk.Frame(self.root)
         title_frame.pack(fill=tk.X, padx=10, pady=5)
-        
+
         ttk.Label(
             title_frame,
             text=f"Ti AWRL6844 固件系统工具 v{VERSION}",
             font=('Arial', 14, 'bold')
         ).pack(side=tk.LEFT)
-        
+
         ttk.Label(
             title_frame,
             text=f"作者: {AUTHOR} | 构建: {BUILD_DATE}",
             font=('Arial', 9),
             foreground='gray'
         ).pack(side=tk.RIGHT)
-        
+
         # 创建Notebook（标签页容器）
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        
+
         # 创建各个标签页的Frame
         flash_frame = ttk.Frame(self.notebook)
         firmware_manager_frame = ttk.Frame(self.notebook)
-        
+
         # 添加到Notebook
         self.notebook.add(flash_frame, text="  烧录功能  ")
         self.notebook.add(firmware_manager_frame, text="  固件管理  ")
-        
+
         # 实例化各标签页模块
         self.flash_tab = FlashTab(flash_frame, self)
         self.basic_tab = self.flash_tab  # 兼容旧代码
         self.firmware_manager_tab = FirmwareManagerTab(firmware_manager_frame, self)
-        
+
         # 状态栏
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=10, pady=5)
-        
+
         self.status_label = ttk.Label(
-            status_frame, 
-            text="就绪", 
+            status_frame,
+            text="就绪",
             relief=tk.SUNKEN,
             anchor=tk.W
         )
         self.status_label.pack(fill=tk.X)
-        
+
     # =========== 端口管理方法 ===========
-    
+
     def refresh_ports(self):
         """刷新串口列表"""
         ports = serial.tools.list_ports.comports()
-        
+
         sbl_ports = []
         app_ports = []
-        
+
         for port in ports:
             if self.device_config['sbl_port_name'] in port.description:
                 sbl_ports.append(port.device)
             if self.device_config['app_port_name'] in port.description:
                 app_ports.append(port.device)
-        
+
         # 更新下拉框（通过标签页模块）
         if hasattr(self, 'basic_tab'):
             self.basic_tab.update_port_list(sbl_ports, app_ports)
-        
+
         return sbl_ports, app_ports
-    
+
     def get_sbl_offset(self):
         """获取SBL Flash偏移量"""
         if not hasattr(self, 'sbl_offset_var'):
             return 0x2000  # 默认值
-        
+
         offset_val = self.sbl_offset_var.get()
         if offset_val == "custom":
             # 从输入框获取
@@ -955,12 +1000,12 @@ class FlashToolGUI:
                 return 0x2000
         else:
             return int(offset_val, 16)
-    
+
     def get_app_offset(self):
         """获取App Flash偏移量"""
         if not hasattr(self, 'app_offset_var'):
             return 0x42000  # 默认值
-        
+
         offset_val = self.app_offset_var.get()
         if offset_val == "custom":
             # 从输入框获取
@@ -1020,9 +1065,9 @@ class FlashToolGUI:
             self.log("\n⚠️ 未指定端口，无法释放\n", "WARN")
             messagebox.showwarning("警告", "请选择要释放的端口！")
             return False
-        
+
         self.log(f"\n🔓 尝试释放端口: {port}\n", "INFO")
-        
+
         # 首先尝试直接打开关闭（如果端口可用）
         try:
             ser = serial.Serial(port, 115200, timeout=0.2)
@@ -1032,13 +1077,13 @@ class FlashToolGUI:
             return True
         except serial.SerialException as e:
             self.log(f"⚠️ 端口 {port} 当前被占用\n", "WARN")
-        
+
         # 尝试关闭本应用内可能打开的串口连接
         self.log(f"🔧 尝试关闭本应用内对端口 {port} 的占用...\n", "INFO")
-        
+
         # 检查是否有串口监视窗口打开了该端口
         # 注意：这里只是尝试，实际的串口监视窗口是独立线程，需要手动关闭
-        
+
         # 再次尝试打开端口
         try:
             ser = serial.Serial(port, 115200, timeout=0.2)
@@ -1048,34 +1093,34 @@ class FlashToolGUI:
             return True
         except serial.SerialException:
             pass
-        
+
         # 查找可能占用该特定端口的外部进程
         self.log(f"🔎 查找占用端口 {port} 的外部进程...\n", "INFO")
-        
+
         # 使用更精确的方式检测：通过lsof或handle工具（Windows）
         found = []
-        
+
         # 方法1：检查常见串口工具进程（但要确认它们是否占用该端口）
         suspects = ["putty", "teraterm", "sscom", "serialplot", "cutecom", "minicom"]
-        
+
         for proc in psutil.process_iter(['pid', 'name', 'connections']):
             try:
                 name = (proc.info.get('name') or '').lower()
-                
+
                 # 只检查串口工具，不检查python/code等（避免关闭IDE或其他Python脚本）
                 if any(s in name for s in suspects):
                     # 注意：psutil.Process.connections()主要用于网络连接
                     # 对于串口，我们只能基于进程名推断
                     found.append((proc.pid, proc.info.get('name')))
-                    
+
             except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError):
                 continue
-        
+
         if found:
             self.log("🔎 发现可能占用串口的工具:\n", "INFO")
             for pid, name in found:
                 self.log(f"  • PID {pid}: {name}\n", "INFO")
-            
+
             # 询问用户是否终止这些串口工具
             result = messagebox.askyesno(
                 "发现串口工具进程",
@@ -1083,7 +1128,7 @@ class FlashToolGUI:
                 "\n".join([f"• {name} (PID: {pid})" for pid, name in found]) +
                 f"\n\n⚠️ 注意：只会关闭这些串口工具，不会关闭本应用。\n\n是否终止这些进程以释放端口？"
             )
-            
+
             if result:
                 killed = []
                 for pid, name in found:
@@ -1102,7 +1147,7 @@ class FlashToolGUI:
                             self.log(f"❌ 无法终止进程 {name}: {str(e)}\n", "ERROR")
                     except Exception as e:
                         self.log(f"❌ 终止进程 {name} 失败: {str(e)}\n", "ERROR")
-                
+
                 # 等待一下，再次尝试打开端口
                 time.sleep(0.5)
                 try:
@@ -1135,7 +1180,7 @@ class FlashToolGUI:
                 "4. 使用任务管理器查找占用进程"
             )
             return False
-    
+
     def get_port_info(self, port):
         """获取端口详细信息"""
         ports = serial.tools.list_ports.comports()
@@ -1149,14 +1194,22 @@ class FlashToolGUI:
                     'pid': p.pid
                 }
         return None
-    
+
     def check_flash_tool(self):
         """检测烧录工具是否存在（支持多个路径）"""
-        # 获取脚本所在目录的绝对路径
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # 向上两级到达 01-AWRL6844固件系统工具
-        tool_base = os.path.dirname(os.path.dirname(script_dir))
-        
+        # 获取基础目录 - EXE模式下使用exe所在目录的父目录（release的父目录），脚本模式下使用脚本目录的父目录
+        if getattr(sys, 'frozen', False):
+            # PyInstaller EXE模式：使用exe所在目录的父目录
+            # 例如：release/EXE.exe → release → 项目根目录
+            exe_path = Path(sys.executable)
+            tool_base = str(exe_path.parent.parent)  # 🔴 修复：回到项目根目录
+            print(f"[DEBUG] check_flash_tool: EXE模式，工具基础目录: {tool_base}")
+        else:
+            # 脚本模式：使用脚本所在目录的父目录(5-Scripts的父目录)
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            tool_base = os.path.dirname(script_dir)
+            print(f"[DEBUG] check_flash_tool: 脚本模式，工具基础目录: {tool_base}")
+
         # 候选路径列表
         tool_paths = [
             # 1. APP内置工具（优先）
@@ -1166,7 +1219,7 @@ class FlashToolGUI:
             # 3. 用户自定义路径（如果已设置）
             self.flash_tool_path
         ]
-        
+
         # 遍历查找第一个存在的工具
         for tool_exe in tool_paths:
             if tool_exe and os.path.exists(tool_exe):
@@ -1176,14 +1229,14 @@ class FlashToolGUI:
                 if hasattr(self, 'tool_path_label'):
                     self.tool_path_label.config(text=tool_exe)
                 return True
-        
+
         # 所有路径都不存在
         if hasattr(self, 'tool_status_label'):
             self.tool_status_label.config(text="❌ 未找到", fg="red")
         if hasattr(self, 'tool_path_label'):
             self.tool_path_label.config(text="")
         return False
-    
+
     def select_flash_tool(self):
         """选择烧录工具路径"""
         filename = filedialog.askopenfilename(
@@ -1197,52 +1250,52 @@ class FlashToolGUI:
         if filename:
             self.flash_tool_path = filename
             self.log(f"✅ 已选择自定义烧录工具: {filename}\n", "SUCCESS")
-            
+
             # 更新下拉框中的自定义工具选项
             if hasattr(self, 'tool_combo'):
                 from pathlib import Path
                 # 获取flash_tab实例
                 flash_tab = self.flash_tab
-                
+
                 # 添加或更新自定义工具选项
                 custom_key = "✨ 自定义工具"
                 flash_tab.tool_options[custom_key] = filename
-                
+
                 # 更新下拉框值
                 self.tool_combo['values'] = list(flash_tab.tool_options.keys())
-                
+
                 # 选中自定义工具
                 for i, key in enumerate(flash_tab.tool_options.keys()):
                     if key == custom_key:
                         self.tool_combo.current(i)
                         break
-                
+
                 # 更新路径显示
                 if hasattr(self, 'tool_path_label'):
                     self.tool_path_label.config(text=filename, fg="#27ae60")
-    
+
     def test_all_ports(self):
         """测试所有相关端口（烧录端口COM3 + 数据输出端口COM4）"""
         self.log("\n" + "="*60 + "\n", "INFO")
         self.log("🔍 开始测试所有端口...\n", "INFO")
-        
+
         # 获取当前选择的端口
         flash_port = ""
         debug_port = ""
-        
+
         if hasattr(self, 'flash_port_combo'):
             flash_port = self.flash_port_combo.get()
         if hasattr(self, 'debug_port_combo'):
             debug_port = self.debug_port_combo.get()
-        
+
         # 如果界面端口未设置，使用默认值
         if not flash_port:
             flash_port = self.sbl_port.get() or "COM3"
         if not debug_port:
             debug_port = self.app_port.get() or "COM4"
-        
+
         results = []
-        
+
         # 测试烧录端口（COM3 - User UART）
         self.log(f"\n📌 测试烧录端口: {flash_port}\n", "INFO")
         try:
@@ -1254,7 +1307,7 @@ class FlashToolGUI:
             error_msg = f"❌ 端口 {flash_port} 连接失败: {str(e)}"
             self.log(f"{error_msg}\n", "ERROR")
             results.append(f"❌ {flash_port} (烧录端口): {str(e)}")
-        
+
         # 测试数据输出端口（COM4 - Auxiliary Data Port）
         self.log(f"\n📌 测试数据输出端口: {debug_port}\n", "INFO")
         try:
@@ -1266,7 +1319,7 @@ class FlashToolGUI:
             error_msg = f"❌ 端口 {debug_port} 连接失败: {str(e)}"
             self.log(f"{error_msg}\n", "ERROR")
             results.append(f"❌ {debug_port} (数据输出端口): {str(e)}")
-        
+
         # 汇总结果
         self.log("\n" + "="*60 + "\n", "INFO")
         self.log("📊 端口测试结果汇总:\n", "INFO")
@@ -1276,23 +1329,23 @@ class FlashToolGUI:
             else:
                 self.log(f"  {result}\n", "ERROR")
         self.log("="*60 + "\n\n", "INFO")
-        
+
         # 显示消息框
         result_text = "\n".join(results)
         if all("✅" in r for r in results):
             messagebox.showinfo("端口测试成功", f"所有端口测试通过！\n\n{result_text}")
         else:
             messagebox.showwarning("端口测试完成", f"部分端口测试失败！\n\n{result_text}")
-    
+
     def test_port(self, port, baudrate=115200):
         """测试单个端口连接"""
         if not port:
             self.log("\n⚠️ 请先选择端口！\n", "WARN")
             messagebox.showwarning("警告", "请先选择要测试的端口！")
             return False, "未选择端口"
-        
+
         self.log(f"\n🔍 正在测试端口 {port}...\n", "INFO")
-        
+
         try:
             ser = serial.Serial(port, baudrate, timeout=1)
             ser.close()
@@ -1304,19 +1357,19 @@ class FlashToolGUI:
             self.log(f"❌ {error_msg}\n", "ERROR")
             messagebox.showerror("错误", error_msg)
             return False, error_msg
-    
+
     # =========== 烧录方法 ===========
-    
+
     def flash_firmware(self):
         """完整烧录固件（SBL + App）"""
         if self.flashing:
             self.log("⚠️ 烧录正在进行中...\n", "WARN")
             return
-        
+
         # 获取固件文件
         sbl_file = (self.sbl_file.get() or '').strip()
         app_file = (self.app_file.get() or '').strip()
-        
+
         if not sbl_file or not app_file:
             messagebox.showerror("错误", "请先选择SBL和应用固件文件！")
             return
@@ -1327,15 +1380,15 @@ class FlashToolGUI:
         if not os.path.exists(app_file):
             messagebox.showerror("错误", f"App文件不存在：{app_file}")
             return
-        
+
         # 获取端口
         sbl_port = self.sbl_port.get()
         app_port = self.app_port.get()
-        
+
         if not sbl_port or not app_port:
             messagebox.showerror("错误", "请先选择SBL和App端口！")
             return
-        
+
         # 启动烧录线程
         self.flashing = True
         self.stop_flashing = False
@@ -1345,16 +1398,16 @@ class FlashToolGUI:
             daemon=True
         )
         self.flash_thread.start()
-    
+
     def stop_flash(self):
         """停止烧录"""
         if not self.flashing:
             self.log("⚠️ 当前没有正在进行的烧录任务\n", "WARN")
             return
-        
+
         self.log("\n🛑 用户请求停止烧录...\n", "WARN")
         self.stop_flashing = True
-        
+
         # 终止当前进程
         if self.flash_process and self.flash_process.poll() is None:
             try:
@@ -1362,10 +1415,10 @@ class FlashToolGUI:
                 self.log("✅ 烧录进程已终止\n", "INFO")
             except Exception as e:
                 self.log(f"❌ 终止进程失败: {e}\n", "ERROR")
-        
+
         self.time_update_running = False  # 停止时间更新
         self.flashing = False
-    
+
     def _update_total_time_display(self, start_time):
         """实时更新总执行时间显示（后台线程）"""
         while self.time_update_running:
@@ -1373,26 +1426,26 @@ class FlashToolGUI:
                 elapsed = time.time() - start_time
                 minutes = int(elapsed // 60)
                 seconds = int(elapsed % 60)
-                
+
                 if hasattr(self, 'total_time_label'):
                     if minutes > 0:
                         time_text = f"⏱️ 总时间: {minutes}分{seconds}秒"
                     else:
                         time_text = f"⏱️ 总时间: {seconds}秒"
                     self.total_time_label.config(text=time_text)
-                
+
                 time.sleep(1)  # 每秒更新一次
             except:
                 break
-    
+
     def _flash_firmware_thread(self, sbl_file, app_file, sbl_port, app_port):
         """烧录线程（完整烧录：依次烧录 SBL 与 App）
-        
+
         根据实测验证，采用依次烧录策略更稳定可靠
         """
         try:
             total_start_time = time.time()  # 总执行时间计时器（从开始到结束）
-            
+
             # 启动总时间实时更新线程
             self.time_update_running = True
             time_thread = threading.Thread(
@@ -1401,11 +1454,11 @@ class FlashToolGUI:
                 daemon=True
             )
             time_thread.start()
-            
+
             self.log("\n" + "="*60 + "\n")
             self.log("🚀 开始完整烧录流程（SBL + App）\n", "INFO")
             self.log("="*60 + "\n\n")
-            
+
             # SOP模式人工确认
             sop_confirm = messagebox.askyesno(
                 "⚠️ 烧录前准备",
@@ -1427,7 +1480,7 @@ class FlashToolGUI:
             if not sop_confirm:
                 self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
                 return
-            
+
             # 查询实际COM端口描述
             ports = serial.tools.list_ports.comports()
             port_description = "未知端口"
@@ -1435,11 +1488,11 @@ class FlashToolGUI:
                 if port.device == sbl_port:
                     port_description = port.description
                     break
-            
+
             self.log(f"📁 SBL文件: {sbl_file}\n")
             self.log(f"📁 App文件: {app_file}\n")
             self.log(f"🔌 烧录端口: {sbl_port} ({port_description})\n\n")
-            
+
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
@@ -1452,18 +1505,18 @@ class FlashToolGUI:
             if not port_confirm:
                 self.log("❌ 用户取消烧录（端口未确认）\n", "ERROR")
                 return
-            
+
             # 获取烧录工具路径
             tool_exe = self.flash_tool_path
-            
+
             if not tool_exe or not os.path.exists(tool_exe):
                 self.log(f"❌ 找不到烧录工具\n", "ERROR")
                 self.log("请点击「选择」按钮选择烧录工具，或确认SDK已正确安装\n", "ERROR")
                 return
-            
+
             # 步骤1: 烧录SBL
             self.log("📝 步骤 1/2: 烧录SBL (Bootloader)\n", "INFO")
-            
+
             # 拔插USB确认
             usb_confirm = messagebox.askyesno(
                 "准备烧录SBL",
@@ -1473,40 +1526,40 @@ class FlashToolGUI:
             if not usb_confirm:
                 self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
                 return
-            
+
             self.log("开始烧录SBL...\n\n")
-            
+
             sbl_flash_start = time.time()  # SBL烧录操作计时器
-            
+
             # 检查是否启用偏移量
             offset_enabled = self.offset_enabled_var.get() if hasattr(self, 'offset_enabled_var') else True
-            
+
             # 构建烧录命令
             sbl_cmd = [
-                tool_exe, 
-                "-p", sbl_port, 
+                tool_exe,
+                "-p", sbl_port,
                 "-f1", sbl_file      # 使用-f1
             ]
-            
+
             if offset_enabled:
                 sbl_offset = self.get_sbl_offset()  # 从用户选择获取
                 self.log(f"📍 使用SBL Flash偏移量: 0x{sbl_offset:X} ({sbl_offset} 字节)\n")
                 sbl_cmd.extend(["-of1", str(sbl_offset)])  # 添加偏移参数
             else:
                 self.log(f"📍 Flash偏移量已禁用，使用工具默认偏移\n")
-            
+
             sbl_cmd.extend([
                 "-s", "SFLASH",       # 存储类型
                 "-c"                  # Break信号
             ])
-            
+
             self.log(f"执行命令: {' '.join(sbl_cmd)}\n")
-            
+
             # 检查是否已停止
             if self.stop_flashing:
                 self.log("❌ 烧录已停止\n", "ERROR")
                 return
-            
+
             process = subprocess.Popen(
                 sbl_cmd,
                 stdout=subprocess.PIPE,
@@ -1515,23 +1568,23 @@ class FlashToolGUI:
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             self.flash_process = process  # 保存进程引用
-            
+
             # 读取输出（使用Label显示进度，支持百分比）
             buffer = b''
-            
+
             while True:
                 if self.stop_flashing:
                     process.kill()
                     self.log("\n❌ 烧录已停止\n", "ERROR")
                     self.time_update_running = False
                     return
-                
+
                 byte = process.stdout.read(1)
                 if not byte:
                     break
-                
+
                 buffer += byte
-                
+
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
@@ -1542,7 +1595,7 @@ class FlashToolGUI:
                     except:
                         pass
                     buffer = b''
-                    
+
                 elif byte == b'\n':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
@@ -1554,28 +1607,28 @@ class FlashToolGUI:
                     except:
                         pass
                     buffer = b''
-            
+
             process.wait()
-            
+
             if self.stop_flashing:
                 self.log("\n❌ 烧录已停止\n", "ERROR")
                 self.time_update_running = False
                 return
-            
+
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
                 self.time_update_running = False
                 return
-            
+
             # 计算SBL烧录耗时（进度条时间）
             sbl_elapsed = time.time() - sbl_flash_start
             sbl_minutes = int(sbl_elapsed // 60)
             sbl_seconds = int(sbl_elapsed % 60)
             sbl_time_str = f"{sbl_minutes}分{sbl_seconds}秒" if sbl_minutes > 0 else f"{sbl_seconds}秒"
-            
+
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
             self.log(f"⏱️  SBL烧录耗时: {sbl_time_str}\n", "INFO")
-            
+
             # 重要提示：SOP模式和复位
             messagebox.showinfo(
                 "SBL烧录完成",
@@ -1590,10 +1643,10 @@ class FlashToolGUI:
                 "点击确定继续烧录应用固件..."
             )
             time.sleep(0.5)
-            
+
             # 步骤2: 烧录应用固件
             self.log("\n📝 步骤 2/2: 烧录应用固件\n", "INFO")
-            
+
             # 应用固件烧录前确认
             app_usb_confirm = messagebox.askyesno(
                 "准备烧录应用固件",
@@ -1603,40 +1656,40 @@ class FlashToolGUI:
             if not app_usb_confirm:
                 self.log("❌ 用户取消应用固件烧录（USB未拔插）\n", "ERROR")
                 return
-            
+
             self.log("开始烧录应用固件...\n\n")
-            
+
             app_flash_start = time.time()  # App烧录操作计时器
-            
+
             # 检查是否启用偏移量
             offset_enabled = self.offset_enabled_var.get() if hasattr(self, 'offset_enabled_var') else True
-            
+
             # 构建烧录命令（注意：App也使用sbl_port烧录端口COM3）
             app_cmd = [
-                tool_exe, 
+                tool_exe,
                 "-p", sbl_port,  # 修复：使用sbl_port（COM3烧录端口）而非app_port（COM4数据端口）
                 "-f1", app_file      # 使用-f1
             ]
-            
+
             if offset_enabled:
                 app_offset = self.get_app_offset()  # 从用户选择获取
                 self.log(f"📍 使用App Flash偏移量: 0x{app_offset:X} ({app_offset} 字节)\n")
                 app_cmd.extend(["-of1", str(app_offset)])  # 添加偏移参数
             else:
                 self.log(f"📍 Flash偏移量已禁用，使用工具默认偏移\n")
-            
+
             app_cmd.extend([
                 "-s", "SFLASH",       # 存储类型
                 "-c"                  # Break信号
             ])
-            
+
             self.log(f"执行命令: {' '.join(app_cmd)}\n")
-            
+
             # 检查是否已停止
             if self.stop_flashing:
                 self.log("❌ 烧录已停止\n", "ERROR")
                 return
-            
+
             process = subprocess.Popen(
                 app_cmd,
                 stdout=subprocess.PIPE,
@@ -1645,23 +1698,23 @@ class FlashToolGUI:
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             self.flash_process = process  # 更新进程引用
-            
+
             # 读取输出（二进制模式，使用Label显示进度）
             buffer = b''
-            
+
             while True:
                 if self.stop_flashing:
                     process.kill()
                     self.log("\n❌ 烧录已停止\n", "ERROR")
                     self.time_update_running = False
                     return
-                
+
                 byte = process.stdout.read(1)
                 if not byte:
                     break
-                
+
                 buffer += byte
-                
+
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
@@ -1672,7 +1725,7 @@ class FlashToolGUI:
                     except:
                         pass
                     buffer = b''
-                    
+
                 elif byte == b'\n':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
@@ -1684,47 +1737,47 @@ class FlashToolGUI:
                     except:
                         pass
                     buffer = b''
-            
+
             process.wait()
-            
+
             if self.stop_flashing:
                 self.log("\n❌ 烧录已停止\n", "ERROR")
                 self.time_update_running = False
                 return
-            
+
             if process.returncode != 0:
                 self.log("\n❌ App烧录失败！\n", "ERROR")
                 self.time_update_running = False
                 return
-            
+
             # 计算App烧录耗时（进度条时间）
             app_elapsed = time.time() - app_flash_start
             app_minutes = int(app_elapsed // 60)
             app_seconds = int(app_elapsed % 60)
             app_time_str = f"{app_minutes}分{app_seconds}秒" if app_minutes > 0 else f"{app_seconds}秒"
-            
+
             self.log("\n✅ App烧录成功！\n", "SUCCESS")
             self.log(f"⏱️  App烧录耗时: {app_time_str}\n", "INFO")
-            
+
             # 计算总执行时间（包括用户确认等待）
             total_elapsed = time.time() - total_start_time
             total_minutes = int(total_elapsed // 60)
             total_seconds = int(total_elapsed % 60)
             total_time_str = f"{total_minutes}分{total_seconds}秒" if total_minutes > 0 else f"{total_seconds}秒"
-            
+
             self.log("\n" + "="*60 + "\n")
             self.log("🎉 完整烧录完成！\n", "SUCCESS")
             self.log(f"⏱️  SBL烧录耗时: {sbl_time_str}\n", "INFO")
             self.log(f"⏱️  App烧录耗时: {app_time_str}\n", "INFO")
             self.log(f"⏱️  总执行时间: {total_time_str} (包括用户确认)\n", "INFO")
             self.log("="*60 + "\n\n")
-            
+
             # 进度条显示完成信息
             if hasattr(self, 'progress_label'):
                 self.progress_label.config(text=f"✅ 烧录完成！ App耗时: {app_time_str} | 总时间: {total_time_str}")
-            
+
             messagebox.showinfo("成功", f"固件烧录完成！\n\nSBL耗时: {sbl_time_str}\nApp耗时: {app_time_str}\n总时间: {total_time_str}\n\n请复位设备并测试。")
-            
+
         except Exception as e:
             self.log(f"\n❌ 烧录过程出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
@@ -1742,28 +1795,28 @@ class FlashToolGUI:
                 except:
                     pass
                 self.flash_process = None
-            
+
             self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
-    
+
     def flash_sbl_only(self):
         """仅烧录SBL"""
         if self.flashing:
             self.log("⚠️ 烧录正在进行中...\n", "WARN")
             return
-        
+
         # 获取SBL固件文件
         firmware_file = self.sbl_file.get()
         if not firmware_file or not os.path.exists(firmware_file):
             messagebox.showerror("错误", "请先选择有效的SBL固件文件！")
             return
-        
+
         # 获取端口
         sbl_port = self.sbl_port.get()
         if not sbl_port:
             messagebox.showerror("错误", "请先选择SBL端口！")
             return
-        
+
         # 启动烧录线程
         self.flashing = True
         self.flash_thread = threading.Thread(
@@ -1772,12 +1825,12 @@ class FlashToolGUI:
             daemon=True
         )
         self.flash_thread.start()
-    
+
     def _flash_sbl_thread(self, firmware_file, sbl_port):
         """烧录线程（仅SBL）"""
         try:
             total_start_time = time.time()  # 总执行时间计时器（从开始到结束）
-            
+
             # 启动总时间实时更新线程
             self.time_update_running = True
             time_thread = threading.Thread(
@@ -1786,11 +1839,11 @@ class FlashToolGUI:
                 daemon=True
             )
             time_thread.start()
-            
+
             self.log("\n" + "="*60 + "\n")
             self.log("🔧 开始SBL烧录\n", "INFO")
             self.log("="*60 + "\n\n")
-            
+
             # SOP模式确认
             sop_confirm = messagebox.askyesno(
                 "SOP模式确认",
@@ -1803,7 +1856,7 @@ class FlashToolGUI:
             if not sop_confirm:
                 self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
                 return
-            
+
             # 查询实际COM端口描述
             ports = serial.tools.list_ports.comports()
             port_description = "未知端口"
@@ -1811,10 +1864,10 @@ class FlashToolGUI:
                 if port.device == sbl_port:
                     port_description = port.description
                     break
-            
+
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 SBL端口: {sbl_port} ({port_description})\n\n")
-            
+
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
@@ -1826,7 +1879,7 @@ class FlashToolGUI:
             if not port_confirm:
                 self.log("❌ 用户取消烧录（端口未确认）\n", "ERROR")
                 return
-            
+
             # 拔插USB确认
             usb_confirm = messagebox.askyesno(
                 "准备烧录",
@@ -1836,21 +1889,21 @@ class FlashToolGUI:
             if not usb_confirm:
                 self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
                 return
-            
+
             # 获取烧录工具路径
             tool_exe = self.flash_tool_path
-            
+
             if not tool_exe or not os.path.exists(tool_exe):
                 self.log(f"❌ 找不到烧录工具\n", "ERROR")
                 return
-            
+
             self.log("开始烧录SBL...\n\n")
-            
+
             flash_start_time = time.time()  # 烧录操作计时器（进度条时间）
-            
+
             # 检查是否启用偏移量
             offset_enabled = self.offset_enabled_var.get() if hasattr(self, 'offset_enabled_var') else True
-            
+
             # 构建烧录命令
             cmd = [
                 tool_exe,
@@ -1859,22 +1912,22 @@ class FlashToolGUI:
                 "-f1",            # 使用-f1而非-f
                 firmware_file
             ]
-            
+
             if offset_enabled:
                 sbl_offset = self.get_sbl_offset()  # 从用户选择获取
                 self.log(f"📍 使用SBL Flash偏移量: 0x{sbl_offset:X} ({sbl_offset} 字节)\n")
                 cmd.extend(["-of1", str(sbl_offset)])  # 添加偏移参数
             else:
                 self.log(f"📍 Flash偏移量已禁用，使用工具默认偏移\n")
-            
+
             cmd.extend([
                 "-s",             # 存储类型
                 "SFLASH",
                 "-c"              # Break信号
             ])
-            
+
             self.log(f"执行命令: {' '.join(cmd)}\n")
-            
+
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -1882,17 +1935,17 @@ class FlashToolGUI:
                 bufsize=0,  # 无缓冲，实时输出
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
-            
+
             # 实时读取并显示输出（使用Label显示进度）
             buffer = b''
-            
+
             while True:
                 byte = process.stdout.read(1)
                 if not byte:
                     break
-                
+
                 buffer += byte
-                
+
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
@@ -1903,7 +1956,7 @@ class FlashToolGUI:
                     except:
                         pass
                     buffer = b''
-                    
+
                 elif byte == b'\n':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
@@ -1914,33 +1967,33 @@ class FlashToolGUI:
                     except:
                         pass
                     buffer = b''
-            
+
             process.wait()
-            
+
             if process.returncode != 0:
                 self.log("\n❌ SBL烧录失败！\n", "ERROR")
                 return
-            
+
             # 计算进度条时间（实际烧录耗时）
             flash_elapsed = time.time() - flash_start_time
             flash_minutes = int(flash_elapsed // 60)
             flash_seconds = int(flash_elapsed % 60)
             flash_time_str = f"{flash_minutes}分{flash_seconds}秒" if flash_minutes > 0 else f"{flash_seconds}秒"
-            
+
             # 计算总执行时间（包括用户确认）
             total_elapsed = time.time() - total_start_time
             total_minutes = int(total_elapsed // 60)
             total_seconds = int(total_elapsed % 60)
             total_time_str = f"{total_minutes}分{total_seconds}秒" if total_minutes > 0 else f"{total_seconds}秒"
-            
+
             self.log("\n✅ SBL烧录成功！\n", "SUCCESS")
             self.log(f"⏱️  烧录耗时: {flash_time_str}\n", "INFO")
             self.log(f"⏱️  总时间: {total_time_str} (包括用户确认)\n", "INFO")
-            
+
             # 进度条显示完成信息
             if hasattr(self, 'progress_label'):
                 self.progress_label.config(text=f"✅ SBL烧录完成！ 烧录耗时: {flash_time_str} | 总时间: {total_time_str}")
-            
+
             # 重要提示：如何启动SBL
             messagebox.showinfo(
                 "SBL烧录完成",
@@ -1954,7 +2007,7 @@ class FlashToolGUI:
                 "   • 启动SBL验证烧录成功\n"
                 "   • 或继续烧录应用固件"
             )
-            
+
         except Exception as e:
             self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
@@ -1972,28 +2025,28 @@ class FlashToolGUI:
                 except:
                     pass
                 self.flash_process = None
-            
+
             self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
-    
+
     def flash_app_only(self):
         """仅烧录应用固件"""
         if self.flashing:
             self.log("⚠️ 烧录正在进行中...\n", "WARN")
             return
-        
+
         # 获取应用固件文件
         firmware_file = self.app_file.get()
         if not firmware_file or not os.path.exists(firmware_file):
             messagebox.showerror("错误", "请先选择有效的应用固件文件！")
             return
-        
+
         # 获取端口（使用烧录端口COM3，而非数据端口COM4）
         app_port = self.sbl_port.get()  # 修复：使用sbl_port（COM3）而非app_port（COM4）
         if not app_port:
             messagebox.showerror("错误", "请先选择烧录端口！")
             return
-        
+
         # 启动烧录线程
         self.flashing = True
         self.flash_thread = threading.Thread(
@@ -2002,12 +2055,12 @@ class FlashToolGUI:
             daemon=True
         )
         self.flash_thread.start()
-    
+
     def _flash_app_thread(self, firmware_file, app_port):
         """烧录线程（仅应用固件）"""
         try:
             total_start_time = time.time()  # 总执行时间计时器（从开始到结束）
-            
+
             # 启动总时间实时更新线程
             self.time_update_running = True
             time_thread = threading.Thread(
@@ -2016,11 +2069,11 @@ class FlashToolGUI:
                 daemon=True
             )
             time_thread.start()
-            
+
             self.log("\n" + "="*60 + "\n")
             self.log("📱 开始应用固件烧录\n", "INFO")
             self.log("="*60 + "\n\n")
-            
+
             # SOP模式确认
             sop_confirm = messagebox.askyesno(
                 "SOP模式确认",
@@ -2037,7 +2090,7 @@ class FlashToolGUI:
             if not sop_confirm:
                 self.log("❌ 用户取消烧录（SOP模式未确认）\n", "ERROR")
                 return
-            
+
             # 查询实际COM端口描述
             ports = serial.tools.list_ports.comports()
             port_description = "未知端口"
@@ -2045,10 +2098,10 @@ class FlashToolGUI:
                 if port.device == app_port:
                     port_description = port.description
                     break
-            
+
             self.log(f"📁 固件文件: {firmware_file}\n")
             self.log(f"🔌 烧录端口: {app_port} ({port_description})\n\n")
-            
+
             # 串口确认
             port_confirm = messagebox.askyesno(
                 "串口确认",
@@ -2060,7 +2113,7 @@ class FlashToolGUI:
             if not port_confirm:
                 self.log("❌ 用户取消烧录（端口未确认）\n", "ERROR")
                 return
-            
+
             # 拔插USB确认
             usb_confirm = messagebox.askyesno(
                 "准备烧录",
@@ -2070,21 +2123,21 @@ class FlashToolGUI:
             if not usb_confirm:
                 self.log("❌ 用户取消烧录（USB未拔插）\n", "ERROR")
                 return
-            
+
             # 获取烧录工具路径
             tool_exe = self.flash_tool_path
-            
+
             if not tool_exe or not os.path.exists(tool_exe):
                 self.log(f"❌ 找不到烧录工具\n", "ERROR")
                 return
-            
+
             self.log("开始烧录App...\n\n")
-            
+
             flash_start_time = time.time()  # 烧录操作计时器（进度条时间）
-            
+
             # 检查是否启用偏移量
             offset_enabled = self.offset_enabled_var.get() if hasattr(self, 'offset_enabled_var') else True
-            
+
             # 构建烧录命令
             cmd = [
                 tool_exe,
@@ -2093,22 +2146,22 @@ class FlashToolGUI:
                 "-f1",            # 使用-f1而非-f
                 firmware_file
             ]
-            
+
             if offset_enabled:
                 app_offset = self.get_app_offset()  # 从用户选择获取
                 self.log(f"📍 使用App Flash偏移量: 0x{app_offset:X} ({app_offset} 字节)\n")
                 cmd.extend(["-of1", str(app_offset)])  # 添加偏移参数
             else:
                 self.log(f"📍 Flash偏移量已禁用，使用工具默认偏移\n")
-            
+
             cmd.extend([
                 "-s",             # 存储类型
                 "SFLASH",
                 "-c"              # Break信号
             ])
-            
+
             self.log(f"执行命令: {' '.join(cmd)}\n")
-            
+
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -2116,17 +2169,17 @@ class FlashToolGUI:
                 bufsize=0,  # 无缓冲，实时输出
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
-            
+
             # 实时读取并显示输出（使用Label显示进度）
             buffer = b''
-            
+
             while True:
                 byte = process.stdout.read(1)
                 if not byte:
                     break
-                
+
                 buffer += byte
-                
+
                 if byte == b'\r':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
@@ -2137,7 +2190,7 @@ class FlashToolGUI:
                     except:
                         pass
                     buffer = b''
-                    
+
                 elif byte == b'\n':
                     try:
                         line = buffer[:-1].decode('utf-8', errors='ignore').strip()
@@ -2148,33 +2201,33 @@ class FlashToolGUI:
                     except:
                         pass
                     buffer = b''
-            
+
             process.wait()
-            
+
             if process.returncode != 0:
                 self.log("\n❌ 应用固件烧录失败！\n", "ERROR")
                 return
-            
+
             # 计算进度条时间（实际烧录耗时）
             flash_elapsed = time.time() - flash_start_time
             flash_minutes = int(flash_elapsed // 60)
             flash_seconds = int(flash_elapsed % 60)
             flash_time_str = f"{flash_minutes}分{flash_seconds}秒" if flash_minutes > 0 else f"{flash_seconds}秒"
-            
+
             # 计算总执行时间（包括用户确认）
             total_elapsed = time.time() - total_start_time
             total_minutes = int(total_elapsed // 60)
             total_seconds = int(total_elapsed % 60)
             total_time_str = f"{total_minutes}分{total_seconds}秒" if total_minutes > 0 else f"{total_seconds}秒"
-            
+
             self.log("\n✅ 应用固件烧录成功！\n", "SUCCESS")
             self.log(f"⏱️  烧录耗时: {flash_time_str}\n", "INFO")
             self.log(f"⏱️  总时间: {total_time_str} (包括用户确认)\n", "INFO")
-            
+
             # 进度条显示完成信息
             if hasattr(self, 'progress_label'):
                 self.progress_label.config(text=f"✅ 应用固件烧录完成！ 烧录耗时: {flash_time_str} | 总时间: {total_time_str}")
-            
+
             # 提示运行应用固件
             messagebox.showinfo(
                 "应用固件烧录完成",
@@ -2186,7 +2239,7 @@ class FlashToolGUI:
                 "   3. 打开串口监视查看输出\n"
                 "      COM4 - 115200 8N1"
             )
-            
+
         except Exception as e:
             self.log(f"\n❌ 烧录出错: {str(e)}\n", "ERROR")
             messagebox.showerror("错误", f"烧录失败：{str(e)}")
@@ -2204,12 +2257,12 @@ class FlashToolGUI:
                 except:
                     pass
                 self.flash_process = None
-            
+
             self.time_update_running = False  # 停止时间更新线程
             self.flashing = False
-    
+
     # =========== 文件选择方法 ===========
-    
+
     def select_sbl_file(self):
         """选择SBL固件文件"""
         filename = filedialog.askopenfilename(
@@ -2223,20 +2276,20 @@ class FlashToolGUI:
         if filename:
             self.sbl_file.set(filename)
             self.log(f"✅ 已选择SBL文件: {filename}\n", "SUCCESS")
-            
+
             # 更新界面状态
             if hasattr(self, 'sbl_status_label'):
                 self.sbl_status_label.config(text="✅ 已选择", fg="green")
             if hasattr(self, 'sbl_path_label'):
                 self.sbl_path_label.config(text=filename)
-            
+
             # 验证文件
             valid, msg = verify_firmware_file(filename)
             if valid:
                 self.log(f"✅ {msg}\n", "SUCCESS")
             else:
                 self.log(f"⚠️ {msg}\n", "WARN")
-    
+
     def select_app_file(self):
         """选择应用固件文件"""
         filename = filedialog.askopenfilename(
@@ -2250,35 +2303,35 @@ class FlashToolGUI:
         if filename:
             self.app_file.set(filename)
             self.log(f"✅ 已选择应用固件文件: {filename}\n", "SUCCESS")
-            
+
             # 更新界面状态
             if hasattr(self, 'app_status_label'):
                 self.app_status_label.config(text="✅ 已选择", fg="green")
             if hasattr(self, 'app_path_label'):
                 self.app_path_label.config(text=filename)
-            
+
             # 验证文件
             valid, msg = verify_firmware_file(filename)
             if valid:
                 self.log(f"✅ {msg}\n", "SUCCESS")
             else:
                 self.log(f"⚠️ {msg}\n", "WARN")
-    
+
     def analyze_firmware(self):
         """分析已选择的固件文件"""
         sbl_file = (self.sbl_file.get() or '').strip()
         app_file = (self.app_file.get() or '').strip()
-        
+
         # 调试信息
         self.log(f"\n🔍 开始分析固件...\n", "INFO")
         self.log(f"SBL文件变量值: '{sbl_file}'\n")
         self.log(f"App文件变量值: '{app_file}'\n")
-        
+
         if not sbl_file and not app_file:
             self.log("\n⚠️ 请先选择SBL或应用固件文件！\n", "WARN")
             self.log("提示: 点击左侧的「选择」按钮来选择固件文件\n")
             return
-        
+
         # 分析SBL固件
         if sbl_file:
             if not os.path.exists(sbl_file):
@@ -2286,7 +2339,7 @@ class FlashToolGUI:
             else:
                 self.log(f"\n🔍 分析SBL固件: {os.path.basename(sbl_file)}\n", "INFO")
                 self.log(f"完整路径: {sbl_file}\n\n")
-                
+
                 info = analyze_appimage_structure(sbl_file)
                 if info:
                     self.log("=" * 70 + "\n")
@@ -2296,11 +2349,11 @@ class FlashToolGUI:
                     self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
                     self.log(f"版本信息: 0x{info.get('version', 0):08X}\n")
                     self.log(f"文件类型: {info.get('file_type', 'Unknown')}\n")
-                    
+
                     # 显示镜像数量
                     if 'num_images' in info:
                         self.log(f"镜像数量标识: {info['num_images'][0]} / {info['num_images'][1]}\n")
-                    
+
                     # 显示各个核心镜像的详细信息
                     if 'images' in info and info['images']:
                         self.log(f"\n📦 核心镜像详情 (文件内偏移):\n")
@@ -2311,13 +2364,13 @@ class FlashToolGUI:
                             self.log(f"      文件内偏移:    0x{img['file_offset']:08X} ({img['file_offset']} 字节)\n")
                             self.log(f"      镜像大小:      0x{img['size']:08X} ({img['size']} 字节 / {img['size']/1024:.2f} KB)\n")
                             self.log(f"      加载地址:      {img['load_addr']}\n")
-                    
+
                     self.log("\n" + "-" * 70 + "\n")
                     self.log(f"💡 提示: Flash烧录偏移量需要在烧录时配置\n")
                     self.log("=" * 70 + "\n")
                 else:
                     self.log("❌ SBL分析失败：无法解析固件文件结构\n", "ERROR")
-        
+
         # 分析App固件
         if app_file and app_file != sbl_file:  # 避免重复分析
             if not os.path.exists(app_file):
@@ -2325,7 +2378,7 @@ class FlashToolGUI:
             else:
                 self.log(f"\n🔍 分析App固件: {os.path.basename(app_file)}\n", "INFO")
                 self.log(f"完整路径: {app_file}\n\n")
-                
+
                 info = analyze_appimage_structure(app_file)
                 if info:
                     self.log("=" * 70 + "\n")
@@ -2335,11 +2388,11 @@ class FlashToolGUI:
                     self.log(f"Magic Number: {info.get('magic_number', 'N/A')}\n")
                     self.log(f"版本信息: 0x{info.get('version', 0):08X}\n")
                     self.log(f"文件类型: {info.get('file_type', 'Unknown')}\n")
-                    
+
                     # 显示镜像数量
                     if 'num_images' in info:
                         self.log(f"镜像数量标识: {info['num_images'][0]} / {info['num_images'][1]}\n")
-                    
+
                     # 显示各个核心镜像的详细信息
                     if 'images' in info and info['images']:
                         self.log(f"\n📦 核心镜像详情 (文件内偏移):\n")
@@ -2354,28 +2407,28 @@ class FlashToolGUI:
                                 self.log(f"      文件内偏移:    0x{img['file_offset']:08X} ({img['file_offset']} 字节)\n")
                             self.log(f"      镜像大小:      0x{img['size']:08X} ({img['size']} 字节 / {img['size']/1024:.2f} KB)\n")
                             self.log(f"      加载地址:      {img['load_addr']}\n")
-                    
+
                     self.log("\n" + "-" * 70 + "\n")
                     self.log(f"💡 提示: Flash烧录偏移量需要在烧录时配置\n")
                     self.log("=" * 70 + "\n")
                 else:
                     self.log("❌ App分析失败：无法解析固件文件结构\n", "ERROR")
-    
+
     def refresh_com_ports(self):
         """刷新COM端口列表"""
         self.log("\n🔄 正在刷新端口列表...\n", "INFO")
-        
+
         # 获取所有端口
         all_ports = list(serial.tools.list_ports.comports())
-        
+
         self.log(f"\n🔍 扫描到 {len(all_ports)} 个端口:\n")
         for port in all_ports:
             self.log(f"  - {port.device}: {port.description}\n")
             if port.hwid:
                 self.log(f"    HWID: {port.hwid}\n")
-        
+
         sbl_ports, app_ports = self.refresh_ports()
-        
+
         if sbl_ports or app_ports:
             self.log(f"\n✅ 刷新成功！\n", "SUCCESS")
             if sbl_ports:
@@ -2388,7 +2441,7 @@ class FlashToolGUI:
                             self.log(f"     - VID:PID = {port_info['vid']:04X}:{port_info['pid']:04X}\n")
             else:
                 self.log(f"  ⚠️ 未找到烧录端口 (XDS110 Auxiliary Data Port)\n", "WARN")
-            
+
             if app_ports:
                 self.log(f"  🔌 找到调试端口: {', '.join(app_ports)}\n", "SUCCESS")
                 for port in app_ports:
@@ -2405,13 +2458,13 @@ class FlashToolGUI:
             self.log("  1. 设备是否正确连接\n")
             self.log("  2. USB驱动是否安装\n")
             self.log("  3. 设备管理器中是否显示XDS110端口\n")
-    
+
     # =========== 日志方法 ===========
-    
+
     # =========== 旧方法已删除 ===========
     # get_last_line_start() 和 update_line_at_mark() 已废弃
     # 现在所有进度条统一使用Label组件显示
-    
+
     def log(self, message, tag=None):
         """添加日志（始终输出到烧录功能标签页）"""
         # 修复：不管当前激活哪个标签页，都输出到烧录功能页
@@ -2420,7 +2473,7 @@ class FlashToolGUI:
         elif hasattr(self, 'basic_tab') and hasattr(self.basic_tab, 'log'):
             # 兼容旧代码
             self.basic_tab.log(message, tag)
-    
+
     def clear_log(self):
         """清空日志"""
         # 修复：不管当前激活哪个标签页，都清除烧录功能页
@@ -2429,9 +2482,9 @@ class FlashToolGUI:
         elif hasattr(self, 'basic_tab') and hasattr(self.basic_tab, 'clear_log'):
             # 兼容旧代码
             self.basic_tab.clear_log()
-    
+
     # =========== 状态栏方法 ===========
-    
+
     def update_status(self, message):
         """更新状态栏"""
         self.status_label.config(text=message)
@@ -2443,15 +2496,25 @@ class FlashToolGUI:
 
 def check_old_process():
     """检查是否有老进程在运行（v1.0.1需求1）
-    
+
     改进版本：只查找真正的旧进程，排除：
     1. 当前进程（current_pid）
     2. 当前进程的父进程（避免终止启动器）
     3. 创建时间晚于或接近当前进程的进程（避免误杀同时启动的进程）
     """
     current_pid = os.getpid()
-    script_name = os.path.basename(__file__)
-    
+
+    # 🔴 修复EXE模式下的进程检测
+    # EXE模式下使用EXE名称，脚本模式下使用脚本名称
+    if getattr(sys, 'frozen', False):
+        # EXE模式：使用EXE文件名
+        script_name = os.path.basename(sys.executable)
+        print(f"[DEBUG] check_old_process: EXE模式，查找进程名: {script_name}")
+    else:
+        # 脚本模式：使用脚本名称
+        script_name = os.path.basename(__file__)
+        print(f"[DEBUG] check_old_process: 脚本模式，查找进程名: {script_name}")
+
     # 获取当前进程信息
     try:
         current_proc = psutil.Process(current_pid)
@@ -2459,36 +2522,36 @@ def check_old_process():
         parent_pid = current_proc.ppid()
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return []
-    
+
     old_processes = []
     for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']):
         try:
             # 跳过当前进程
             if proc.pid == current_pid:
                 continue
-            
+
             # 跳过父进程（避免终止启动器/命令行）
             if proc.pid == parent_pid:
                 continue
-            
+
             cmdline = proc.info.get('cmdline', [])
             if not cmdline:
                 continue
-                
+
             # 检查是否是flash_tool.py进程
             cmdline_str = ' '.join(cmdline)
             if script_name not in cmdline_str:
                 continue
-            
+
             # 只添加创建时间早于当前进程的旧进程
             # 增加1秒容差，避免误杀几乎同时启动的进程
             proc_create_time = proc.info.get('create_time', 0)
             if proc_create_time < (current_create_time - 1.0):
                 old_processes.append(proc)
-                
+
         except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
             pass
-    
+
     return old_processes
 
 def kill_old_processes(processes):
@@ -2505,45 +2568,62 @@ def kill_old_processes(processes):
 
 def main():
     """主函数"""
-    # 检查是否已在后台运行（通过环境变量标记）
-    if os.environ.get('FLASH_TOOL_DETACHED') != '1':
-        # 第一次启动：先检查旧进程，然后分离到后台
-        old_processes = check_old_process()
-        if old_processes:
-            root_temp = tk.Tk()
-            root_temp.withdraw()
-            response = messagebox.askyesno(
-                "检测到旧进程",
-                f"检测到 {len(old_processes)} 个旧的烧录工具进程正在运行。\n\n"
-                "是否关闭旧进程并启动新窗口？\n\n"
-                "点击'是'：关闭旧进程并启动新窗口\n"
-                "点击'否'：取消启动"
-            )
-            root_temp.destroy()
-            
-            if response:
-                kill_old_processes(old_processes)
-                time.sleep(0.5)
-            else:
-                sys.exit(0)
-        
-        # 分离到后台运行
-        import subprocess
-        env = os.environ.copy()
-        env['FLASH_TOOL_DETACHED'] = '1'
-        
-        subprocess.Popen(
-            [sys.executable, __file__],
-            env=env,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-            close_fds=True
+    # 🔴 彻底解决临时目录清理警告：禁用PyInstaller的自动清理
+    # PyInstaller会尝试在退出时删除_MEI*目录，但DLL被锁定会导致失败
+    # 设置这个环境变量后，PyInstaller不会尝试清理，让系统自动清理
+    if getattr(sys, 'frozen', False):
+        os.environ['_MEIPASS2'] = sys._MEIPASS if hasattr(sys, '_MEIPASS') else ''
+        print(f"[INFO] EXE模式: 已禁用PyInstaller临时目录自动清理")
+        print(f"[INFO] 临时目录: {sys._MEIPASS if hasattr(sys, '_MEIPASS') else 'N/A'}")
+
+    print(f"[INFO] Python版本: {sys.version}")
+    print(f"[INFO] 当前工作目录: {os.getcwd()}")
+    print(f"[INFO] 程序路径: {sys.executable if getattr(sys, 'frozen', False) else __file__}")
+    print(f"[INFO] 正在启动GUI...\n")
+
+    # 🔴 调试模式：禁用后台启动，直接启动GUI以保持控制台窗口
+    # 检查旧进程
+    old_processes = check_old_process()
+    if old_processes:
+        root_temp = tk.Tk()
+        root_temp.withdraw()
+        response = messagebox.askyesno(
+            "检测到旧进程",
+            f"检测到 {len(old_processes)} 个旧的烧录工具进程正在运行。\n\n"
+            "是否关闭旧进程并启动新窗口？\n\n"
+            "点击'是'：关闭旧进程并启动新窗口\n"
+            "点击'否'：取消启动"
         )
-        sys.exit(0)
-    
-    # 后台进程：直接启动GUI
+        root_temp.destroy()
+
+        if response:
+            kill_old_processes(old_processes)
+            time.sleep(0.5)
+        else:
+            sys.exit(0)
+
+    # 直接启动GUI（不后台分离，保持控制台窗口）
     root = tk.Tk()
     app = FlashToolGUI(root)
     root.mainloop()
 
+    print(f"\n[INFO] GUI已关闭")
+    input("按回车键退出...")
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        error_msg = f"程序启动失败:\n{str(e)}\n\n详细信息:\n{traceback.format_exc()}"
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror("启动错误", error_msg)
+            root.destroy()
+        except:
+            print(error_msg)
+        sys.exit(1)
