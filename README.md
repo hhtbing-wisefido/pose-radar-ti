@@ -250,6 +250,11 @@ mmw_demo_SDK_reference/
 
 ```
 1-需求与设计/
+├── 00Release.EXE提示词.md                       # ⭐ EXE发布提示词模板（含PY=EXE一致性+取证验收）
+├── 00图标替换提示词.md                          # Windows图标替换提示词
+├── 00Windows任务栏标题栏图标设置指南.md          # 任务栏/标题栏图标设置指南
+├── 00Python-单一进程执行步骤.md                  # 单例+后台启动链路（PY/EXE一致）
+├── 00Python 一行启动命令-可从任何路径复制使用.md  # Python一行启动命令
 ├── 01-AWRL6844固件系统工具提示词.md            # 固件系统工具需求
 ├── 06.雷达配置参数研究提示词.md                # 配置研究需求
 ├── 07-跌倒检测研究提示词.md                    # 跌倒检测需求
@@ -257,7 +262,6 @@ mmw_demo_SDK_reference/
 ├── AWRL6844_HealthDetect提示词.md              # HealthDetect项目需求
 ├── sdk 编译流程.md                              # SDK编译流程说明
 ├── 寻找TI 固件项目规律.md                       # 固件项目规律分析
-├── 烧录APP一行启动命令.md                       # 快速烧录命令
 ├── 雷达配置文件相关提示词.md                    # 配置文件需求
 └── 📂 image/                                    # 图片资源
 ```

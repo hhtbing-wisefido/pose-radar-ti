@@ -17,13 +17,13 @@ import re
 with open('radar_test_gui.py', 'r', encoding='utf-8') as f:
     content = f.read()
 
-print("\n✅ 验证1: 版本号更新")
+print("\nOK: 验证1: 版本号更新")
 if 'v1.1.4' in content:
     print("   ✓ 版本号已更新为 v1.1.4")
 else:
     print("   ✗ 版本号未更新")
 
-print("\n✅ 验证2: 分类折叠功能实现")
+print("\nOK: 验证2: 分类折叠功能实现")
 
 # 检查数据结构是否改进
 if "'state': collapsed_var" in content and "'frame': cmd_list_frame" in content:
@@ -42,7 +42,7 @@ if toggle_match:
 else:
     print("   ✗ 未找到toggle_category函数")
 
-print("\n✅ 验证3: 行号显示功能")
+print("\nOK: 验证3: 行号显示功能")
 
 # 检查line_numbers组件是否创建
 if 'self.line_numbers = tk.Text' in content:
@@ -68,7 +68,7 @@ if "<KeyRelease>" in content and "update_line_numbers" in content:
 else:
     print("   ✗ 行号更新事件未绑定")
 
-print("\n✅ 验证4: 导出功能行号处理增强")
+print("\nOK: 验证4: 导出功能行号处理增强")
 
 export_match = re.search(r'def export_config_file\(self\):.*?(?=\n    def )', content, re.DOTALL)
 if export_match:
@@ -84,7 +84,7 @@ print("\n" + "=" * 60)
 print("功能验证完成")
 print("=" * 60)
 
-print("\n💡 测试建议：")
+print("\nTIP: 测试建议：")
 print("1. 运行GUI程序")
 print("2. 测试点击分类折叠按钮（▼ 应变为 ▶）")
 print("3. 观察配置命令区左侧是否显示灰色行号")

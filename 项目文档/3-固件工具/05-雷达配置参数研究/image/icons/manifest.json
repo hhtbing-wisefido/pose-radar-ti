@@ -1,0 +1,233 @@
+{
+  "app_radar": {
+    "library": "bootstrap-icons",
+    "name": "radar",
+    "svg": "bootstrap-icons/icons-main/icons/radar.svg",
+    "fg": "#ffffff",
+    "bg_from": "#00c6ff",
+    "bg_to": "#0072ff",
+    "png16": "image/icons/app_radar_16.png",
+    "png24": "image/icons/app_radar_24.png",
+    "preview32": "image/icons/preview/app_radar_32.png"
+  },
+  "connect": {
+    "library": "bootstrap-icons",
+    "name": "plug-fill",
+    "svg": "bootstrap-icons/icons-main/icons/plug-fill.svg",
+    "fg": "#ffffff",
+    "bg_from": "#00c853",
+    "bg_to": "#64dd17",
+    "png16": "image/icons/connect_16.png",
+    "png24": "image/icons/connect_24.png",
+    "preview32": "image/icons/preview/connect_32.png"
+  },
+  "disconnect": {
+    "library": "bootstrap-icons",
+    "name": "plug-fill",
+    "svg": "bootstrap-icons/icons-main/icons/plug-fill.svg",
+    "fg": "#ffffff",
+    "bg_from": "#ff1744",
+    "bg_to": "#ff5252",
+    "png16": "image/icons/disconnect_16.png",
+    "png24": "image/icons/disconnect_24.png",
+    "preview32": "image/icons/preview/disconnect_32.png"
+  },
+  "refresh": {
+    "library": "feather-icons",
+    "name": "refresh-cw",
+    "svg": "feather-icons/icons/refresh-cw.svg",
+    "fg": "#ffffff",
+    "bg_from": "#2979ff",
+    "bg_to": "#00b0ff",
+    "png16": "image/icons/refresh_16.png",
+    "png24": "image/icons/refresh_24.png",
+    "preview32": "image/icons/preview/refresh_32.png"
+  },
+  "select_all": {
+    "library": "feather-icons",
+    "name": "check-square",
+    "svg": "feather-icons/icons/check-square.svg",
+    "fg": "#ffffff",
+    "bg_from": "#00c853",
+    "bg_to": "#64dd17",
+    "png16": "image/icons/select_all_16.png",
+    "png24": "image/icons/select_all_24.png",
+    "preview32": "image/icons/preview/select_all_32.png"
+  },
+  "select_none": {
+    "library": "feather-icons",
+    "name": "square",
+    "svg": "feather-icons/icons/square.svg",
+    "fg": "#ffffff",
+    "bg_from": "#546e7a",
+    "bg_to": "#90a4ae",
+    "png16": "image/icons/select_none_16.png",
+    "png24": "image/icons/select_none_24.png",
+    "preview32": "image/icons/preview/select_none_32.png"
+  },
+  "select_required": {
+    "library": "feather-icons",
+    "name": "star",
+    "svg": "feather-icons/icons/star.svg",
+    "fg": "#ffffff",
+    "bg_from": "#ff6d00",
+    "bg_to": "#ffab40",
+    "png16": "image/icons/select_required_16.png",
+    "png24": "image/icons/select_required_24.png",
+    "preview32": "image/icons/preview/select_required_32.png"
+  },
+  "template": {
+    "library": "feather-icons",
+    "name": "package",
+    "svg": "feather-icons/icons/package.svg",
+    "fg": "#ffffff",
+    "bg_from": "#651fff",
+    "bg_to": "#d500f9",
+    "png16": "image/icons/template_16.png",
+    "png24": "image/icons/template_24.png",
+    "preview32": "image/icons/preview/template_32.png"
+  },
+  "load": {
+    "library": "feather-icons",
+    "name": "download",
+    "svg": "feather-icons/icons/download.svg",
+    "fg": "#ffffff",
+    "bg_from": "#2962ff",
+    "bg_to": "#448aff",
+    "png16": "image/icons/load_16.png",
+    "png24": "image/icons/load_24.png",
+    "preview32": "image/icons/preview/load_32.png"
+  },
+  "send": {
+    "library": "feather-icons",
+    "name": "send",
+    "svg": "feather-icons/icons/send.svg",
+    "fg": "#ffffff",
+    "bg_from": "#00bfa5",
+    "bg_to": "#1de9b6",
+    "png16": "image/icons/send_16.png",
+    "png24": "image/icons/send_24.png",
+    "preview32": "image/icons/preview/send_32.png"
+  },
+  "stop": {
+    "library": "feather-icons",
+    "name": "stop-circle",
+    "svg": "feather-icons/icons/stop-circle.svg",
+    "fg": "#ffffff",
+    "bg_from": "#d50000",
+    "bg_to": "#ff1744",
+    "png16": "image/icons/stop_16.png",
+    "png24": "image/icons/stop_24.png",
+    "preview32": "image/icons/preview/stop_32.png"
+  },
+  "save": {
+    "library": "feather-icons",
+    "name": "save",
+    "svg": "feather-icons/icons/save.svg",
+    "fg": "#ffffff",
+    "bg_from": "#00c6ff",
+    "bg_to": "#0072ff",
+    "png16": "image/icons/save_16.png",
+    "png24": "image/icons/save_24.png",
+    "preview32": "image/icons/preview/save_32.png"
+  },
+  "open_file": {
+    "library": "feather-icons",
+    "name": "folder",
+    "svg": "feather-icons/icons/folder.svg",
+    "fg": "#ffffff",
+    "bg_from": "#2962ff",
+    "bg_to": "#448aff",
+    "png16": "image/icons/open_file_16.png",
+    "png24": "image/icons/open_file_24.png",
+    "preview32": "image/icons/preview/open_file_32.png"
+  },
+  "export": {
+    "library": "feather-icons",
+    "name": "upload",
+    "svg": "feather-icons/icons/upload.svg",
+    "fg": "#ffffff",
+    "bg_from": "#2962ff",
+    "bg_to": "#448aff",
+    "png16": "image/icons/export_16.png",
+    "png24": "image/icons/export_24.png",
+    "preview32": "image/icons/preview/export_32.png"
+  },
+  "clear": {
+    "library": "feather-icons",
+    "name": "trash-2",
+    "svg": "feather-icons/icons/trash-2.svg",
+    "fg": "#ffffff",
+    "bg_from": "#546e7a",
+    "bg_to": "#90a4ae",
+    "png16": "image/icons/clear_16.png",
+    "png24": "image/icons/clear_24.png",
+    "preview32": "image/icons/preview/clear_32.png"
+  },
+  "edit": {
+    "library": "feather-icons",
+    "name": "edit-3",
+    "svg": "feather-icons/icons/edit-3.svg",
+    "fg": "#ffffff",
+    "bg_from": "#2962ff",
+    "bg_to": "#448aff",
+    "png16": "image/icons/edit_16.png",
+    "png24": "image/icons/edit_24.png",
+    "preview32": "image/icons/preview/edit_32.png"
+  },
+  "copy": {
+    "library": "feather-icons",
+    "name": "copy",
+    "svg": "feather-icons/icons/copy.svg",
+    "fg": "#ffffff",
+    "bg_from": "#2962ff",
+    "bg_to": "#448aff",
+    "png16": "image/icons/copy_16.png",
+    "png24": "image/icons/copy_24.png",
+    "preview32": "image/icons/preview/copy_32.png"
+  },
+  "close": {
+    "library": "feather-icons",
+    "name": "x",
+    "svg": "feather-icons/icons/x.svg",
+    "fg": "#ffffff",
+    "bg_from": "#546e7a",
+    "bg_to": "#90a4ae",
+    "png16": "image/icons/close_16.png",
+    "png24": "image/icons/close_24.png",
+    "preview32": "image/icons/preview/close_32.png"
+  },
+  "info": {
+    "library": "feather-icons",
+    "name": "info",
+    "svg": "feather-icons/icons/info.svg",
+    "fg": "#ffffff",
+    "bg_from": "#00b0ff",
+    "bg_to": "#18ffff",
+    "png16": "image/icons/info_16.png",
+    "png24": "image/icons/info_24.png",
+    "preview32": "image/icons/preview/info_32.png"
+  },
+  "warn": {
+    "library": "feather-icons",
+    "name": "alert-triangle",
+    "svg": "feather-icons/icons/alert-triangle.svg",
+    "fg": "#ffffff",
+    "bg_from": "#ff6f00",
+    "bg_to": "#ffd740",
+    "png16": "image/icons/warn_16.png",
+    "png24": "image/icons/warn_24.png",
+    "preview32": "image/icons/preview/warn_32.png"
+  },
+  "ok": {
+    "library": "feather-icons",
+    "name": "check-circle",
+    "svg": "feather-icons/icons/check-circle.svg",
+    "fg": "#ffffff",
+    "bg_from": "#00c853",
+    "bg_to": "#64dd17",
+    "png16": "image/icons/ok_16.png",
+    "png24": "image/icons/ok_24.png",
+    "preview32": "image/icons/preview/ok_32.png"
+  }
+}

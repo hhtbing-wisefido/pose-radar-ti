@@ -1,3 +1,7 @@
 # AWRL6844固件烧录工具依赖
 pyserial>=3.5
 psutil>=5.9.0
+
+# 图标资源生成（SVG -> PNG/ICO）
+cairosvg>=2.7.1
+pillow>=10.4.0

@@ -39,8 +39,15 @@ import sys
 import threading
 from pathlib import Path
 
-# 导入固件匹配器（从同目录父级导入）
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+DEBUG = os.environ.get("FLASH_TOOL_DEBUG") == "1"
+
+
+def _dprint(msg: str) -> None:
+    if DEBUG:
+        print(msg)
+
+# 导入固件匹配器
 try:
     from awrl6844_firmware_matcher import (
         AWRL6844FirmwareMatcher, FirmwareInfo, SBLInfo, ConfigInfo
@@ -51,6 +58,7 @@ except ImportError:
         "无法导入 awrl6844_firmware_matcher 模块\n"
         "请确保 awrl6844_firmware_matcher.py 在 Scripts 目录下"
     )
+    raise
 
 
 class FirmwareManagerTab:
@@ -68,6 +76,9 @@ class FirmwareManagerTab:
         self.main_app = main_app
         self.matcher = AWRL6844FirmwareMatcher()
 
+        # Treeview item -> 文件路径映射（避免把Windows路径放进Tk tags导致转义/插入失败/路径失真）
+        self._tree_item_paths = {}
+
         # 默认扫描目录
         self.scan_directories = [
             r"C:\ti\MMWAVE_L_SDK_06_01_00_01",
@@ -80,21 +91,123 @@ class FirmwareManagerTab:
         # 创建界面
         self.create_widgets()
 
+    def _clear_tree_path_map(self, tree):
+        if tree in self._tree_item_paths:
+            self._tree_item_paths[tree].clear()
+
+    def _remember_tree_item_path(self, tree, item_id, path):
+        if not path:
+            return
+        self._tree_item_paths.setdefault(tree, {})[item_id] = path
+
+    def _get_tree_item_path(self, tree, item_id):
+        # 1) 优先从映射获取（最可靠）
+        path_map = self._tree_item_paths.get(tree)
+        if path_map:
+            path = path_map.get(item_id)
+            if path:
+                return path
+
+        # 2) 兼容旧逻辑：从tags读取（可能被Tcl转义，尽量不用）
+        try:
+            tags = tree.item(item_id).get('tags')
+            if tags:
+                return tags[0]
+        except Exception:
+            pass
+
+        # 3) 兜底：从values里尝试找“像路径”的字段（用于智能匹配列表）
+        try:
+            values = tree.item(item_id).get('values')
+            if values:
+                for v in values:
+                    s = str(v)
+                    if (':\\' in s) or s.startswith('\\\\'):
+                        return s
+        except Exception:
+            pass
+
+        return ""
+
+    def _install_panedwindow_sash_fix(
+        self,
+        paned,
+        *,
+        min_list_height=200,
+        min_detail_height=140,
+        list_ratio=0.60,
+    ):
+        """确保PanedWindow在任何窗口大小下，列表区域都不会被挤到不可见。"""
+
+        state = {"pending": False, "last": None}
+
+        def apply():
+            state["pending"] = False
+            try:
+                total_h = paned.winfo_height()
+                # 还未完成布局时，尺寸可能为1
+                if total_h <= 2:
+                    paned.after(50, apply)
+                    return
+
+                desired = int(total_h * list_ratio)
+                max_list = max(0, total_h - min_detail_height)
+                list_h = min(max(desired, min_list_height), max_list if max_list > 0 else desired)
+                # 至少保证表头可见
+                list_h = max(list_h, 40)
+
+                last = state.get("last")
+                if isinstance(last, int) and abs(last - list_h) <= 2:
+                    return
+                state["last"] = list_h
+
+                paned.sashpos(0, list_h)
+            except Exception:
+                return
+
+        def schedule(_event=None):
+            if state["pending"]:
+                return
+            state["pending"] = True
+            paned.after_idle(apply)
+
+        paned.bind("<Configure>", schedule)
+        schedule()
+
     def create_widgets(self):
         """创建界面组件"""
 
+        icons = getattr(self.main_app, "icons", None)
+        self.icons = icons
+
         # ============ 顶部控制区 ============
-        control_frame = ttk.LabelFrame(self.parent, text="📡 扫描控制", padding=10)
+        control_frame = ttk.LabelFrame(self.parent, padding=10)
+        if icons:
+            control_frame.configure(
+                labelwidget=icons.make_labelframe_labelwidget(
+                    parent=self.parent,
+                    icon_key="radar",
+                    text="扫描控制",
+                    size=20,
+                )
+            )
+        else:
+            control_frame.configure(text="扫描控制")
         control_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
 
         # 扫描按钮行
         btn_row = ttk.Frame(control_frame)
         btn_row.pack(fill=tk.X, pady=5)
 
-        self.btn_scan = ttk.Button(btn_row, text="🔍 开始扫描", command=self.start_scan)
+        self.btn_scan = ttk.Button(btn_row, text="开始扫描", command=self.start_scan)
+        if icons:
+            self.btn_scan.configure(image=icons.get("search", 20), compound="left")
         self.btn_scan.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
 
-        ttk.Button(btn_row, text="🗑️ 清空结果", command=self.clear_results).pack(
+        btn_clear = ttk.Button(btn_row, text="清空结果", command=self.clear_results)
+        if icons:
+            btn_clear.configure(image=icons.get("trash", 20), compound="left")
+        btn_clear.pack(
             side=tk.LEFT, padx=5, fill=tk.X, expand=True
         )
 
@@ -133,14 +246,22 @@ class FirmwareManagerTab:
     def create_directory_tab(self):
         """创建扫描目录管理标签页"""
         frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="📁 扫描目录")
+        if self.icons:
+            self.notebook.add(
+                frame,
+                text="扫描目录",
+                image=self.icons.get("folder_open", 20),
+                compound="left",
+            )
+        else:
+            self.notebook.add(frame, text="扫描目录")
 
         # 说明
         info_frame = ttk.Frame(frame)
         info_frame.pack(fill=tk.X, padx=10, pady=10)
 
         info_text = (
-            "📖 使用说明:\n"
+            "使用说明:\n"
             "• 添加TI SDK安装目录（如: C:\\ti\\MMWAVE_L_SDK_06_01_00_01）\n"
             "• 添加雷达工具箱目录（如: C:\\ti\\radar_toolbox_3_30_00_06）\n"
             "• 点击'开始扫描'按钮，系统将递归扫描所有子目录\n"
@@ -152,16 +273,28 @@ class FirmwareManagerTab:
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        ttk.Button(btn_frame, text="➕ 添加目录", command=self.add_directory_to_list).pack(
+        btn_add = ttk.Button(btn_frame, text="添加目录", command=self.add_directory_to_list)
+        if self.icons:
+            btn_add.configure(image=self.icons.get("plus", 16), compound="left")
+        btn_add.pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(btn_frame, text="➖ 删除选中", command=self.remove_selected_directory).pack(
+        btn_remove = ttk.Button(btn_frame, text="删除选中", command=self.remove_selected_directory)
+        if self.icons:
+            btn_remove.configure(image=self.icons.get("minus", 16), compound="left")
+        btn_remove.pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(btn_frame, text="🔄 恢复默认", command=self.restore_default_directories).pack(
+        btn_restore = ttk.Button(btn_frame, text="恢复默认", command=self.restore_default_directories)
+        if self.icons:
+            btn_restore.configure(image=self.icons.get("refresh", 16), compound="left")
+        btn_restore.pack(
             side=tk.LEFT, padx=5
         )
-        ttk.Button(btn_frame, text="🗑️ 清空所有", command=self.clear_all_directories).pack(
+        btn_clear_all = ttk.Button(btn_frame, text="清空所有", command=self.clear_all_directories)
+        if self.icons:
+            btn_clear_all.configure(image=self.icons.get("trash", 16), compound="left")
+        btn_clear_all.pack(
             side=tk.LEFT, padx=5
         )
 
@@ -195,7 +328,15 @@ class FirmwareManagerTab:
     def create_firmware_tab(self):
         """创建应用固件标签页"""
         frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="📦 应用固件")
+        if self.icons:
+            self.notebook.add(
+                frame,
+                text="应用固件",
+                image=self.icons.get("microchip", 20),
+                compound="left",
+            )
+        else:
+            self.notebook.add(frame, text="应用固件")
 
         # 筛选区
         filter_frame = ttk.LabelFrame(frame, text="筛选条件", padding=5)
@@ -249,7 +390,10 @@ class FirmwareManagerTab:
         filter_row3 = ttk.Frame(filter_frame)
         filter_row3.pack(fill=tk.X, pady=2)
 
-        ttk.Label(filter_row3, text="🔍 搜索:").pack(side=tk.LEFT, padx=5)
+        lbl_fw_search = ttk.Label(filter_row3, text="搜索:")
+        if self.icons:
+            lbl_fw_search.configure(image=self.icons.get("search", 16), compound="left")
+        lbl_fw_search.pack(side=tk.LEFT, padx=5)
         self.fw_search = ttk.Entry(filter_row3, width=80)
         self.fw_search.bind('<KeyRelease>', lambda e: self.filter_firmwares())
         self.fw_search.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
@@ -297,20 +441,31 @@ class FirmwareManagerTab:
         detail_frame = ttk.LabelFrame(paned, text="详细信息", padding=5)
         paned.add(detail_frame, weight=1)
 
+        # 修复：默认窗口下确保列表区域可见（ttk.PanedWindow不支持minsize参数，需手动设置sash）
+        self._install_panedwindow_sash_fix(paned)
+
         self.fw_detail = scrolledtext.ScrolledText(detail_frame, wrap=tk.WORD)
         self.fw_detail.pack(fill=tk.BOTH, expand=True)
 
     def create_sbl_tab(self):
         """创建SBL固件标签页"""
         frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="🔧 SBL固件")
+        if self.icons:
+            self.notebook.add(
+                frame,
+                text="SBL固件",
+                image=self.icons.get("settings", 20),
+                compound="left",
+            )
+        else:
+            self.notebook.add(frame, text="SBL固件")
 
         # 说明
         info_frame = ttk.Frame(frame)
         info_frame.pack(fill=tk.X, padx=5, pady=5)
 
         info_text = (
-            "🔧 SBL固件说明:\n"
+            "SBL固件说明:\n"
             "SBL (Secondary Bootloader) 是芯片启动的第一级程序，负责从Flash加载应用固件。\n"
             "推荐使用: 标准版SBL，功能完整，适用于绝大多数应用场景。"
         )
@@ -340,7 +495,10 @@ class FirmwareManagerTab:
         filter_row2 = ttk.Frame(filter_frame)
         filter_row2.pack(fill=tk.X, pady=2)
 
-        ttk.Label(filter_row2, text="🔍 搜索:").pack(side=tk.LEFT, padx=5)
+        lbl_sbl_search = ttk.Label(filter_row2, text="搜索:")
+        if self.icons:
+            lbl_sbl_search.configure(image=self.icons.get("search", 16), compound="left")
+        lbl_sbl_search.pack(side=tk.LEFT, padx=5)
         self.sbl_search = ttk.Entry(filter_row2, width=60)
         self.sbl_search.bind('<KeyRelease>', lambda e: self.filter_sbls())
         self.sbl_search.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
@@ -387,13 +545,24 @@ class FirmwareManagerTab:
         detail_frame = ttk.LabelFrame(paned, text="详细信息", padding=5)
         paned.add(detail_frame, weight=1)
 
+        # 修复：默认窗口下确保列表区域可见（ttk.PanedWindow不支持minsize参数，需手动设置sash）
+        self._install_panedwindow_sash_fix(paned)
+
         self.sbl_detail = scrolledtext.ScrolledText(detail_frame, wrap=tk.WORD)
         self.sbl_detail.pack(fill=tk.BOTH, expand=True)
 
     def create_config_tab(self):
         """创建雷达配置标签页"""
         frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="⚙️ 雷达配置")
+        if self.icons:
+            self.notebook.add(
+                frame,
+                text="雷达配置",
+                image=self.icons.get("radar", 20),
+                compound="left",
+            )
+        else:
+            self.notebook.add(frame, text="雷达配置")
 
         # 筛选区
         filter_frame = ttk.LabelFrame(frame, text="筛选条件", padding=5)
@@ -431,7 +600,10 @@ class FirmwareManagerTab:
         filter_row2 = ttk.Frame(filter_frame)
         filter_row2.pack(fill=tk.X, pady=2)
 
-        ttk.Label(filter_row2, text="🔍 搜索:").pack(side=tk.LEFT, padx=5)
+        lbl_cfg_search = ttk.Label(filter_row2, text="搜索:")
+        if self.icons:
+            lbl_cfg_search.configure(image=self.icons.get("search", 16), compound="left")
+        lbl_cfg_search.pack(side=tk.LEFT, padx=5)
         self.cfg_search = ttk.Entry(filter_row2, width=70)
         self.cfg_search.bind('<KeyRelease>', lambda e: self.filter_configs())
         self.cfg_search.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
@@ -478,13 +650,24 @@ class FirmwareManagerTab:
         detail_frame = ttk.LabelFrame(paned, text="详细信息", padding=5)
         paned.add(detail_frame, weight=1)
 
+        # 修复：默认窗口下确保列表区域可见（ttk.PanedWindow不支持minsize参数，需手动设置sash）
+        self._install_panedwindow_sash_fix(paned)
+
         self.cfg_detail = scrolledtext.ScrolledText(detail_frame, wrap=tk.WORD)
         self.cfg_detail.pack(fill=tk.BOTH, expand=True)
 
     def create_match_tab(self):
         """创建智能匹配标签页"""
         frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="🎯 智能匹配")
+        if self.icons:
+            self.notebook.add(
+                frame,
+                text="智能匹配",
+                image=self.icons.get("search", 20),
+                compound="left",
+            )
+        else:
+            self.notebook.add(frame, text="智能匹配")
 
         # 说明
         # 顶部操作栏：说明文字 + 一键添加按钮（同行）
@@ -502,7 +685,7 @@ class FirmwareManagerTab:
         # 右侧一键添加按钮
         add_btn = tk.Button(
             top_frame,
-            text="⚡ 一键添加到烧录功能",
+            text="一键添加到烧录功能",
             font=("Microsoft YaHei UI", 10, "bold"),
             command=self.add_to_basic_flash,
             bg="#27ae60",
@@ -515,6 +698,8 @@ class FirmwareManagerTab:
             pady=8,
             cursor="hand2"
         )
+        if self.icons:
+            add_btn.configure(image=self.icons.get("rocket", 20), compound="left")
         add_btn.pack(side=tk.RIGHT)
 
         # 按钮下方提示
@@ -534,7 +719,10 @@ class FirmwareManagerTab:
         search_row = ttk.Frame(select_frame)
         search_row.pack(fill=tk.X, pady=(0, 5))
 
-        ttk.Label(search_row, text="🔍 搜索:").pack(side=tk.LEFT, padx=(0, 5))
+        lbl_match_search = ttk.Label(search_row, text="搜索:")
+        if self.icons:
+            lbl_match_search.configure(image=self.icons.get("search", 16), compound="left")
+        lbl_match_search.pack(side=tk.LEFT, padx=(0, 5))
         self.match_search = ttk.Entry(search_row, width=40)
         self.match_search.bind('<KeyRelease>', lambda e: self.filter_match_firmwares())
         self.match_search.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
@@ -651,18 +839,18 @@ class FirmwareManagerTab:
 
             # 创建右键菜单
             menu = tk.Menu(tree, tearoff=0)
-            menu.add_command(label="📋 复制文件名", command=lambda: self.copy_filename(tree))
-            menu.add_command(label="📂 复制完整路径", command=lambda: self.copy_path(tree))
+            menu.add_command(label="复制文件名", command=lambda: self.copy_filename(tree))
+            menu.add_command(label="复制完整路径", command=lambda: self.copy_path(tree))
 
             # 判断当前树是哪个类型，添加相应的"添加到烧录"选项
             if tree == self.fw_tree or tree == self.match_fw_list:
                 # 应用固件（固件管理标签页或智能匹配标签页）
                 menu.add_separator()
-                menu.add_command(label="➕ 添加到烧录", command=lambda: self.add_to_flash(tree, 'app'))
+                menu.add_command(label="添加到烧录", command=lambda: self.add_to_flash(tree, 'app'))
             elif tree == self.sbl_tree or tree == self.match_sbl_tree:
                 # SBL固件（SBL管理标签页或智能匹配推荐）
                 menu.add_separator()
-                menu.add_command(label="➕ 添加到烧录", command=lambda: self.add_to_flash(tree, 'sbl'))
+                menu.add_command(label="添加到烧录", command=lambda: self.add_to_flash(tree, 'sbl'))
 
             # 显示菜单
             menu.post(event.x_root, event.y_root)
@@ -691,19 +879,11 @@ class FirmwareManagerTab:
         if not selection:
             return
 
-        # 从 tags 中获取完整路径
         item = selection[0]
-        tags = tree.item(item)['tags']
-        path = tags[0] if tags else ""
-
+        path = self._get_tree_item_path(tree, item)
         if not path:
-            # 如果 tags 中没有路径，尝试从 values 中获取
-            values = tree.item(item)['values']
-            if values:
-                # 对于匹配结果，可能需要从数据中查找
-                filename = str(values[0])
-                messagebox.showwarning("警告", f"无法获取路径信息")
-                return
+            messagebox.showwarning("警告", "无法获取路径信息")
+            return
 
         # 复制到剪贴板
         self.parent.clipboard_clear()
@@ -723,11 +903,8 @@ class FirmwareManagerTab:
         if not selection:
             return
 
-        # 从 tags 中获取完整路径
         item = selection[0]
-        tags = tree.item(item)['tags']
-        path = tags[0] if tags else ""
-
+        path = self._get_tree_item_path(tree, item)
         if not path:
             messagebox.showwarning("警告", "无法获取路径信息")
             return
@@ -741,11 +918,11 @@ class FirmwareManagerTab:
         if firmware_type == 'app':
             # 设置应用固件
             self.main_app.app_file.set(path)
-            self.main_app.log(f"✅ 已添加应用固件到烧录: {os.path.basename(path)}\n", "SUCCESS")
+            self.main_app.log(f"已添加应用固件到烧录: {os.path.basename(path)}\n", "SUCCESS")
 
             # 更新界面状态
             if hasattr(self.main_app, 'app_status_label'):
-                self.main_app.app_status_label.config(text="✅ 已选择", fg="green")
+                self.main_app.app_status_label.config(text="已选择", fg="green")
             if hasattr(self.main_app, 'app_path_label'):
                 self.main_app.app_path_label.config(text=path)
 
@@ -754,11 +931,11 @@ class FirmwareManagerTab:
         elif firmware_type == 'sbl':
             # 设置SBL固件
             self.main_app.sbl_file.set(path)
-            self.main_app.log(f"✅ 已添加SBL固件到烧录: {os.path.basename(path)}\n", "SUCCESS")
+            self.main_app.log(f"已添加SBL固件到烧录: {os.path.basename(path)}\n", "SUCCESS")
 
             # 更新界面状态
             if hasattr(self.main_app, 'sbl_status_label'):
-                self.main_app.sbl_status_label.config(text="✅ 已选择", fg="green")
+                self.main_app.sbl_status_label.config(text="已选择", fg="green")
             if hasattr(self.main_app, 'sbl_path_label'):
                 self.main_app.sbl_path_label.config(text=path)
 
@@ -792,7 +969,7 @@ class FirmwareManagerTab:
             self.update_directory_list()
 
     def restore_default_directories(self):
-        """🔄 恢复默认扫描目录"""
+        """恢复默认扫描目录"""
         print(f"\n[DEBUG] restore_default_directories() 被调用")
 
         default_dirs = [
@@ -810,18 +987,18 @@ class FirmwareManagerTab:
 
         msg = "将恢复以下默认扫描目录：\n\n"
         if existing_dirs:
-            msg += "✅ 存在的目录：\n"
+            msg += "存在的目录：\n"
             for d in existing_dirs:
                 msg += f"  {d}\n"
         if missing_dirs:
-            msg += "\n⚠️ 不存在的目录（将跳过）：\n"
+            msg += "\n不存在的目录（将跳过）：\n"
             for d in missing_dirs:
                 msg += f"  {d}\n"
         msg += "\n确定要恢复默认目录吗？"
 
         if messagebox.askyesno("恢复默认目录", msg):
             self.scan_directories = existing_dirs.copy()
-            print(f"[DEBUG] 已设置 scan_directories = {self.scan_directories}")
+            _dprint(f"[DEBUG] 已设置 scan_directories = {self.scan_directories}")
             self.update_directory_list()
             messagebox.showinfo("完成", f"已恢复 {len(existing_dirs)} 个默认扫描目录")
 
@@ -830,7 +1007,7 @@ class FirmwareManagerTab:
         self.dir_tree.delete(*self.dir_tree.get_children())
 
         for directory in self.scan_directories:
-            status = "✅ 存在" if os.path.exists(directory) else "❌ 不存在"
+            status = "存在" if os.path.exists(directory) else "不存在"
             self.dir_tree.insert('', 'end', values=(directory, status))
 
     def start_scan(self):
@@ -868,8 +1045,8 @@ class FirmwareManagerTab:
 
     def _scan_completed(self):
         """扫描完成"""
-        # 🔍 调试日志
-        print(f"\n[DEBUG] ======== _scan_completed() 被调用 ========")
+        # 调试日志
+        _dprint("\n[DEBUG] ======== _scan_completed() 被调用 ========")
 
         self.is_scanning = False
         self.btn_scan.config(state='normal')
@@ -877,35 +1054,40 @@ class FirmwareManagerTab:
 
         # 更新统计
         stats = self.matcher.get_statistics()
-        print(f"[DEBUG] 统计信息: {stats}")
+        _dprint(f"[DEBUG] 统计信息: {stats}")
 
         self.lbl_app.config(text=f"应用固件: {stats['application_count']}")
         self.lbl_sbl.config(text=f"SBL固件: {stats['sbl_count']}")
         self.lbl_config.config(text=f"雷达配置: {stats['config_count']}")
 
         # 更新列表
-        print(f"[DEBUG] 开始调用 update_firmware_list()")
+        _dprint("[DEBUG] 开始调用 update_firmware_list()")
         self.update_firmware_list()
 
-        print(f"[DEBUG] 开始调用 update_sbl_list()")
+        _dprint("[DEBUG] 开始调用 update_sbl_list()")
         self.update_sbl_list()
 
-        print(f"[DEBUG] 开始调用 update_config_list()")
+        _dprint("[DEBUG] 开始调用 update_config_list()")
         self.update_config_list()
 
-        print(f"[DEBUG] 开始调用 update_match_list()")
+        _dprint("[DEBUG] 开始调用 update_match_list()")
         self.update_match_list()
 
         # 更新筛选器选项
-        print(f"[DEBUG] 开始调用 update_filter_options()")
+        _dprint("[DEBUG] 开始调用 update_filter_options()")
         self.update_filter_options()
 
-        print(f"[DEBUG] ======== _scan_completed() 执行完成 ========\n")
+        # 防止筛选器/事件导致列表被意外清空：再强制刷新一次
+        self.update_firmware_list()
+        self.update_sbl_list()
+        self.update_config_list()
 
-        # 🔴 关键修复：自动切换到"应用固件"标签页，让用户看到结果
+        _dprint("[DEBUG] ======== _scan_completed() 执行完成 ========\n")
+
+        # 关键修复：自动切换到"应用固件"标签页，让用户看到结果
         # 标签页索引：0=扫描目录, 1=应用固件, 2=SBL固件, 3=雷达配置, 4=智能匹配
         self.notebook.select(1)  # 切换到"应用固件"标签页
-        print(f"[DEBUG] 已自动切换到'应用固件'标签页")
+        _dprint("[DEBUG] 已自动切换到'应用固件'标签页")
 
         messagebox.showinfo(
             "扫描完成",
@@ -917,100 +1099,109 @@ class FirmwareManagerTab:
 
     def update_firmware_list(self):
         """更新应用固件列表"""
-        # 🔍 调试日志
-        print(f"[DEBUG] update_firmware_list() 被调用")
-        print(f"[DEBUG] matcher.application_firmwares 数量: {len(self.matcher.application_firmwares)}")
+        # 调试日志
+        _dprint("[DEBUG] update_firmware_list() 被调用")
+        _dprint(f"[DEBUG] matcher.application_firmwares 数量: {len(self.matcher.application_firmwares)}")
 
         self.fw_tree.delete(*self.fw_tree.get_children())
+        self._clear_tree_path_map(self.fw_tree)
 
         count = 0
         for fw in self.matcher.application_firmwares:
-            self.fw_tree.insert('', 'end', values=(
+            item_id = self.fw_tree.insert('', 'end', values=(
                 fw.filename,
                 fw.category,
                 fw.subcategory,
                 fw.processor,
                 fw.version
-            ), tags=(fw.path,))
+            ))
+            self._remember_tree_item_path(self.fw_tree, item_id, fw.path)
             count += 1
 
-        print(f"[DEBUG] 成功插入 {count} 条记录到 fw_tree")
-        print(f"[DEBUG] fw_tree 当前子项数量: {len(self.fw_tree.get_children())}")
+        _dprint(f"[DEBUG] 成功插入 {count} 条记录到 fw_tree")
+        _dprint(f"[DEBUG] fw_tree 当前子项数量: {len(self.fw_tree.get_children())}")
 
-        # 🔴 关键修复：强制设置列宽度（防止列宽度为0）
+        # 关键修复：强制设置列宽度（防止列宽度为0）
         self.fw_tree.column('filename', width=300, minwidth=200)
         self.fw_tree.column('category', width=100, minwidth=80)
         self.fw_tree.column('subcategory', width=150, minwidth=100)
         self.fw_tree.column('processor', width=180, minwidth=120)
         self.fw_tree.column('version', width=100, minwidth=80)
-        print(f"[DEBUG] 已强制设置列宽度")
+        _dprint("[DEBUG] 已强制设置列宽度")
 
-        # 🔴 关键修复：强制刷新TreeView显示
+        # 关键修复：强制刷新TreeView显示
         self.fw_tree.update_idletasks()
         self.fw_tree.update()
-        print(f"[DEBUG] 已强制刷新 fw_tree 显示")
+        _dprint("[DEBUG] 已强制刷新 fw_tree 显示")
 
     def update_sbl_list(self):
         """更新SBL固件列表"""
-        # 🔍 调试日志
-        print(f"[DEBUG] update_sbl_list() 被调用")
-        print(f"[DEBUG] matcher.sbl_firmwares 数量: {len(self.matcher.sbl_firmwares)}")
+        # 调试日志
+        _dprint("[DEBUG] update_sbl_list() 被调用")
+        _dprint(f"[DEBUG] matcher.sbl_firmwares 数量: {len(self.matcher.sbl_firmwares)}")
 
         self.sbl_tree.delete(*self.sbl_tree.get_children())
+        self._clear_tree_path_map(self.sbl_tree)
 
         count = 0
         for sbl in self.matcher.sbl_firmwares:
-            self.sbl_tree.insert('', 'end', values=(
+            item_id = self.sbl_tree.insert('', 'end', values=(
                 sbl.filename,
                 sbl.variant,
                 sbl.flash_address,
                 sbl.flash_size,
                 sbl.description
-            ), tags=(sbl.path,))
+            ))
+            self._remember_tree_item_path(self.sbl_tree, item_id, sbl.path)
             count += 1
 
-        print(f"[DEBUG] 成功插入 {count} 条记录到 sbl_tree")
-        print(f"[DEBUG] sbl_tree 当前子项数量: {len(self.sbl_tree.get_children())}")
+        _dprint(f"[DEBUG] 成功插入 {count} 条记录到 sbl_tree")
+        _dprint(f"[DEBUG] sbl_tree 当前子项数量: {len(self.sbl_tree.get_children())}")
 
-        # 🔴 关键修复：强制设置列宽度（列名必须与定义时一致）
+        # 关键修复：强制设置列宽度（列名必须与定义时一致）
         self.sbl_tree.column('filename', width=300, minwidth=200)
         self.sbl_tree.column('variant', width=100, minwidth=80)
         self.sbl_tree.column('flash_addr', width=120, minwidth=100)      # 注意：是 flash_addr 不是 flash_address
         self.sbl_tree.column('size', width=100, minwidth=80)              # 注意：是 size 不是 flash_size
         self.sbl_tree.column('description', width=250, minwidth=150)
-        print(f"[DEBUG] 已强制设置 SBL 列宽度")
+        _dprint("[DEBUG] 已强制设置 SBL 列宽度")
 
-        # 🔴 关键修复：强制刷新TreeView显示
+        # 关键修复：强制刷新TreeView显示
         self.sbl_tree.update_idletasks()
         self.sbl_tree.update()
-        print(f"[DEBUG] 已强制刷新 sbl_tree 显示")
+        _dprint("[DEBUG] 已强制刷新 sbl_tree 显示")
 
     def update_config_list(self):
         """更新雷达配置列表"""
         self.cfg_tree.delete(*self.cfg_tree.get_children())
+        self._clear_tree_path_map(self.cfg_tree)
         for cfg in self.matcher.config_files:
             channels = f"{cfg.tx_channels}TX/{cfg.rx_channels}RX" if cfg.tx_channels > 0 else "N/A"
-            self.cfg_tree.insert('', 'end', values=(
+            item_id = self.cfg_tree.insert('', 'end', values=(
                 cfg.filename,
                 cfg.application,
                 channels,
                 cfg.range_m if cfg.range_m > 0 else "N/A",
                 cfg.mode
-            ), tags=(cfg.path,))
+            ))
+            self._remember_tree_item_path(self.cfg_tree, item_id, cfg.path)
 
     def update_match_list(self):
         """更新匹配列表"""
         self.match_fw_list.delete(*self.match_fw_list.get_children())
+        self._clear_tree_path_map(self.match_fw_list)
         for fw in self.matcher.application_firmwares:
             # 获取文件大小
             size_str = self._format_file_size(fw.path)
-            self.match_fw_list.insert('', 'end', values=(fw.filename, size_str, fw.path), tags=(fw.path,))
+            item_id = self.match_fw_list.insert('', 'end', values=(fw.filename, size_str, fw.path))
+            self._remember_tree_item_path(self.match_fw_list, item_id, fw.path)
 
     def filter_match_firmwares(self):
         """根据搜索关键词过滤智能匹配的固件列表"""
         keyword = self.match_search.get().lower()
 
         self.match_fw_list.delete(*self.match_fw_list.get_children())
+        self._clear_tree_path_map(self.match_fw_list)
 
         for fw in self.matcher.application_firmwares:
             # 搜索文件名或路径
@@ -1019,13 +1210,14 @@ class FirmwareManagerTab:
 
             # 获取文件大小
             size_str = self._format_file_size(fw.path)
-            self.match_fw_list.insert('', 'end', values=(fw.filename, size_str, fw.path), tags=(fw.path,))
+            item_id = self.match_fw_list.insert('', 'end', values=(fw.filename, size_str, fw.path))
+            self._remember_tree_item_path(self.match_fw_list, item_id, fw.path)
 
     def update_filter_options(self):
         """更新筛选器选项"""
-        print(f"[DEBUG] update_filter_options() 被调用")
+        _dprint("[DEBUG] update_filter_options() 被调用")
 
-        # 🔴 关键修复v2.4.6：临时解绑所有筛选器事件，防止更新选项时触发筛选导致列表被清空
+        # 关键修复v2.4.6：临时解绑所有筛选器事件，防止更新选项时触发筛选导致列表被清空
         # ===== 应用固件筛选器事件解绑 =====
         self.fw_category.unbind('<<ComboboxSelected>>')
         self.fw_subcategory.unbind('<<ComboboxSelected>>')
@@ -1044,7 +1236,7 @@ class FirmwareManagerTab:
         self.cfg_channels.unbind('<<ComboboxSelected>>')
         self.cfg_range.unbind('<<ComboboxSelected>>')
 
-        print(f"[DEBUG] 所有筛选器事件已解绑")
+        _dprint("[DEBUG] 所有筛选器事件已解绑")
 
         # ===== 应用固件筛选器选项更新 =====
         categories = set(fw.category for fw in self.matcher.application_firmwares if fw.category)
@@ -1099,7 +1291,7 @@ class FirmwareManagerTab:
         self.cfg_range['values'] = ["全部"] + sorted(ranges, key=lambda x: float(x.rstrip('m')))
         self.cfg_range.current(0)
 
-        # 🔴 关键修复v2.4.6：重新绑定所有筛选器事件
+        # 关键修复v2.4.6：重新绑定所有筛选器事件
         # ===== 应用固件筛选器事件重新绑定 =====
         self.fw_category.bind('<<ComboboxSelected>>', lambda e: self.on_fw_filter_change())
         self.fw_subcategory.bind('<<ComboboxSelected>>', lambda e: self.on_fw_filter_change())
@@ -1118,13 +1310,13 @@ class FirmwareManagerTab:
         self.cfg_channels.bind('<<ComboboxSelected>>', lambda e: self.on_cfg_filter_change())
         self.cfg_range.bind('<<ComboboxSelected>>', lambda e: self.filter_configs())
 
-        print(f"[DEBUG] 所有筛选器事件已重新绑定")
+        _dprint("[DEBUG] 所有筛选器事件已重新绑定")
 
-        # 🔍 调试：检查 update_filter_options 后 TreeView 的数据量
-        print(f"[DEBUG] update_filter_options() 结束后:")
-        print(f"[DEBUG]   fw_tree 数量: {len(self.fw_tree.get_children())}")
-        print(f"[DEBUG]   sbl_tree 数量: {len(self.sbl_tree.get_children())}")
-        print(f"[DEBUG]   cfg_tree 数量: {len(self.cfg_tree.get_children())}")
+        # 调试：检查 update_filter_options 后 TreeView 的数据量
+        _dprint("[DEBUG] update_filter_options() 结束后:")
+        _dprint(f"[DEBUG]   fw_tree 数量: {len(self.fw_tree.get_children())}")
+        _dprint(f"[DEBUG]   sbl_tree 数量: {len(self.sbl_tree.get_children())}")
+        _dprint(f"[DEBUG]   cfg_tree 数量: {len(self.cfg_tree.get_children())}")
 
     def _format_size(self, size_bytes):
         """格式化文件大小"""
@@ -1238,6 +1430,7 @@ class FirmwareManagerTab:
         keyword = self.fw_search.get().lower()
 
         self.fw_tree.delete(*self.fw_tree.get_children())
+        self._clear_tree_path_map(self.fw_tree)
 
         for fw in self.matcher.application_firmwares:
             if category != "全部" and fw.category != category:
@@ -1266,13 +1459,14 @@ class FirmwareManagerTab:
                 if not any(keyword in field for field in search_fields):
                     continue
 
-            self.fw_tree.insert('', 'end', values=(
+            item_id = self.fw_tree.insert('', 'end', values=(
                 fw.filename,
                 fw.category,
                 fw.subcategory,
                 fw.processor,
                 fw.version
-            ), tags=(fw.path,))
+            ))
+            self._remember_tree_item_path(self.fw_tree, item_id, fw.path)
 
     def filter_sbls(self):
         """筛选SBL固件"""
@@ -1281,6 +1475,7 @@ class FirmwareManagerTab:
         keyword = self.sbl_search.get().lower()
 
         self.sbl_tree.delete(*self.sbl_tree.get_children())
+        self._clear_tree_path_map(self.sbl_tree)
 
         for sbl in self.matcher.sbl_firmwares:
             if variant_filter != "全部" and sbl.variant != variant_filter:
@@ -1299,13 +1494,14 @@ class FirmwareManagerTab:
                 if not any(keyword in field for field in search_fields):
                     continue
 
-            self.sbl_tree.insert('', 'end', values=(
+            item_id = self.sbl_tree.insert('', 'end', values=(
                 sbl.filename,
                 sbl.variant,
                 sbl.flash_address,
                 self._format_size(sbl.size),
                 sbl.description
-            ), tags=(sbl.path,))
+            ))
+            self._remember_tree_item_path(self.sbl_tree, item_id, sbl.path)
 
     def filter_configs(self):
         """筛选雷达配置"""
@@ -1316,6 +1512,7 @@ class FirmwareManagerTab:
         keyword = self.cfg_search.get().lower()
 
         self.cfg_tree.delete(*self.cfg_tree.get_children())
+        self._clear_tree_path_map(self.cfg_tree)
 
         for cfg in self.matcher.config_files:
             if app != "全部" and cfg.application != app:
@@ -1349,13 +1546,14 @@ class FirmwareManagerTab:
                     continue
 
             range_display = f"{cfg.range_m}m" if cfg.range_m > 0 else "N/A"
-            self.cfg_tree.insert('', 'end', values=(
+            item_id = self.cfg_tree.insert('', 'end', values=(
                 cfg.filename,
                 cfg.application,
                 channels_str,
                 range_display,
                 cfg.mode
-            ), tags=(cfg.path,))
+            ))
+            self._remember_tree_item_path(self.cfg_tree, item_id, cfg.path)
 
     def on_firmware_selected(self, event):
         """应用固件选中事件"""
@@ -1363,7 +1561,9 @@ class FirmwareManagerTab:
         if not selection:
             return
 
-        path = self.fw_tree.item(selection[0])['tags'][0]
+        path = self._get_tree_item_path(self.fw_tree, selection[0])
+        if not path:
+            return
         fw = next((f for f in self.matcher.application_firmwares if f.path == path), None)
 
         if fw:
@@ -1385,7 +1585,9 @@ class FirmwareManagerTab:
         if not selection:
             return
 
-        path = self.sbl_tree.item(selection[0])['tags'][0]
+        path = self._get_tree_item_path(self.sbl_tree, selection[0])
+        if not path:
+            return
         sbl = next((s for s in self.matcher.sbl_firmwares if s.path == path), None)
 
         if sbl:
@@ -1406,7 +1608,9 @@ class FirmwareManagerTab:
         if not selection:
             return
 
-        path = self.cfg_tree.item(selection[0])['tags'][0]
+        path = self._get_tree_item_path(self.cfg_tree, selection[0])
+        if not path:
+            return
         cfg = next((c for c in self.matcher.config_files if c.path == path), None)
 
         if cfg:
@@ -1434,7 +1638,10 @@ class FirmwareManagerTab:
             messagebox.showwarning("警告", "请先选择一个应用固件")
             return
 
-        app_path = self.match_fw_list.item(fw_selection[0])['tags'][0]
+        app_path = self._get_tree_item_path(self.match_fw_list, fw_selection[0])
+        if not app_path:
+            messagebox.showwarning("警告", "无法获取应用固件路径")
+            return
 
         # 获取选中的SBL固件（推荐列表中的第一个或用户选中的）
         sbl_selection = self.match_sbl_tree.selection()
@@ -1446,11 +1653,14 @@ class FirmwareManagerTab:
                 return
             sbl_selection = [sbl_items[0]]
 
-        sbl_path = self.match_sbl_tree.item(sbl_selection[0])['tags'][0]
+        sbl_path = self._get_tree_item_path(self.match_sbl_tree, sbl_selection[0])
+        if not sbl_path:
+            messagebox.showwarning("警告", "无法获取SBL固件路径")
+            return
 
         # 设置到主应用的固件路径
         try:
-            # ⚠️ 关键修复：设置StringVar变量（供analyze_firmware使用）
+            # 关键修复：设置StringVar变量（供analyze_firmware使用）
             if hasattr(self.main_app, 'sbl_file'):
                 self.main_app.sbl_file.set(sbl_path)
             if hasattr(self.main_app, 'app_file'):
@@ -1462,13 +1672,13 @@ class FirmwareManagerTab:
             if hasattr(self.main_app, 'sbl_path_label'):
                 self.main_app.sbl_path_label.config(text=sbl_path)
             if hasattr(self.main_app, 'sbl_status_label'):
-                self.main_app.sbl_status_label.config(text="✅ 已选择", fg="green")
+                self.main_app.sbl_status_label.config(text="已选择", fg="green")
 
             # 更新App路径显示
             if hasattr(self.main_app, 'app_path_label'):
                 self.main_app.app_path_label.config(text=app_path)
             if hasattr(self.main_app, 'app_status_label'):
-                self.main_app.app_status_label.config(text="✅ 已选择", fg="green")
+                self.main_app.app_status_label.config(text="已选择", fg="green")
 
             # 切换到基本烧录标签页
             if hasattr(self.main_app, 'notebook'):
@@ -1490,7 +1700,9 @@ class FirmwareManagerTab:
         if not selection:
             return
 
-        path = self.match_fw_list.item(selection[0])['tags'][0]
+        path = self._get_tree_item_path(self.match_fw_list, selection[0])
+        if not path:
+            return
         fw = next((f for f in self.matcher.application_firmwares if f.path == path), None)
 
         if not fw:
@@ -1503,16 +1715,17 @@ class FirmwareManagerTab:
         # 匹配SBL
         sbl_matches = self.matcher.match_sbl_for_firmware(fw)
         for i, (sbl, score) in enumerate(sbl_matches[:5]):
-            tag_list = [sbl.path]
+            tag_list = []
             if i == 0:  # 高亮最佳匹配
                 tag_list.append('best')
 
-            self.match_sbl_tree.insert('', 'end', values=(
+            item_id = self.match_sbl_tree.insert('', 'end', values=(
                 sbl.filename,
                 sbl.variant,
                 f"{score:.0f}%",
                 sbl.path
             ), tags=tuple(tag_list))
+            self._remember_tree_item_path(self.match_sbl_tree, item_id, sbl.path)
 
         # 匹配配置
         cfg_matches = self.matcher.match_configs_for_firmware(fw)
@@ -1526,26 +1739,27 @@ class FirmwareManagerTab:
                 params.append(cfg.mode)
 
             # v4.0: 根据评分设置标签
-            tag_list = [cfg.path]
+            tag_list = []
             if score <= -999999:
-                score_text = "❌ 不可用"
+                score_text = "不可用"
                 tag_list.append('unavailable')
             elif score < 0:
-                score_text = f"⚠️ {score:.0f}"
+                score_text = f"警告 {score:.0f}"
                 tag_list.append('warning')
             elif i == 0:
-                score_text = f"✅ {score:.0f}"
+                score_text = f"最佳 {score:.0f}"
                 tag_list.append('best')
             else:
                 score_text = f"{score:.0f}"
 
-            self.match_cfg_tree.insert('', 'end', values=(
+            item_id = self.match_cfg_tree.insert('', 'end', values=(
                 cfg.filename,
                 cfg.application,
                 " | ".join(params),
                 score_text,
                 cfg.path
             ), tags=tuple(tag_list))
+            self._remember_tree_item_path(self.match_cfg_tree, item_id, cfg.path)
 
         # 配置高亮样式（v4.0更新）
         self.match_sbl_tree.tag_configure('best', background='#c8ffc8')
@@ -1564,6 +1778,13 @@ class FirmwareManagerTab:
             self.match_fw_list.delete(*self.match_fw_list.get_children())
             self.match_sbl_tree.delete(*self.match_sbl_tree.get_children())
             self.match_cfg_tree.delete(*self.match_cfg_tree.get_children())
+
+            self._clear_tree_path_map(self.fw_tree)
+            self._clear_tree_path_map(self.sbl_tree)
+            self._clear_tree_path_map(self.cfg_tree)
+            self._clear_tree_path_map(self.match_fw_list)
+            self._clear_tree_path_map(self.match_sbl_tree)
+            self._clear_tree_path_map(self.match_cfg_tree)
 
             self.lbl_app.config(text="应用固件: 0")
             self.lbl_sbl.config(text="SBL固件: 0")

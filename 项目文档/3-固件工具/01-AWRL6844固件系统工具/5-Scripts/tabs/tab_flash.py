@@ -7,7 +7,7 @@ tab_flash.py - 烧录功能标签页（整合版）
 
 整合了原来的基本烧录、高级功能、串口监视、端口管理功能
 
-⚠️ 此模块不能单独运行，必须从 flash_tool.py 主入口启动！
+注意：此模块不能单独运行，必须从 flash_tool.py 主入口启动！
 """
 
 import tkinter as tk
@@ -39,7 +39,7 @@ class FlashTab:
         """显示错误并退出"""
         import sys
         print("=" * 70)
-        print("⚠️  错误：tab_flash 模块不能单独运行！")
+        print("错误：tab_flash 模块不能单独运行！")
         print("=" * 70)
         print()
         print("请从主入口启动烧录工具：")
@@ -52,6 +52,10 @@ class FlashTab:
 
     def create_ui(self):
         """创建标签页UI"""
+        icons = getattr(self.app, "icons", None)
+        if icons is None:
+            raise RuntimeError("主程序未初始化 icons（IconManager）")
+
         # 使用PanedWindow创建可拖动分隔的两列布局
         paned_window = ttk.PanedWindow(self.frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -72,9 +76,18 @@ class FlashTab:
         # ============= 左列：所有功能区 =============
 
         # --- 固件文件状态 ---
+        firmware_label = icons.make_labelframe_labelwidget(
+            left_col,
+            key="microchip",
+            size=16,
+            text="固件文件",
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            font=("Microsoft YaHei UI", 10, "bold"),
+        )
         firmware_frame = tk.LabelFrame(
             left_col,
-            text="📦 固件文件",
+            labelwidget=firmware_label,
             font=("Microsoft YaHei UI", 10, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
@@ -98,12 +111,13 @@ class FlashTab:
 
         self.app.sbl_status_label = tk.Label(
             firmware_frame,
-            text="❌ 未找到",
+            text="未找到",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1",
             fg="red"
         )
         self.app.sbl_status_label.grid(row=0, column=1, columnspan=2, sticky=tk.W, pady=2, padx=(5, 0))
+        self.app.sbl_status_label.config(image=icons.get("error", 16), compound="left")
 
         # SBL路径显示（自适应宽度）
         self.app.sbl_path_label = tk.Label(
@@ -143,12 +157,13 @@ class FlashTab:
 
         self.app.app_status_label = tk.Label(
             firmware_frame,
-            text="❌ 未找到",
+            text="未找到",
             font=("Microsoft YaHei UI", 9),
             bg="#ecf0f1",
             fg="red"
         )
         self.app.app_status_label.grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=2, padx=(5, 0))
+        self.app.app_status_label.config(image=icons.get("error", 16), compound="left")
 
         # App路径显示（自适应宽度）
         self.app.app_path_label = tk.Label(
@@ -240,7 +255,7 @@ class FlashTab:
         # 分析已选固件按钮
         tk.Button(
             button_container,
-            text="🔍 分析已选固件",
+            text="分析已选固件",
             font=("Microsoft YaHei UI", 8),
             command=self.app.analyze_firmware,
             bg="#3498db",
@@ -250,11 +265,25 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(fill=tk.X, expand=True)
+        try:
+            btn = button_container.winfo_children()[-1]
+            btn.config(image=icons.get("search", 16), compound="left")
+        except Exception:
+            pass
 
         # --- Flash偏移量配置区 ---
+        offset_label = icons.make_labelframe_labelwidget(
+            left_col,
+            key="settings",
+            size=16,
+            text="Flash偏移量配置",
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            font=("Microsoft YaHei UI", 10, "bold"),
+        )
         offset_frame = tk.LabelFrame(
             left_col,
-            text="📍 Flash偏移量配置",
+            labelwidget=offset_label,
             font=("Microsoft YaHei UI", 10, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
@@ -271,7 +300,7 @@ class FlashTab:
 
         tk.Checkbutton(
             enable_offset_frame,
-            text="🔘 启用Flash偏移量参数",
+            text="启用Flash偏移量参数",
             variable=self.app.offset_enabled_var,
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1",
@@ -280,6 +309,11 @@ class FlashTab:
             selectcolor="#27ae60",
             command=self.toggle_offset_controls
         ).pack(side=tk.LEFT)
+        try:
+            cb = enable_offset_frame.winfo_children()[-1]
+            cb.config(image=icons.get("settings", 16), compound="left")
+        except Exception:
+            pass
 
         # 提示信息
         self.offset_hint_label = tk.Label(
@@ -425,9 +459,18 @@ class FlashTab:
         self.toggle_offset_controls()
 
         # --- 烧录操作区 ---
+        flash_label = icons.make_labelframe_labelwidget(
+            left_col,
+            key="fire",
+            size=16,
+            text="烧录操作",
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            font=("Microsoft YaHei UI", 10, "bold"),
+        )
         flash_frame = tk.LabelFrame(
             left_col,
-            text="🔥 烧录操作",
+            labelwidget=flash_label,
             font=("Microsoft YaHei UI", 10, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
@@ -439,7 +482,7 @@ class FlashTab:
         # 完整烧录按钮
         tk.Button(
             flash_frame,
-            text="🚀 完整烧录 (SBL + App)",
+            text="完整烧录 (SBL + App)",
             font=("Microsoft YaHei UI", 11, "bold"),
             command=self.app.flash_firmware,
             bg="#27ae60",
@@ -450,6 +493,11 @@ class FlashTab:
             cursor="hand2",
             activebackground="#229954"
         ).pack(fill=tk.X, pady=(0, 5))
+        try:
+            btn = flash_frame.winfo_children()[-1]
+            btn.config(image=icons.get("rocket", 16), compound="left")
+        except Exception:
+            pass
 
         # 单独烧录按钮（三列：仅SBL、仅应用固件、停止烧录）
         single_flash_frame = tk.Frame(flash_frame, bg="#ecf0f1")
@@ -457,7 +505,7 @@ class FlashTab:
 
         tk.Button(
             single_flash_frame,
-            text="🔥 仅SBL",
+            text="仅SBL",
             font=("Microsoft YaHei UI", 9, "bold"),
             command=self.app.flash_sbl_only,
             bg="#e67e22",
@@ -467,10 +515,15 @@ class FlashTab:
             pady=6,
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        try:
+            btn = single_flash_frame.winfo_children()[-1]
+            btn.config(image=icons.get("fire", 16), compound="left")
+        except Exception:
+            pass
 
         tk.Button(
             single_flash_frame,
-            text="🔥 仅应用固件",
+            text="仅应用固件",
             font=("Microsoft YaHei UI", 9, "bold"),
             command=self.app.flash_app_only,
             bg="#3498db",
@@ -480,10 +533,15 @@ class FlashTab:
             pady=6,
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
+        try:
+            btn = single_flash_frame.winfo_children()[-1]
+            btn.config(image=icons.get("upload", 16), compound="left")
+        except Exception:
+            pass
 
         tk.Button(
             single_flash_frame,
-            text="🛑 停止",
+            text="停止",
             font=("Microsoft YaHei UI", 9, "bold"),
             command=self.app.stop_flash,
             bg="#e74c3c",
@@ -493,11 +551,25 @@ class FlashTab:
             pady=6,
             cursor="hand2"
         ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
+        try:
+            btn = single_flash_frame.winfo_children()[-1]
+            btn.config(image=icons.get("stop", 16), compound="left")
+        except Exception:
+            pass
 
         # --- 端口管理（整合端口设置、串口监视和端口管理）---
+        port_label = icons.make_labelframe_labelwidget(
+            left_col,
+            key="plug",
+            size=16,
+            text="端口管理",
+            bg="#ecf0f1",
+            fg="#2c3e50",
+            font=("Microsoft YaHei UI", 10, "bold"),
+        )
         port_mgmt_frame = tk.LabelFrame(
             left_col,
-            text="🔧 端口管理",
+            labelwidget=port_label,
             font=("Microsoft YaHei UI", 10, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50",
@@ -615,7 +687,7 @@ class FlashTab:
 
         tk.Button(
             port_action_frame,
-            text="🔄 刷新",
+            text="刷新",
             font=("Microsoft YaHei UI", 8),
             command=self.app.refresh_com_ports,
             bg="#3498db",
@@ -625,10 +697,15 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        try:
+            btn = port_action_frame.winfo_children()[-1]
+            btn.config(image=icons.get("refresh", 16), compound="left")
+        except Exception:
+            pass
 
         tk.Button(
             port_action_frame,
-            text="🔍 测试",
+            text="测试",
             font=("Microsoft YaHei UI", 8),
             command=self.app.test_all_ports,
             bg="#27ae60",
@@ -638,6 +715,11 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
+        try:
+            btn = port_action_frame.winfo_children()[-1]
+            btn.config(image=icons.get("search", 16), compound="left")
+        except Exception:
+            pass
 
         # 板载SBL固件存在性检测（单独一行）
         sbl_check_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
@@ -645,7 +727,7 @@ class FlashTab:
 
         tk.Button(
             sbl_check_frame,
-            text="🔎 板载SBL固件存在性检测\n(SOP调整为功能模式非烧录模式并重启)",
+            text="板载SBL固件存在性检测\n(SOP调整为功能模式非烧录模式并重启)",
             font=("Microsoft YaHei UI", 8),
             command=self.check_sbl,
             bg="#9b59b6",
@@ -656,17 +738,27 @@ class FlashTab:
             cursor="hand2",
             justify=tk.CENTER
         ).pack(fill=tk.X, expand=True)
+        try:
+            btn = sbl_check_frame.winfo_children()[-1]
+            btn.config(image=icons.get("search", 16), compound="left")
+        except Exception:
+            pass
 
         # ============= 右列：日志输出 =============
 
         # 日志标题
         tk.Label(
             right_col,
-            text="📋 烧录日志",
+            text="烧录日志",
             font=("Microsoft YaHei UI", 12, "bold"),
             bg="#ecf0f1",
             fg="#2c3e50"
         ).pack(pady=(0, 10))
+        try:
+            lbl = right_col.winfo_children()[-1]
+            lbl.config(image=icons.get("clipboard", 20), compound="left")
+        except Exception:
+            pass
 
         # 日志框架
         log_frame = tk.Frame(right_col, bg="#ecf0f1")
@@ -686,10 +778,25 @@ class FlashTab:
 
         # 创建右键菜单
         self.log_context_menu = tk.Menu(self.app.log_text, tearoff=0)
-        self.log_context_menu.add_command(label="📋 复制选中内容", command=self.copy_selected_log)
-        self.log_context_menu.add_command(label="📋 复制全部日志", command=self.copy_all_log)
+        self.log_context_menu.add_command(
+            label="复制选中内容",
+            image=icons.get("clipboard", 16),
+            compound="left",
+            command=self.copy_selected_log,
+        )
+        self.log_context_menu.add_command(
+            label="复制全部日志",
+            image=icons.get("clipboard", 16),
+            compound="left",
+            command=self.copy_all_log,
+        )
         self.log_context_menu.add_separator()
-        self.log_context_menu.add_command(label="🗑️ 清空日志", command=self.clear_log)
+        self.log_context_menu.add_command(
+            label="清空日志",
+            image=icons.get("trash", 16),
+            compound="left",
+            command=self.clear_log,
+        )
 
         # 绑定右键菜单
         self.app.log_text.bind("<Button-3>", self.show_log_context_menu)
@@ -727,7 +834,7 @@ class FlashTab:
 
         self.app.total_time_label = tk.Label(
             time_frame,
-            text="⏱️ 总时间: 0秒",
+            text="总时间: 0秒",
             font=("Microsoft YaHei UI", 10, "bold"),
             bg="#1a1a2e",
             fg="#f39c12",
@@ -735,11 +842,12 @@ class FlashTab:
             justify=tk.CENTER
         )
         self.app.total_time_label.pack(fill=tk.BOTH, expand=True, padx=5, pady=8)
+        self.app.total_time_label.config(image=icons.get("clock", 16), compound="left")
 
         # 清除日志按钮
         tk.Button(
             log_frame,
-            text="🗑️ 清除日志",
+            text="清除日志",
             font=("Microsoft YaHei UI", 9),
             command=self.app.clear_log,
             bg="#95a5a6",
@@ -749,6 +857,11 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(pady=(5, 0))
+        try:
+            btn = log_frame.winfo_children()[-1]
+            btn.config(image=icons.get("trash", 16), compound="left")
+        except Exception:
+            pass
 
         # 初始化时刷新一次端口，更新Label显示
         self.frame.after(100, self.app.refresh_com_ports)
@@ -795,13 +908,100 @@ class FlashTab:
 
     def log(self, message, tag=None):
         """添加日志消息"""
-        if hasattr(self.app, 'log_text'):
-            self.app.log_text.config(state=tk.NORMAL)
-            if tag:
-                self.app.log_text.insert(tk.END, message, tag)
+        if not hasattr(self.app, 'log_text'):
+            return
+
+        # 兼容：如果仍有历史emoji流入，这里做一次兜底清洗
+        if isinstance(message, str):
+            replacements = {
+                "\u2705": "[OK]",
+                "\u274c": "[X]",
+                "\u26a0\ufe0f": "[!]",
+                "\u26a0": "[!]",
+                "\U0001F50D": "[?]",
+                "\U0001F4C1": "",
+                "\U0001F4CD": "",
+                "\U0001F4E1": "",
+                "\U0001F50C": "",
+                "\U0001F527": "",
+                "\U0001F5D1\ufe0f": "",
+                "\U0001F5D1": "",
+                "\U0001F4CB": "",
+                "\U0001F680": "",
+                "\U0001F525": "",
+                "\U0001F6D1": "",
+                "\u23f1\ufe0f": "",
+                "\u23f1": "",
+            }
+            for old, new in replacements.items():
+                message = message.replace(old, new)
+
+        icons = getattr(self.app, "icons", None)
+        tag_to_icon_key = {
+            "SUCCESS": "ok",
+            "WARN": "warning",
+            "ERROR": "error",
+            "INFO": "info",
+        }
+        tag_to_strip_prefix = {
+            "SUCCESS": ("[OK]", "[DONE]"),
+            "WARN": ("[WARN]", "[!]"),
+            "ERROR": ("[ERROR]", "[X]"),
+            "INFO": ("[INFO]",),
+        }
+
+        def _strip_prefix(line: str) -> str:
+            if not tag or not isinstance(line, str):
+                return line
+            prefixes = tag_to_strip_prefix.get(tag, ())
+            if not prefixes:
+                return line
+
+            # 仅处理行首前缀，保留行首缩进
+            i = 0
+            while i < len(line) and line[i] in (" ", "\t"):
+                i += 1
+            leading_ws = line[:i]
+            body = line[i:]
+            for p in prefixes:
+                if body.startswith(p):
+                    body = body[len(p):].lstrip()
+                    break
+            return leading_ws + body
+
+        def _should_prefix_icon(line: str) -> bool:
+            stripped = (line or "").strip()
+            if not stripped:
+                return False
+            if all(ch in "=-*_+/\\|.[]()<>" for ch in stripped):
+                return False
+            return True
+
+        self.app.log_text.config(state=tk.NORMAL)
+        try:
+            if tag and icons is not None and tag in tag_to_icon_key and isinstance(message, str):
+                icon_key = tag_to_icon_key[tag]
+                icon_img = icons.get(icon_key, 16)
+
+                for part in message.splitlines(True):
+                    if part in ("\n", "\r\n"):
+                        self.app.log_text.insert(tk.END, part)
+                        continue
+
+                    part = _strip_prefix(part)
+                    if icon_img is not None and _should_prefix_icon(part):
+                        self.app.log_text.image_create(tk.END, image=icon_img)
+                        self.app.log_text.insert(tk.END, " ")
+
+                    self.app.log_text.insert(tk.END, part, tag)
             else:
-                self.app.log_text.insert(tk.END, message)
+                if tag:
+                    self.app.log_text.insert(tk.END, message, tag)
+                else:
+                    self.app.log_text.insert(tk.END, message)
+
             self.app.log_text.see(tk.END)
+        finally:
             self.app.log_text.config(state=tk.DISABLED)
 
     def show_log_context_menu(self, event):
@@ -830,12 +1030,12 @@ class FlashTab:
                 # 复制到剪贴板
                 self.app.log_text.clipboard_clear()
                 self.app.log_text.clipboard_append(selected_text)
-                self.log("✅ 已复制选中日志到剪贴板", "SUCCESS")
+                self.log("已复制选中日志到剪贴板\n", "SUCCESS")
 
             self.app.log_text.config(state=tk.DISABLED)
         except Exception as e:
             self.app.log_text.config(state=tk.DISABLED)
-            self.log(f"❌ 复制失败: {e}", "ERROR")
+            self.log(f"复制失败: {e}\n", "ERROR")
 
     def copy_all_log(self):
         """复制全部日志内容"""
@@ -848,14 +1048,14 @@ class FlashTab:
                 # 复制到剪贴板
                 self.app.log_text.clipboard_clear()
                 self.app.log_text.clipboard_append(all_text)
-                self.log("✅ 已复制全部日志到剪贴板", "SUCCESS")
+                self.log("已复制全部日志到剪贴板\n", "SUCCESS")
             else:
-                self.log("⚠️ 日志为空，无内容可复制", "WARN")
+                self.log("日志为空，无内容可复制\n", "WARN")
 
             self.app.log_text.config(state=tk.DISABLED)
         except Exception as e:
             self.app.log_text.config(state=tk.DISABLED)
-            self.log(f"❌ 复制失败: {e}", "ERROR")
+            self.log(f"复制失败: {e}\n", "ERROR")
 
     def clear_log(self):
         """清空日志"""
@@ -873,18 +1073,22 @@ class FlashTab:
             messagebox.showwarning("警告", "请先选择烧录端口（COM3）")
             return
 
-        # 导入SBLCheckDialog
-        import sys
-        import os
-        # 获取flash_tool.py所在目录
-        flash_tool_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        if flash_tool_dir not in sys.path:
-            sys.path.insert(0, flash_tool_dir)
-
-        # 动态导入（因为SBLCheckDialog在flash_tool.py中）
+        # 导入 SBLCheckDialog（兼容脚本模式与 PyInstaller EXE 模式）
         try:
-            import flash_tool
-            dialog = flash_tool.SBLCheckDialog(self.app.root, port)
+            import __main__ as main_mod
+
+            dialog_cls = getattr(main_mod, "SBLCheckDialog", None)
+            if dialog_cls is None:
+                try:
+                    import flash_tool as flash_tool_mod
+                    dialog_cls = getattr(flash_tool_mod, "SBLCheckDialog", None)
+                except Exception:
+                    dialog_cls = None
+
+            if dialog_cls is None:
+                raise AttributeError("未找到 SBLCheckDialog（__main__/flash_tool）")
+
+            dialog = dialog_cls(self.app.root, port)
             self.app.root.wait_window(dialog)
         except Exception as e:
             from tkinter import messagebox
@@ -903,8 +1107,21 @@ class FlashTab:
         try:
             # 获取基础目录 - EXE模式下使用exe所在目录，脚本模式下使用脚本目录的父目录
             if getattr(sys, 'frozen', False):
-                # PyInstaller EXE模式：使用exe所在目录
-                base_dir = Path(sys.executable).parent
+                # PyInstaller EXE模式：兼容 EXE 位于不同目录（如 6-Distribution 或 项目根 release/）
+                exe_dir = Path(sys.executable).resolve().parent
+                meipass = getattr(sys, '_MEIPASS', None)
+                candidates = [
+                    Path(meipass) if meipass else exe_dir,
+                    exe_dir,
+                    exe_dir.parent,
+                    exe_dir.parent.parent,
+                    exe_dir.parent.parent / '项目文档' / '3-固件工具' / '01-AWRL6844固件系统工具',
+                ]
+                base_dir = candidates[0]
+                for p in candidates:
+                    if (p / '3-Tools').exists():
+                        base_dir = p
+                        break
             else:
                 # 脚本模式：使用tabs目录的父目录(5-Scripts)的父目录
                 base_dir = Path(__file__).parent.parent.parent
@@ -914,20 +1131,29 @@ class FlashTab:
             project_tool = project_tool.resolve()
 
             if project_tool.exists():
-                self.tool_options["📦 项目内工具 (推荐)"] = str(project_tool)
+                self.tool_options["项目内工具 (推荐)"] = str(project_tool)
         except Exception as e:
             print(f"项目内工具路径解析失败: {e}")
 
         # 选项2: SDK工具
         sdk_tool = Path(r"C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool\arprog_cmdline_6844.exe")
+        if not sdk_tool.exists():
+            ti_root = Path(r"C:\ti")
+            if ti_root.exists():
+                try:
+                    for p in ti_root.glob("**/tools/FlashingTool/arprog_cmdline_6844.exe"):
+                        sdk_tool = p
+                        break
+                except Exception:
+                    pass
         if sdk_tool.exists():
-            self.tool_options["🔧 SDK工具"] = str(sdk_tool)
+            self.tool_options["SDK工具"] = str(sdk_tool)
 
         # 选项3: 自定义工具（如果已设置）
         if hasattr(self.app, 'flash_tool_path') and self.app.flash_tool_path:
             custom_path = Path(self.app.flash_tool_path)
             if custom_path.exists() and str(custom_path) not in self.tool_options.values():
-                self.tool_options["✨ 自定义工具"] = str(custom_path)
+                self.tool_options["自定义工具"] = str(custom_path)
 
         # 更新下拉框
         if self.tool_options:
@@ -937,7 +1163,7 @@ class FlashTab:
             # 触发选择事件来更新路径显示和主程序变量
             self._on_tool_selected(None)
         else:
-            self.app.tool_combo['values'] = ["❌ 未找到可用工具"]
+            self.app.tool_combo['values'] = ["未找到可用工具"]
             self.app.tool_combo.current(0)
             self.app.tool_path_label.config(text="未找到烧录工具，请手动选择", fg="red")
 
@@ -1020,7 +1246,7 @@ class FlashTab:
 if __name__ == "__main__":
     import sys
     print("=" * 70)
-    print("⚠️  错误：tab_flash.py 不能单独运行！")
+    print("错误：tab_flash.py 不能单独运行！")
     print("=" * 70)
     print()
     print("请从主入口启动烧录工具：")

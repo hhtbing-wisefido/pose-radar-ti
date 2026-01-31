@@ -28,7 +28,7 @@ draw.ellipse([90, 140, 100, 150], fill=(255, 255, 255))
 
 # 保存PNG
 img.save('radar_icon.png')
-print('✅ 雷达图标已创建: radar_icon.png')
+print('OK: 雷达图标已创建: radar_icon.png')
 
 # 转换为ICO（多尺寸）
 try:
@@ -43,8 +43,8 @@ try:
     draw_ico.ellipse([180, 100, 190, 110], fill=(255, 255, 255))
     draw_ico.ellipse([160, 150, 170, 160], fill=(255, 255, 255))
     draw_ico.ellipse([90, 140, 100, 150], fill=(255, 255, 255))
-    
+
     img_ico.save('radar_icon.ico', sizes=[(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])
-    print('✅ ICO图标已创建: radar_icon.ico')
+    print('OK: ICO图标已创建: radar_icon.ico')
 except Exception as e:
-    print(f'⚠️ ICO创建失败: {e}')
+    print(f'WARN: ICO创建失败: {e}')

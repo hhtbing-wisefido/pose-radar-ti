@@ -11,8 +11,6 @@
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
-import serial
-import serial.tools.list_ports
 import threading
 import time
 import json
@@ -22,24 +20,144 @@ import queue
 import sys
 import subprocess
 import os
-import psutil
+
+
+def _set_windows_app_id(app_id: str) -> None:
+    """Windows 任务栏/标题栏图标稳定显示所需（必须在 tk.Tk() 之前调用）。"""
+    if sys.platform != 'win32':
+        return
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except Exception:
+        pass
+
+
+def _pip_install(packages: list[str]) -> None:
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', *packages])
+
+
+try:
+    import serial
+    import serial.tools.list_ports
+except ImportError:
+    _pip_install(['pyserial'])
+    import serial
+    import serial.tools.list_ports
+
+
+try:
+    import psutil
+except ImportError:
+    _pip_install(['psutil'])
+    import psutil
+
+
+class IconManager:
+    def __init__(self, tk_root: tk.Misc, icons_dir: Path | None = None):
+        self._root = tk_root
+        self._icons_dir = icons_dir or self._resolve_icons_dir()
+        self._cache: dict[str, tk.PhotoImage] = {}
+        self._spinner_frames: list[tk.PhotoImage] | None = None
+
+    @staticmethod
+    def _resolve_icons_dir() -> Path:
+        # 脚本模式：相对当前 .py 文件
+        if not getattr(sys, 'frozen', False):
+            return Path(__file__).parent / 'image' / 'icons'
+
+        # PyInstaller：优先 sys._MEIPASS，其次 exe 同级
+        base = Path(getattr(sys, '_MEIPASS', '')) if getattr(sys, '_MEIPASS', '') else Path(sys.executable).parent
+        candidates = [
+            base / 'image' / 'icons',
+            base / 'icons',
+            base,
+        ]
+        for c in candidates:
+            if c.exists():
+                return c
+        return candidates[0]
+
+    def _png_path(self, key: str, size: int) -> Path:
+        return self._icons_dir / f"{key}_{size}.png"
+
+    def get_png(self, key: str, size: int) -> tk.PhotoImage | None:
+        cache_key = f"{key}:{size}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
+        path = self._png_path(key, size)
+        if not path.exists():
+            return None
+
+        img = tk.PhotoImage(master=self._root, file=str(path))
+        self._cache[cache_key] = img
+        return img
+
+    def get_spinner_frames(self) -> list[tk.PhotoImage]:
+        if self._spinner_frames is not None:
+            return self._spinner_frames
+
+        gif_path = self._icons_dir / 'spinner_24.gif'
+        frames: list[tk.PhotoImage] = []
+        if gif_path.exists():
+            idx = 0
+            while True:
+                try:
+                    frames.append(tk.PhotoImage(master=self._root, file=str(gif_path), format=f"gif -index {idx}"))
+                    idx += 1
+                except tk.TclError:
+                    break
+
+        self._spinner_frames = frames
+        return frames
+
+    def apply_window_icons(self, window: tk.Tk | tk.Toplevel) -> None:
+        ico_path = self._icons_dir / 'app_radar.ico'
+        if ico_path.exists():
+            try:
+                window.iconbitmap(ico_path)
+            except Exception:
+                pass
+
+        # Windows 更稳：iconphoto + 强引用（防 GC 回退到 python 默认图标），优先 256px
+        png256 = self.get_png('app_radar', 256)
+        png24 = self.get_png('app_radar', 24)
+        photo = png256 or png24
+        if photo is not None:
+            try:
+                window.iconphoto(True, photo)
+                setattr(window, '_app_icon_256', photo)
+            except Exception:
+                pass
 
 def check_existing_process():
-    """检查是否有同名进程正在运行，返回进程列表"""
+    """检查是否有同名进程正在运行"""
     current_pid = os.getpid()
-    script_name = os.path.basename(__file__)
-    existing_procs = []
+    try:
+        parent_pid = psutil.Process(current_pid).ppid()
+    except Exception:
+        parent_pid = None
+    current_name = os.path.basename(sys.argv[0])
 
+    existing_processes = []
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
-            if proc.info['pid'] == current_pid:
+            # 跳过当前进程和父进程（onefile 下父进程同名，不能当成“旧实例”）
+            if proc.pid == current_pid or (parent_pid is not None and proc.pid == parent_pid):
                 continue
+
             cmdline = proc.info.get('cmdline', [])
-            if cmdline and script_name in ' '.join(cmdline):
-                existing_procs.append(proc)
+            if not cmdline:
+                continue
+
+            if any(current_name in cmd for cmd in cmdline):
+                existing_processes.append(proc)
         except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-    return existing_procs
+            pass
+
+    return existing_processes
+
 
 def ensure_log_directory():
     """确保log目录存在"""
@@ -50,24 +168,6 @@ def ensure_log_directory():
         # Avoid emoji in print to prevent Windows encoding issues
         # print(f"Created log directory: {log_dir}")
     return log_dir
-
-def check_existing_process():
-    """检查是否有同名进程正在运行"""
-    current_pid = os.getpid()
-    current_name = os.path.basename(sys.argv[0])
-
-    existing_processes = []
-    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-        try:
-            if proc.pid != current_pid:
-                # 检查是否是Python进程运行同一个脚本
-                cmdline = proc.info.get('cmdline', [])
-                if cmdline and any(current_name in cmd for cmd in cmdline):
-                    existing_processes.append(proc)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
-
-    return existing_processes
 
 # ============================================================================
 # 22命令完整数据结构（基于《雷达配置文件深度分析.md》）
@@ -640,8 +740,11 @@ class RadarTestGUI:
             6. 自动扫描可用串口
         """
         self.root = root
-        self.root.title("🔬 雷达配置参数测试工具 v1.1.5 - 双端口模式")
+        self.root.title("雷达配置参数测试工具 v1.1.5 - 双端口模式")
         self.root.geometry("1200x800")
+
+        self.icons = IconManager(self.root)
+        self.icons.apply_window_icons(self.root)
 
         # 确保log目录存在
         self.log_dir = ensure_log_directory()
@@ -691,11 +794,11 @@ class RadarTestGUI:
         """
 
         # ===== 顶部：连接控制 =====
-        conn_frame = ttk.LabelFrame(self.root, text="🔌 双串口连接配置（已测试验证）", padding=10)
+        conn_frame = self._make_labelframe(self.root, 'connect', '双串口连接配置（已测试验证）', padding=10)
         conn_frame.pack(fill=tk.X, padx=10, pady=5)
 
         # CLI端口配置
-        ttk.Label(conn_frame, text="📤 CLI端口:", font=('Arial', 9, 'bold')).grid(row=0, column=0, padx=5, sticky=tk.W)
+        ttk.Label(conn_frame, text="CLI端口:", font=('Arial', 9, 'bold')).grid(row=0, column=0, padx=5, sticky=tk.W)
         self.cli_port_combo = ttk.Combobox(conn_frame, width=12, state='readonly')
         self.cli_port_combo.grid(row=0, column=1, padx=5)
 
@@ -709,7 +812,7 @@ class RadarTestGUI:
         ttk.Label(conn_frame, text="(发送命令)", foreground="gray").grid(row=0, column=4, padx=5)
 
         # 数据端口配置
-        ttk.Label(conn_frame, text="📥 数据端口:", font=('Arial', 9, 'bold')).grid(row=1, column=0, padx=5, sticky=tk.W, pady=5)
+        ttk.Label(conn_frame, text="数据端口:", font=('Arial', 9, 'bold')).grid(row=1, column=0, padx=5, sticky=tk.W, pady=5)
         self.data_port_combo = ttk.Combobox(conn_frame, width=12, state='readonly')
         self.data_port_combo.grid(row=1, column=1, padx=5)
 
@@ -723,13 +826,26 @@ class RadarTestGUI:
         ttk.Label(conn_frame, text="(接收数据)", foreground="gray").grid(row=1, column=4, padx=5)
 
         # 连接按钮
-        self.connect_btn = ttk.Button(conn_frame, text="连接双端口", command=self.toggle_connection)
+        self.connect_btn = ttk.Button(
+            conn_frame,
+            text="连接双端口",
+            image=self.icons.get_png('connect', 24),
+            compound=tk.LEFT,
+            command=self.toggle_connection,
+        )
         self.connect_btn.grid(row=0, column=5, rowspan=2, padx=10)
 
         self.status_label = ttk.Label(conn_frame, text="● 未连接", foreground="red")
         self.status_label.grid(row=0, column=6, rowspan=2, padx=10)
 
-        ttk.Button(conn_frame, text="刷新端口", command=self.scan_ports).grid(row=0, column=7, rowspan=2, padx=5)
+        self.refresh_btn = ttk.Button(
+            conn_frame,
+            text="刷新端口",
+            image=self.icons.get_png('refresh', 24),
+            compound=tk.LEFT,
+            command=self.scan_ports,
+        )
+        self.refresh_btn.grid(row=0, column=7, rowspan=2, padx=5)
 
         # ===== 主面板（使用PanedWindow实现可拖动分割） =====
         main_paned = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
@@ -739,25 +855,43 @@ class RadarTestGUI:
         left_frame = ttk.Frame(main_paned, width=350)
         main_paned.add(left_frame, weight=1)
 
-        config_frame = ttk.LabelFrame(left_frame, text="🎛️ 自定义配置（自定义参数）", padding=10)
+        config_frame = self._make_labelframe(left_frame, 'template', '自定义配置（自定义参数）', padding=10)
         config_frame.pack(fill=tk.BOTH, expand=True)
 
         # 快速操作按钮（第一行）
         quick_btn_frame = ttk.Frame(config_frame)
         quick_btn_frame.pack(fill=tk.X, pady=(0,5))
 
-        ttk.Button(quick_btn_frame, text="✅ 全选", width=8,
-                  command=self.select_all_commands).pack(side=tk.LEFT, padx=2)
-        ttk.Button(quick_btn_frame, text="❌ 全不选", width=8,
-                  command=self.deselect_all_commands).pack(side=tk.LEFT, padx=2)
-        ttk.Button(quick_btn_frame, text="🔄 仅必需", width=8,
-                  command=self.select_required_only).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            quick_btn_frame,
+            text="全选",
+            width=8,
+            image=self.icons.get_png('select_all', 24),
+            compound=tk.LEFT,
+            command=self.select_all_commands,
+        ).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            quick_btn_frame,
+            text="全不选",
+            width=8,
+            image=self.icons.get_png('select_none', 24),
+            compound=tk.LEFT,
+            command=self.deselect_all_commands,
+        ).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            quick_btn_frame,
+            text="仅必需",
+            width=8,
+            image=self.icons.get_png('select_required', 24),
+            compound=tk.LEFT,
+            command=self.select_required_only,
+        ).pack(side=tk.LEFT, padx=2)
 
         # 预设模板选择（第二行）- 任务5新增
         template_frame = ttk.Frame(config_frame)
         template_frame.pack(fill=tk.X, pady=(0,5))
 
-        ttk.Label(template_frame, text="📦 预设模板:", font=('Arial', 9, 'bold')).pack(side=tk.LEFT, padx=2)
+        self._make_icon_label(template_frame, 'template', "预设模板:").pack(side=tk.LEFT, padx=2)
 
         # 任务6：扩展模板选项，添加场景配置
         self.template_combo = ttk.Combobox(template_frame, width=25, state='readonly',
@@ -772,8 +906,14 @@ class RadarTestGUI:
         self.template_combo.pack(side=tk.LEFT, padx=2)
         self.template_combo.set("TI标准配置（22命令）")
 
-        ttk.Button(template_frame, text="🚀 加载", width=8,
-                  command=self.load_selected_template).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            template_frame,
+            text="加载",
+            width=8,
+            image=self.icons.get_png('load', 24),
+            compound=tk.LEFT,
+            command=self.load_selected_template,
+        ).pack(side=tk.LEFT, padx=2)
 
         # 可滚动的命令列表区域
         canvas_frame = ttk.Frame(config_frame)
@@ -849,22 +989,42 @@ class RadarTestGUI:
         ctrl_frame = ttk.Frame(config_frame)
         ctrl_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Button(ctrl_frame, text="清空",
-                  command=self.clear_commands).pack(side=tk.LEFT, padx=2)
-        ttk.Button(ctrl_frame, text="加载配置文件",
-                  command=self.load_from_file).pack(side=tk.LEFT, padx=2)
-        ttk.Button(ctrl_frame, text="导出配置文件",
-                  command=self.export_config_file).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            ctrl_frame,
+            text="清空",
+            image=self.icons.get_png('clear', 16),
+            compound=tk.LEFT,
+            command=self.clear_commands,
+        ).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            ctrl_frame,
+            text="加载配置文件",
+            image=self.icons.get_png('open_file', 16),
+            compound=tk.LEFT,
+            command=self.load_from_file,
+        ).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            ctrl_frame,
+            text="导出配置文件",
+            image=self.icons.get_png('export', 16),
+            compound=tk.LEFT,
+            command=self.export_config_file,
+        ).pack(side=tk.LEFT, padx=2)
         # 注意：应用勾选按钮已删除，现在自动同步配置命令
 
         # 配置注释框（任务6新增）
-        comment_frame = ttk.LabelFrame(middle_frame, text="📝 配置注释（可选）", padding=10)
+        comment_frame = self._make_labelframe(middle_frame, 'edit', '配置注释（可选）', padding=10)
         comment_frame.pack(fill=tk.X, pady=5)
 
         # v1.1.4: 添加编码提示
-        warning_label = ttk.Label(comment_frame,
-                                 text="⚠️ 注意：CLI仅支持ASCII编码，中文注释将被跳过，建议使用英文",
-                                 foreground='orange', font=('Arial', 8))
+        warning_label = ttk.Label(
+            comment_frame,
+            text="注意：CLI仅支持ASCII编码，中文注释将被跳过，建议使用英文",
+            image=self.icons.get_png('warn', 16),
+            compound=tk.LEFT,
+            foreground='orange',
+            font=('Arial', 8),
+        )
         warning_label.pack(anchor=tk.W, pady=(0, 2))
 
         ttk.Label(comment_frame, text="添加注释说明（将作为注释行插入配置文件开头）:").pack(anchor=tk.W)
@@ -875,7 +1035,7 @@ class RadarTestGUI:
         self.config_comment_text.insert("1.0", "% Configuration: \n% Created: \n% Scene: ")
 
         # 测试控制
-        test_frame = ttk.LabelFrame(middle_frame, text="⚡ 测试控制", padding=10)
+        test_frame = self._make_labelframe(middle_frame, 'send', '测试控制', padding=10)
         test_frame.pack(fill=tk.X, pady=5)
 
         # 创建按钮样式
@@ -884,19 +1044,34 @@ class RadarTestGUI:
         style.configure('Stop.TButton', font=('Arial', 11, 'bold'), foreground='red')
         style.configure('Save.TButton', font=('Arial', 10, 'bold'))
 
-        self.test_btn = ttk.Button(test_frame, text="📡 发送配置执行",
-                                   style='Start.TButton',
-                                   command=self.start_test)
+        self.test_btn = ttk.Button(
+            test_frame,
+            text="发送配置执行",
+            image=self.icons.get_png('send', 24),
+            compound=tk.LEFT,
+            style='Start.TButton',
+            command=self.start_test,
+        )
         self.test_btn.pack(side=tk.LEFT, padx=5)
 
-        self.stop_btn = ttk.Button(test_frame, text="⏹ 停止雷达",
-                                   style='Stop.TButton',
-                                   command=self.stop_radar)
+        self.stop_btn = ttk.Button(
+            test_frame,
+            text="停止雷达",
+            image=self.icons.get_png('stop', 24),
+            compound=tk.LEFT,
+            style='Stop.TButton',
+            command=self.stop_radar,
+        )
         self.stop_btn.pack(side=tk.LEFT, padx=5)
 
-        self.save_btn = ttk.Button(test_frame, text="💾 保存日志",
-                                   style='Save.TButton',
-                                   command=self.save_test_log)
+        self.save_btn = ttk.Button(
+            test_frame,
+            text="保存日志",
+            image=self.icons.get_png('save', 24),
+            compound=tk.LEFT,
+            style='Save.TButton',
+            command=self.save_test_log,
+        )
         self.save_btn.pack(side=tk.LEFT, padx=5)
 
         # LED确认（不是控制开关，是确认记录）
@@ -911,11 +1086,17 @@ class RadarTestGUI:
 
         # 说明标签
         ttk.Label(test_frame, text="│", foreground="gray").pack(side=tk.LEFT, padx=5)
-        ttk.Label(test_frame, text="💡 勾选命令后自动同步，点击'发送配置执行'启动",
-                 foreground="blue", font=('Arial', 9, 'bold')).pack(side=tk.LEFT, padx=5)
+        ttk.Label(
+            test_frame,
+            text="勾选命令后自动同步，点击'发送配置执行'启动",
+            image=self.icons.get_png('info', 16),
+            compound=tk.LEFT,
+            foreground="blue",
+            font=('Arial', 9, 'bold'),
+        ).pack(side=tk.LEFT, padx=5)
 
         # 性能指标显示（任务9新增）
-        metrics_frame = ttk.LabelFrame(middle_frame, text="📊 性能指标", padding=10)
+        metrics_frame = self._make_labelframe(middle_frame, 'info', '性能指标', padding=10)
         metrics_frame.pack(fill=tk.X, pady=5)
 
         self.metrics_text = scrolledtext.ScrolledText(metrics_frame, height=4,
@@ -927,7 +1108,7 @@ class RadarTestGUI:
         self.metrics_text.config(state='disabled')
 
         # 参数调整建议（任务9新增）
-        suggestions_frame = ttk.LabelFrame(middle_frame, text="💡 参数调整建议", padding=10)
+        suggestions_frame = self._make_labelframe(middle_frame, 'info', '参数调整建议', padding=10)
         suggestions_frame.pack(fill=tk.X, pady=5)
 
         self.suggestions_text = scrolledtext.ScrolledText(suggestions_frame, height=4,
@@ -953,8 +1134,13 @@ class RadarTestGUI:
 
         cli_btn_frame = ttk.Frame(cli_frame)
         cli_btn_frame.pack(fill=tk.X)
-        ttk.Button(cli_btn_frame, text="清空",
-                  command=lambda: self.cli_output.delete(1.0, tk.END)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            cli_btn_frame,
+            text="清空",
+            image=self.icons.get_png('clear', 16),
+            compound=tk.LEFT,
+            command=lambda: self.cli_output.delete(1.0, tk.END),
+        ).pack(side=tk.LEFT, padx=2)
 
         # 雷达数据输出
         data_frame = ttk.LabelFrame(right_frame, text="雷达数据输出", padding=5)
@@ -984,8 +1170,13 @@ class RadarTestGUI:
 
         data_btn_frame = ttk.Frame(data_frame)
         data_btn_frame.pack(fill=tk.X)
-        ttk.Button(data_btn_frame, text="清空",
-                  command=lambda: self.data_output.delete(1.0, tk.END)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            data_btn_frame,
+            text="清空",
+            image=self.icons.get_png('clear', 16),
+            compound=tk.LEFT,
+            command=lambda: self.data_output.delete(1.0, tk.END),
+        ).pack(side=tk.LEFT, padx=2)
 
         # 状态栏
         status_frame = ttk.Frame(self.root)
@@ -993,6 +1184,46 @@ class RadarTestGUI:
 
         self.info_label = ttk.Label(status_frame, text="就绪", relief=tk.SUNKEN)
         self.info_label.pack(fill=tk.X)
+
+    def _make_icon_label(self, parent, icon_key: str, text: str) -> ttk.Label:
+        return ttk.Label(parent, text=text, image=self.icons.get_png(icon_key, 16), compound=tk.LEFT)
+
+    def _make_labelframe(self, parent, icon_key: str, text: str, **kwargs) -> ttk.LabelFrame:
+        icon = self.icons.get_png(icon_key, 16)
+        if icon is None:
+            return ttk.LabelFrame(parent, text=text, **kwargs)
+        label = ttk.Label(parent, text=text, image=icon, compound=tk.LEFT)
+        return ttk.LabelFrame(parent, labelwidget=label, **kwargs)
+
+    def _start_refresh_spinner(self) -> None:
+        if not hasattr(self, 'refresh_btn'):
+            return
+        frames = self.icons.get_spinner_frames()
+        if not frames:
+            return
+
+        self._spinner_frames = frames
+        self._spinner_index = 0
+
+        def step():
+            if not hasattr(self, '_spinner_frames'):
+                return
+            self.refresh_btn.config(image=self._spinner_frames[self._spinner_index])
+            self._spinner_index = (self._spinner_index + 1) % len(self._spinner_frames)
+            self._spinner_job = self.root.after(60, step)
+
+        self._spinner_job = self.root.after(0, step)
+
+    def _stop_refresh_spinner(self) -> None:
+        job = getattr(self, '_spinner_job', None)
+        if job:
+            try:
+                self.root.after_cancel(job)
+            except Exception:
+                pass
+        self._spinner_job = None
+        if hasattr(self, 'refresh_btn'):
+            self.refresh_btn.config(image=self.icons.get_png('refresh', 24))
 
     def create_tooltip(self, widget, text):
         """为组件创建工具提示"""
@@ -1032,31 +1263,6 @@ class RadarTestGUI:
     #     pass
 
     def scan_ports(self):
-        self.data_count_label = ttk.Label(stats_frame, text="0 bytes", foreground="blue")
-        self.data_count_label.pack(side=tk.LEFT, padx=5)
-
-        ttk.Label(stats_frame, text="速率:").pack(side=tk.LEFT, padx=5)
-        self.data_rate_label = ttk.Label(stats_frame, text="0 B/s", foreground="green")
-        self.data_rate_label.pack(side=tk.LEFT, padx=5)
-
-        self.data_output = scrolledtext.ScrolledText(data_frame, height=15,
-                                                      font=('Consolas', 8),
-                                                      bg='#1e1e1e', fg='#00ff00')
-        self.data_output.pack(fill=tk.BOTH, expand=True)
-
-        data_btn_frame = ttk.Frame(data_frame)
-        data_btn_frame.pack(fill=tk.X)
-        ttk.Button(data_btn_frame, text="清空",
-                  command=lambda: self.data_output.delete(1.0, tk.END)).pack(side=tk.LEFT, padx=2)
-
-        # 状态栏
-        status_frame = ttk.Frame(self.root)
-        status_frame.pack(fill=tk.X, padx=10, pady=5)
-
-        self.info_label = ttk.Label(status_frame, text="就绪", relief=tk.SUNKEN)
-        self.info_label.pack(fill=tk.X)
-
-    def scan_ports(self):
         """
         扫描系统可用的串口
 
@@ -1070,8 +1276,13 @@ class RadarTestGUI:
         - description: 设备描述
         - hwid: 硬件ID
         """
-        ports = serial.tools.list_ports.comports()
-        port_list = [port.device for port in ports]
+        self._start_refresh_spinner()
+        try:
+            ports = serial.tools.list_ports.comports()
+            port_list = [port.device for port in ports]
+        finally:
+            # 给 UI 一点时间展示动画（避免扫描过快看不到）
+            self.root.after(400, self._stop_refresh_spinner)
 
         # 更新CLI端口列表
         self.cli_port_combo['values'] = port_list
@@ -1138,7 +1349,11 @@ class RadarTestGUI:
             self.root.after(100, self.process_data_queue)
 
             self.status_label.config(text=f"● 已连接\nCLI:{cli_port} 数据:{data_port}", foreground="green")
-            self.connect_btn.config(text="断开")
+            self.connect_btn.config(
+                text="断开",
+                image=self.icons.get_png('disconnect', 24),
+                compound=tk.LEFT,
+            )
             # 连接后检查是否有数据输出，延迟1秒后检查
             self.root.after(1000, self.check_radar_running)
             self.update_info(f"已连接 - CLI:{cli_port}@{cli_baudrate} | 数据:{data_port}@{data_baudrate}")
@@ -1169,7 +1384,11 @@ class RadarTestGUI:
             self.data_conn.close()
 
             self.status_label.config(text="● 未连接", foreground="red")
-        self.connect_btn.config(text="连接双端口")
+        self.connect_btn.config(
+            text="连接双端口",
+            image=self.icons.get_png('connect', 24),
+            compound=tk.LEFT,
+        )
         # v1.1.3: 按钮始终保持可用，点击时检查连接状态
         self.update_info("已断开连接")
 
@@ -1191,7 +1410,7 @@ class RadarTestGUI:
             # 有数据输出，说明雷达正在运行
             if not self.is_testing:
                 self.is_testing = True
-                self.update_info("⚠️ 检测到雷达正在运行")
+                self.update_info("检测到雷达正在运行")
         else:
             # 无数据输出
             if not self.is_testing:
@@ -1225,7 +1444,7 @@ class RadarTestGUI:
                         # 串口错误，可能是设备断开
                         error_count += 1
                         if error_count >= max_errors:
-                            self.root.after(0, lambda: self.update_info("⚠️ CLI串口已断开"))
+                            self.root.after(0, lambda: self.update_info("WARN: CLI串口已断开"))
                             self.root.after(0, self.disconnect)
                             break
                 time.sleep(0.01)
@@ -1267,7 +1486,7 @@ class RadarTestGUI:
                         # 串口错误，可能是设备断开
                         error_count += 1
                         if error_count >= max_errors:
-                            self.root.after(0, lambda: self.update_info("⚠️ 数据串口已断开"))
+                            self.root.after(0, lambda: self.update_info("WARN: 数据串口已断开"))
                             self.root.after(0, self.disconnect)
                             break
 
@@ -1296,18 +1515,18 @@ class RadarTestGUI:
                         magic = data[0:8].hex()
                         if magic.startswith('0201040306050807'):  # TI雷达数据包头
                             self.data_output.insert(tk.END,
-                                f"📦 #{self.packet_count} 雷达数据包: {packet_size} bytes [魔术字: {magic[:16]}...]\n",
+                                f"RADAR #{self.packet_count}: {packet_size} bytes [magic: {magic[:16]}...]\n",
                                 'radar_packet')
                         else:
                             # 显示前32字节的十六进制
                             preview = data[:32].hex()
                             self.data_output.insert(tk.END,
-                                f"📊 #{self.packet_count} 数据: {packet_size} bytes [{preview}...]\n",
+                                f"DATA #{self.packet_count}: {packet_size} bytes [{preview}...]\n",
                                 'data_packet')
                     else:
                         # 小数据包，显示全部
                         self.data_output.insert(tk.END,
-                            f"📝 #{self.packet_count} 数据: {packet_size} bytes [{data.hex()}]\n",
+                            f"RAW #{self.packet_count}: {packet_size} bytes [{data.hex()}]\n",
                             'small_packet')
 
                     self.data_output.see(tk.END)
@@ -1359,7 +1578,7 @@ class RadarTestGUI:
                 self.cli_output.insert(tk.END, f"> {command}\n", 'command')
             except UnicodeEncodeError:
                 # 包含非ASCII字符（如中文），跳过发送
-                self.cli_output.insert(tk.END, f"⚠️ Skipped (contains non-ASCII): {command}\n", 'warning')
+                self.cli_output.insert(tk.END, f"WARN: Skipped (contains non-ASCII): {command}\n", 'warning')
                 self.update_info(f"已跳过包含中文的注释行")
                 return None
 
@@ -1519,7 +1738,7 @@ class RadarTestGUI:
             """异步发送命令的线程函数（任务8：支持注释）v1.1.4: 过滤中文注释"""
             # 先发送注释框中的注释（跳过中文）
             if comment_text:
-                self.root.after(0, lambda: self.cli_output.insert(tk.END, f"\n📝 发送配置注释...\n"))
+                self.root.after(0, lambda: self.cli_output.insert(tk.END, f"\nINFO: 发送配置注释...\n"))
                 sent_count = 0
                 skipped_count = 0
                 for comment_line in comment_text.split('\n'):
@@ -1536,15 +1755,15 @@ class RadarTestGUI:
                         except UnicodeEncodeError:
                             skipped_count += 1
                             self.root.after(0, lambda line=comment_line:
-                                self.cli_output.insert(tk.END, f"⚠️ 跳过中文注释: {line}\n", 'warning'))
+                                self.cli_output.insert(tk.END, f"WARN: 跳过非ASCII注释: {line}\n", 'warning'))
 
                 if skipped_count > 0:
                     self.root.after(0, lambda: self.cli_output.insert(tk.END,
-                        f"⚠️ 已跳过 {skipped_count} 行中文注释（CLI仅支持ASCII）\n", 'warning'))
+                        f"WARN: 已跳过 {skipped_count} 行非ASCII注释（CLI仅支持ASCII）\n", 'warning'))
 
             # 发送命令区中的注释行（v1.1.4: 跳过中文）
             if comments_in_cmd:
-                self.root.after(0, lambda: self.cli_output.insert(tk.END, f"\n📝 发送内联注释...\n"))
+                self.root.after(0, lambda: self.cli_output.insert(tk.END, f"\nINFO: 发送内联注释...\n"))
                 for comment in comments_in_cmd:
                     try:
                         comment.encode('ascii')
@@ -1552,10 +1771,10 @@ class RadarTestGUI:
                         time.sleep(0.02)
                     except UnicodeEncodeError:
                         self.root.after(0, lambda c=comment:
-                            self.cli_output.insert(tk.END, f"⚠️ 跳过中文注释: {c}\n", 'warning'))
+                            self.cli_output.insert(tk.END, f"WARN: 跳过非ASCII注释: {c}\n", 'warning'))
 
             # 发送配置命令
-            self.root.after(0, lambda: self.cli_output.insert(tk.END, f"\n📤 发送 {len(commands)} 条命令...\n"))
+            self.root.after(0, lambda: self.cli_output.insert(tk.END, f"\nINFO: 发送 {len(commands)} 条命令...\n"))
             for i, cmd in enumerate(commands, 1):
                 self.root.after(0, lambda c=cmd, n=i: self.cli_output.insert(tk.END, f"  {n:2d}. {c}\n"))
                 self.root.after(0, lambda: self.cli_output.see(tk.END))
@@ -1570,7 +1789,7 @@ class RadarTestGUI:
 
         # 显示提示（不阻塞）
         self.cli_output.insert(tk.END, "\n" + "="*60 + "\n")
-        self.cli_output.insert(tk.END, "✅ 雷达已启动！请检查：\n")
+        self.cli_output.insert(tk.END, "OK: 雷达已启动！请检查：\n")
         self.cli_output.insert(tk.END, "1. 板子LED是否闪烁（约2Hz频率）\n")
         self.cli_output.insert(tk.END, "2. 右侧'雷达数据输出'窗口是否有数据包\n")
         self.cli_output.insert(tk.END, "3. 数据包计数是否在增加\n")
@@ -1603,7 +1822,7 @@ class RadarTestGUI:
         # 使用线程异步停止，避免UI阻塞
         def stop_radar_async():
             """异步停止雷达的线程函数"""
-            self.cli_output.insert(tk.END, "\n⏹ 发送停止命令...\n")
+            self.cli_output.insert(tk.END, "\nINFO: 发送停止命令...\n")
 
             # 多次发送停止命令确保生效（雷达可能需要多次确认）
             for i in range(3):
@@ -1625,19 +1844,19 @@ class RadarTestGUI:
                     time.sleep(0.3)
                     if self.data_conn.in_waiting > 0:
                         discarded = self.data_conn.read(self.data_conn.in_waiting)
-                        self.cli_output.insert(tk.END, f"⚠️ 丢弃缓冲数据: {len(discarded)} 字节\n")
+                        self.cli_output.insert(tk.END, f"WARN: 丢弃缓冲数据: {len(discarded)} 字节\n")
                     else:
-                        self.cli_output.insert(tk.END, "✅ 数据端口已清空\n")
+                        self.cli_output.insert(tk.END, "OK: 数据端口已清空\n")
                 except Exception as e:
-                    self.cli_output.insert(tk.END, f"⚠️ 清空缓冲区失败: {e}\n")
+                    self.cli_output.insert(tk.END, f"WARN: 清空缓冲区失败: {e}\n")
 
             # 清除测试状态
             self.is_testing = False
 
             # v1.1.3: 不再控制按钮状态
-            self.root.after(0, lambda: self.update_info("✅ 雷达已停止，缓冲区已清空"))
-            self.cli_output.insert(tk.END, "✅ 停止命令已发送\n")
-            self.cli_output.insert(tk.END, "💡 提示：如果仍有数据输出，请检查雷达状态\n\n")
+            self.root.after(0, lambda: self.update_info("OK: 雷达已停止，缓冲区已清空"))
+            self.cli_output.insert(tk.END, "OK: 停止命令已发送\n")
+            self.cli_output.insert(tk.END, "TIP: 如果仍有数据输出，请检查雷达状态\n\n")
             self.cli_output.see(tk.END)
 
         # 启动停止线程
@@ -1756,9 +1975,9 @@ class RadarTestGUI:
 
                 # 必需标记（仅图标）
                 if cmd_info.get('required', False):
-                    ttk.Label(cb_frame, text="✅", foreground='green').pack(side=tk.LEFT, padx=2)
+                    ttk.Label(cb_frame, image=self.icons.get_png('ok', 16)).pack(side=tk.LEFT, padx=2)
                 else:
-                    ttk.Label(cb_frame, text="🔲", foreground='gray').pack(side=tk.LEFT, padx=2)
+                    ttk.Label(cb_frame, image=self.icons.get_png('info', 16)).pack(side=tk.LEFT, padx=2)
 
                 # 命令名称（可点击选择）
                 name_label = ttk.Label(cb_frame, text=cmd_name,
@@ -2119,12 +2338,12 @@ class RadarTestGUI:
                 if len(frame_params) >= 5:
                     frame_period_ms = float(frame_params[4])
                     fps = 1000 / frame_period_ms if frame_period_ms > 0 else 0
-                    metrics.append(f"📈 帧率: {fps:.1f} FPS ({frame_period_ms}ms周期)")
+                    metrics.append(f"帧率: {fps:.1f} FPS ({frame_period_ms}ms周期)")
 
                     if fps < 5:
-                        suggestions.append("⚠️ 帧率较低，考虑减小framePeriodicity以提高响应速度")
+                        suggestions.append("WARN: 帧率较低，考虑减小framePeriodicity以提高响应速度")
                     elif fps > 20:
-                        suggestions.append("💡 帧率较高，可适当增大framePeriodicity以降低功耗")
+                        suggestions.append("TIP: 帧率较高，可适当增大framePeriodicity以降低功耗")
             except:
                 pass
 
@@ -2136,12 +2355,12 @@ class RadarTestGUI:
                 if len(range_params) >= 3:
                     min_range = float(range_params[1])
                     max_range = float(range_params[2])
-                    metrics.append(f"📏 检测距离: {min_range}m - {max_range}m")
+                    metrics.append(f"检测距离: {min_range}m - {max_range}m")
 
                     if max_range > 10:
-                        suggestions.append("💡 长距离检测，建议使用高功率模式")
+                        suggestions.append("TIP: 长距离检测，建议使用高功率模式")
                     elif max_range < 3:
-                        suggestions.append("💡 短距离检测，可启用低功耗模式节省电力")
+                        suggestions.append("TIP: 短距离检测，可启用低功耗模式节省电力")
             except:
                 pass
 
@@ -2152,10 +2371,10 @@ class RadarTestGUI:
                 if len(doppler_params) >= 3:
                     min_vel = float(doppler_params[1])
                     max_vel = float(doppler_params[2])
-                    metrics.append(f"🚀 速度范围: {min_vel} - {max_vel} m/s")
+                    metrics.append(f"速度范围: {min_vel} - {max_vel} m/s")
 
                     if abs(max_vel) > 15:
-                        suggestions.append("⚡ 高速检测，确保chirp配置支持足够的多普勒带宽")
+                        suggestions.append("TIP: 高速检测，确保chirp配置支持足够的多普勒带宽")
             except:
                 pass
 
@@ -2166,10 +2385,10 @@ class RadarTestGUI:
                 if len(aoa_params) >= 4:
                     min_az = int(aoa_params[0])
                     max_az = int(aoa_params[1])
-                    metrics.append(f"📐 方位角: {min_az}° - {max_az}°")
+                    metrics.append(f"方位角: {min_az}° - {max_az}°")
 
                     if max_az - min_az > 100:
-                        suggestions.append("💡 广角覆盖，角度分辨率可能降低")
+                        suggestions.append("TIP: 广角覆盖，角度分辨率可能降低")
             except:
                 pass
 
@@ -2179,23 +2398,23 @@ class RadarTestGUI:
                 range_cfar = config_params['cfarProcCfg'].get('cfarProcCfg_Range', [])
                 if len(range_cfar) >= 7:
                     threshold = float(range_cfar[6])
-                    metrics.append(f"🎯 CFAR阈值: {threshold} dB")
+                    metrics.append(f"CFAR阈值: {threshold} dB")
 
                     if threshold < 8:
-                        suggestions.append("⚠️ 阈值较低，可能增加误检，建议提高到8-10 dB")
+                        suggestions.append("WARN: 阈值较低，可能增加误检，建议提高到8-10 dB")
                     elif threshold > 12:
-                        suggestions.append("💡 阈值较高，漏检风险增加，可适当降低")
+                        suggestions.append("TIP: 阈值较高，漏检风险增加，可适当降低")
             except:
                 pass
 
         # 功耗分析
         low_power_enabled = 'lowPowerCfg' in config_params
         if low_power_enabled:
-            metrics.append("🔋 低功耗模式: 已启用")
-            suggestions.append("✅ 低功耗模式已启用，适合长期运行场景")
+            metrics.append("低功耗模式: 已启用")
+            suggestions.append("OK: 低功耗模式已启用，适合长期运行场景")
         else:
-            metrics.append("⚡ 低功耗模式: 未启用")
-            suggestions.append("💡 可启用lowPowerCfg以降低功耗（需权衡性能）")
+            metrics.append("低功耗模式: 未启用")
+            suggestions.append("TIP: 可启用lowPowerCfg以降低功耗（需权衡性能）")
 
         # 更新显示
         self.metrics_text.config(state='normal')
@@ -2251,19 +2470,19 @@ class RadarTestGUI:
 
         # 创建编辑窗口
         editor_window = tk.Toplevel(self.root)
-        editor_window.title(f"📝 参数编辑 - {cmd_name}")
+        editor_window.title(f"参数编辑 - {cmd_name}")
         editor_window.geometry("600x500")
         editor_window.transient(self.root)
         editor_window.grab_set()
 
         # 窗口图标（尝试）
         try:
-            editor_window.iconbitmap(default=self.root.iconbitmap())
-        except:
+            self.icons.apply_window_icons(editor_window)
+        except Exception:
             pass
 
         # ===== 顶部：命令信息 =====
-        info_frame = ttk.LabelFrame(editor_window, text="📋 命令信息", padding=10)
+        info_frame = ttk.LabelFrame(editor_window, text="命令信息", padding=10)
         info_frame.pack(fill=tk.X, padx=10, pady=5)
 
         # 命令名称
@@ -2279,12 +2498,12 @@ class RadarTestGUI:
         ttk.Label(info_frame, text=cmd_info['category'], foreground='darkgreen').grid(row=2, column=1, sticky=tk.W, pady=2)
 
         # 必需标记
-        required_text = "是 ✅" if cmd_info.get('required', False) else "否 🔲"
+        required_text = "是" if cmd_info.get('required', False) else "否"
         ttk.Label(info_frame, text="必需:", font=('Arial', 9, 'bold')).grid(row=3, column=0, sticky=tk.W, pady=2)
         ttk.Label(info_frame, text=required_text).grid(row=3, column=1, sticky=tk.W, pady=2)
 
         # ===== 中间：参数编辑区 =====
-        param_frame = ttk.LabelFrame(editor_window, text="🔧 参数编辑", padding=10)
+        param_frame = ttk.LabelFrame(editor_window, text="参数编辑", padding=10)
         param_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
         # 创建Canvas和滚动条（支持大量参数）
@@ -2343,7 +2562,7 @@ class RadarTestGUI:
         canvas.configure(scrollregion=canvas.bbox('all'))
 
         # ===== 底部：命令预览和按钮 =====
-        preview_frame = ttk.LabelFrame(editor_window, text="👁️ 命令预览", padding=10)
+        preview_frame = ttk.LabelFrame(editor_window, text="命令预览", padding=10)
         preview_frame.pack(fill=tk.X, padx=10, pady=5)
 
         # 命令预览文本框
@@ -2453,14 +2672,14 @@ class RadarTestGUI:
             messagebox.showinfo("成功", "命令已复制到剪贴板！", parent=editor_window)
 
         # 按钮
-        ttk.Button(button_frame, text="✅ 应用修改",
-                  command=apply_changes).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="🔄 重置默认",
-                  command=reset_defaults).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="📋 复制命令",
-                  command=copy_command).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="❌ 关闭",
-                  command=editor_window.destroy).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="应用修改", image=self.icons.get_png('ok', 16), compound=tk.LEFT,
+              command=apply_changes).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="重置默认", image=self.icons.get_png('refresh', 16), compound=tk.LEFT,
+              command=reset_defaults).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="复制命令", image=self.icons.get_png('copy', 16), compound=tk.LEFT,
+              command=copy_command).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="关闭", image=self.icons.get_png('close', 16), compound=tk.LEFT,
+              command=editor_window.destroy).pack(side=tk.RIGHT, padx=5)
 
         # 居中显示
         editor_window.update_idletasks()
@@ -2597,11 +2816,37 @@ class RadarTestGUI:
 
 def main():
     """主函数 - 处理进程检查和后台启动"""
-    # 🔴 彻底解决临时目录清理警告：禁用PyInstaller的自动清理
-    if getattr(sys, 'frozen', False):
-        os.environ['_MEIPASS2'] = sys._MEIPASS if hasattr(sys, '_MEIPASS') else ''
-        print(f"[INFO] EXE模式: 已禁用PyInstaller临时目录自动清理")
-        print(f"[INFO] 临时目录: {sys._MEIPASS if hasattr(sys, '_MEIPASS') else 'N/A'}")
+    # Windows：必须在 tk.Tk() 之前设置 AppUserModelID（任务栏分组/固定/图标识别）
+    _set_windows_app_id('WiseFido.TI.RadarConfigTool')
+
+    # 启动取证（仅调试使用）：记录 EXE/onefile 下的 sys.argv，帮助定位“为何未进入 --detach 启动器分支”。
+    if os.environ.get('RADAR_CONFIG_TOOL_LOG_ARGS') == '1':
+        try:
+            from pathlib import Path
+
+            forced_log_path = os.environ.get('RADAR_CONFIG_TOOL_LOG_PATH')
+            if forced_log_path:
+                log_path = Path(forced_log_path)
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+            else:
+                log_path = None
+
+            if getattr(sys, 'frozen', False):
+                # onefile 下 sys.executable 可能指向临时副本；用 argv[0] 更接近用户实际启动的 EXE 路径
+                log_dir = Path(sys.argv[0]).resolve().parent
+                if not log_dir.exists():
+                    log_dir = Path(sys.executable).resolve().parent
+            else:
+                log_dir = Path(__file__).resolve().parent
+
+            if log_path is None:
+                log_path = log_dir / 'radar_config_tool_args.log'
+            with open(log_path, 'w', encoding='utf-8', newline='\n') as f:
+                f.write(f"frozen={getattr(sys, 'frozen', False)}\n")
+                f.write(f"executable={sys.executable}\n")
+                f.write(f"argv={sys.argv!r}\n")
+        except Exception:
+            pass
 
     # 检查命令行参数：--detach 表示后台启动模式
     detach_mode = '--detach' in sys.argv
@@ -2622,7 +2867,7 @@ def main():
                 f"是否关闭旧进程并启动新窗口？\n\n"
                 f"点击\"是\"：关闭所有旧进程，打开新窗口\n"
                 f"点击\"否\"：取消启动",
-                "⚠️ 检测到已运行的实例",
+                "检测到已运行的实例",
                 4 | 48  # MB_YESNO | MB_ICONWARNING
             )
 
@@ -2648,14 +2893,40 @@ def main():
         if getattr(sys, 'frozen', False):
             # EXE模式：直接使用exe路径
             cmd = [sys.executable, '--detach']
+            cwd = os.path.dirname(os.path.abspath(sys.executable))
         else:
             # 脚本模式：使用python解释器和脚本路径
             script_path = os.path.abspath(__file__)
             cmd = [sys.executable, script_path, '--detach']
+            cwd = os.path.dirname(script_path)
+
+        env = os.environ.copy()
+        for k in (
+            '_MEIPASS2',
+            '_PYI_APPLICATION_HOME_DIR',
+            '_PYI_PARENT_PROCESS_LEVEL',
+            '_PYI_ARCHIVE_FILE',
+        ):
+            env.pop(k, None)
+        env['PYINSTALLER_RESET_ENVIRONMENT'] = '1'
+
+        creationflags = 0
+        if sys.platform == 'win32':
+            try:
+                creationflags = (
+                    subprocess.CREATE_NEW_PROCESS_GROUP
+                    | subprocess.DETACHED_PROCESS
+                    | subprocess.CREATE_NO_WINDOW
+                    | getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0)
+                )
+            except Exception:
+                creationflags = subprocess.CREATE_NO_WINDOW
 
         subprocess.Popen(
             cmd,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
+            cwd=cwd,
+            env=env,
+            creationflags=creationflags,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL
@@ -2664,22 +2935,20 @@ def main():
         # print("GUI started in background")
         # print("You can close this terminal window now")
         time.sleep(1)
-        sys.exit(0)  # 退出启动进程
+        os._exit(0)  # 退出启动进程（onefile 下更可靠）
 
     else:
         # 后台模式：实际启动GUI
         root = tk.Tk()
 
+        # 任务栏/标题栏图标：尽早设置（root.withdraw 前后都可；这里在 withdraw 前设置也 OK）
+        try:
+            IconManager(root).apply_window_icons(root)
+        except Exception:
+            pass
+
         # 在显示任何内容之前先隐藏窗口，避免闪现
         root.withdraw()
-
-        # 设置窗口图标（如果存在）
-        try:
-            icon_path = Path(__file__).parent / 'radar_icon.ico'
-            if icon_path.exists():
-                root.iconbitmap(icon_path)
-        except Exception as e:
-            pass  # 后台模式不打印错误
 
         # 创建应用实例
         app = RadarTestGUI(root)

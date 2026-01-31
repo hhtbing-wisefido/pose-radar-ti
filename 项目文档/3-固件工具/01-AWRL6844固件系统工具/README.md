@@ -44,6 +44,7 @@ C:\ti\MMWAVE_L_SDK_06_01_00_01\    # SDK根目录
 ├── 📄 README.md                          # 本文件
 ├── 📄 操作指南.md                         # 详细烧录步骤
 ├── 📄 Flash布局说明.md                    # QSPI Flash内存布局
+├── 📄 图标替换方案.md                      # GUI图标替换映射（含预览）
 │
 ├── 📂 1-SBL_Bootloader/                  # SBL固件
 │   ├── sbl.release.appimage              # SBL固件（可直接烧录）

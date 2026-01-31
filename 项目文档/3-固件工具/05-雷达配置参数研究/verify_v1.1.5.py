@@ -18,7 +18,7 @@ test_strings = [
     ("% Scene: Office", True, "纯英文"),
 ]
 
-print("\n✅ 测试编码检测逻辑")
+print("\nOK: 测试编码检测逻辑")
 print("-" * 60)
 
 for text, should_pass, desc in test_strings:
@@ -29,11 +29,11 @@ for text, should_pass, desc in test_strings:
     except UnicodeEncodeError:
         result = "✗ 跳过"
         passed = not should_pass
-    
-    status = "✅" if passed else "❌"
+
+    status = "OK" if passed else "FAIL"
     print(f"{status} {desc:15s} | {text:40s} | {result}")
 
-print("\n✅ 验证代码改进")
+print("\nOK: 验证代码改进")
 print("-" * 60)
 
 import re
@@ -75,14 +75,14 @@ print("\n" + "=" * 60)
 print("功能验证完成")
 print("=" * 60)
 
-print("\n💡 测试建议：")
+print("\nTIP: 测试建议：")
 print("1. 运行GUI程序")
 print("2. 在注释框输入中文注释")
 print("3. 点击'发送配置执行'")
 print("4. 观察CLI输出区是否显示跳过提示")
 print("5. 验证配置命令是否正常发送")
 
-print("\n📝 推荐注释格式：")
+print("\nINFO: 推荐注释格式：")
 print("   % Configuration: [场景描述]")
 print("   % Created: [日期]")
 print("   % Scene: [应用场景]")
