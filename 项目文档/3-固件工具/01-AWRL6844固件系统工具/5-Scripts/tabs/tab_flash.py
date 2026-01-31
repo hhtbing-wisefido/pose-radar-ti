@@ -16,25 +16,25 @@ from pathlib import Path
 
 class FlashTab:
     """烧录功能标签页类（整合版）"""
-    
+
     def __init__(self, parent_frame, app):
         """
         初始化烧录功能标签页
-        
+
         Args:
             parent_frame: 父容器（tk.Frame）
             app: 主应用实例（FlashToolGUI）
         """
         self.frame = parent_frame
         self.app = app
-        
+
         # 检查是否是通过主入口启动
         if not hasattr(app, 'VERSION'):
             self._show_error_and_exit()
-        
+
         # 创建界面
         self.create_ui()
-    
+
     def _show_error_and_exit(self):
         """显示错误并退出"""
         import sys
@@ -49,28 +49,28 @@ class FlashTab:
         print()
         print("=" * 70)
         sys.exit(1)
-    
+
     def create_ui(self):
         """创建标签页UI"""
         # 使用PanedWindow创建可拖动分隔的两列布局
         paned_window = ttk.PanedWindow(self.frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+
         # 左列容器（固件选择和控制区）- 30%宽度
         left_col = tk.Frame(paned_window, bg="#ecf0f1")
         paned_window.add(left_col, weight=3)  # weight=3 占30%
-        
+
         # 右列容器（日志显示区）- 70%宽度
         right_col = tk.Frame(paned_window, bg="#ecf0f1")
         paned_window.add(right_col, weight=7)  # weight=7 占70%
-        
+
         # 保存paned_window引用，用于动态调整分隔条位置
         self.paned_window = paned_window
         # 延迟设置分隔条位置（窗口显示后）
         self.frame.after(10, self._adjust_sash_position)
-        
+
         # ============= 左列：所有功能区 =============
-        
+
         # --- 固件文件状态 ---
         firmware_frame = tk.LabelFrame(
             left_col,
@@ -82,12 +82,12 @@ class FlashTab:
             pady=10
         )
         firmware_frame.pack(fill=tk.X, pady=(0, 10))
-        
+
         # 配置grid列权重，使中间列可以自动伸缩
         firmware_frame.columnconfigure(0, weight=0)  # 标签列固定
         firmware_frame.columnconfigure(1, weight=1)  # 内容列自适应
         firmware_frame.columnconfigure(2, weight=0)  # 按钮列固定
-        
+
         # SBL固件标签
         tk.Label(
             firmware_frame,
@@ -95,7 +95,7 @@ class FlashTab:
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1"
         ).grid(row=0, column=0, sticky=tk.W, pady=2)
-        
+
         self.app.sbl_status_label = tk.Label(
             firmware_frame,
             text="❌ 未找到",
@@ -104,7 +104,7 @@ class FlashTab:
             fg="red"
         )
         self.app.sbl_status_label.grid(row=0, column=1, columnspan=2, sticky=tk.W, pady=2, padx=(5, 0))
-        
+
         # SBL路径显示（自适应宽度）
         self.app.sbl_path_label = tk.Label(
             firmware_frame,
@@ -116,10 +116,10 @@ class FlashTab:
             justify=tk.LEFT
         )
         self.app.sbl_path_label.grid(row=1, column=0, columnspan=2, sticky=tk.EW, pady=(0, 5), padx=(0, 5))
-        
+
         # 绑定配置事件，动态更新wraplength
         self.app.sbl_path_label.bind('<Configure>', lambda e: self.app.sbl_path_label.config(wraplength=max(100, e.width - 10)))
-        
+
         tk.Button(
             firmware_frame,
             text="选择",
@@ -132,7 +132,7 @@ class FlashTab:
             pady=1,
             cursor="hand2"
         ).grid(row=1, column=2, sticky=tk.E, pady=(0, 5))
-        
+
         # 应用固件标签
         tk.Label(
             firmware_frame,
@@ -140,7 +140,7 @@ class FlashTab:
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1"
         ).grid(row=2, column=0, sticky=tk.W, pady=2)
-        
+
         self.app.app_status_label = tk.Label(
             firmware_frame,
             text="❌ 未找到",
@@ -149,7 +149,7 @@ class FlashTab:
             fg="red"
         )
         self.app.app_status_label.grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=2, padx=(5, 0))
-        
+
         # App路径显示（自适应宽度）
         self.app.app_path_label = tk.Label(
             firmware_frame,
@@ -161,10 +161,10 @@ class FlashTab:
             justify=tk.LEFT
         )
         self.app.app_path_label.grid(row=3, column=0, columnspan=2, sticky=tk.EW, pady=(0, 5), padx=(0, 5))
-        
+
         # 绑定配置事件，动态更新wraplength
         self.app.app_path_label.bind('<Configure>', lambda e: self.app.app_path_label.config(wraplength=max(100, e.width - 10)))
-        
+
         tk.Button(
             firmware_frame,
             text="选择",
@@ -177,7 +177,7 @@ class FlashTab:
             pady=1,
             cursor="hand2"
         ).grid(row=3, column=2, sticky=tk.E, pady=(0, 5))
-        
+
         # 工具标签
         tk.Label(
             firmware_frame,
@@ -185,11 +185,11 @@ class FlashTab:
             font=("Microsoft YaHei UI", 9, "bold"),
             bg="#ecf0f1"
         ).grid(row=4, column=0, sticky=tk.W, pady=(5, 2))
-        
+
         # 创建工具选择容器
         tool_container = tk.Frame(firmware_frame, bg="#ecf0f1")
         tool_container.grid(row=4, column=1, columnspan=2, sticky=tk.EW, pady=(5, 2), padx=(5, 0))
-        
+
         # 工具选择下拉框
         self.app.tool_combo = ttk.Combobox(
             tool_container,
@@ -198,7 +198,7 @@ class FlashTab:
             font=("Consolas", 8)
         )
         self.app.tool_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
+
         # 浏览按钮
         tk.Button(
             tool_container,
@@ -211,7 +211,7 @@ class FlashTab:
             width=4,
             cursor="hand2"
         ).pack(side=tk.LEFT, padx=(3, 0))
-        
+
         # 工具路径显示（自适应宽度）
         self.app.tool_path_label = tk.Label(
             firmware_frame,
@@ -223,20 +223,20 @@ class FlashTab:
             justify=tk.LEFT
         )
         self.app.tool_path_label.grid(row=5, column=0, columnspan=3, sticky=tk.EW, pady=(0, 5))
-        
+
         # 绑定配置事件，动态更新wraplength
         self.app.tool_path_label.bind('<Configure>', lambda e: self.app.tool_path_label.config(wraplength=max(100, e.width - 10)))
-        
+
         # 初始化工具选项（放在界面元素创建之后）
         self._init_tool_options()
-        
+
         # 选择变更时的回调
         self.app.tool_combo.bind('<<ComboboxSelected>>', self._on_tool_selected)
-        
+
         # 按钮区域
         button_container = tk.Frame(firmware_frame, bg="#ecf0f1")
         button_container.grid(row=6, column=0, columnspan=3, pady=(10, 0), sticky=tk.EW)
-        
+
         # 分析已选固件按钮
         tk.Button(
             button_container,
@@ -250,7 +250,7 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(fill=tk.X, expand=True)
-        
+
         # --- Flash偏移量配置区 ---
         offset_frame = tk.LabelFrame(
             left_col,
@@ -262,13 +262,13 @@ class FlashTab:
             pady=10
         )
         offset_frame.pack(fill=tk.X, pady=(10, 10))
-        
+
         # 启用/禁用开关
         enable_offset_frame = tk.Frame(offset_frame, bg="#ecf0f1")
         enable_offset_frame.pack(fill=tk.X, pady=(0, 10))
-        
+
         self.app.offset_enabled_var = tk.BooleanVar(value=False)  # 默认禁用
-        
+
         tk.Checkbutton(
             enable_offset_frame,
             text="🔘 启用Flash偏移量参数",
@@ -280,7 +280,7 @@ class FlashTab:
             selectcolor="#27ae60",
             command=self.toggle_offset_controls
         ).pack(side=tk.LEFT)
-        
+
         # 提示信息
         self.offset_hint_label = tk.Label(
             enable_offset_frame,
@@ -290,11 +290,11 @@ class FlashTab:
             fg="#7f8c8d"
         )
         self.offset_hint_label.pack(side=tk.LEFT, padx=(5, 0))
-        
+
         # SBL Flash偏移
         sbl_offset_container = tk.Frame(offset_frame, bg="#ecf0f1")
         sbl_offset_container.pack(fill=tk.X, pady=(0, 8))
-        
+
         self.sbl_offset_label = tk.Label(
             sbl_offset_container,
             text="SBL偏移:",
@@ -304,14 +304,14 @@ class FlashTab:
             anchor="w"
         )
         self.sbl_offset_label.pack(side=tk.LEFT)
-        
+
         # SBL偏移选择变量
         self.app.sbl_offset_var = tk.StringVar(value="0x2000")
-        
+
         # 预设选项
         sbl_preset_frame = tk.Frame(sbl_offset_container, bg="#ecf0f1")
         sbl_preset_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
+
         self.sbl_radio_0 = tk.Radiobutton(
             sbl_preset_frame,
             text="0x0000 (0字节)",
@@ -322,7 +322,7 @@ class FlashTab:
             activebackground="#ecf0f1"
         )
         self.sbl_radio_0.pack(side=tk.LEFT, padx=(0, 8))
-        
+
         self.sbl_radio_2000 = tk.Radiobutton(
             sbl_preset_frame,
             text="0x2000 (8192字节)",
@@ -333,7 +333,7 @@ class FlashTab:
             activebackground="#ecf0f1"
         )
         self.sbl_radio_2000.pack(side=tk.LEFT, padx=(0, 8))
-        
+
         self.sbl_radio_custom = tk.Radiobutton(
             sbl_preset_frame,
             text="自定义",
@@ -345,7 +345,7 @@ class FlashTab:
             command=lambda: self.app.sbl_offset_entry.focus()
         )
         self.sbl_radio_custom.pack(side=tk.LEFT)
-        
+
         # 自定义输入框
         self.app.sbl_offset_entry = tk.Entry(
             sbl_preset_frame,
@@ -355,11 +355,11 @@ class FlashTab:
         )
         self.app.sbl_offset_entry.pack(side=tk.LEFT, padx=(5, 0))
         self.app.sbl_offset_entry.insert(0, "0x")
-        
+
         # App Flash偏移
         app_offset_container = tk.Frame(offset_frame, bg="#ecf0f1")
         app_offset_container.pack(fill=tk.X)
-        
+
         self.app_offset_label = tk.Label(
             app_offset_container,
             text="App偏移:",
@@ -369,14 +369,14 @@ class FlashTab:
             anchor="w"
         )
         self.app_offset_label.pack(side=tk.LEFT)
-        
+
         # App偏移选择变量
         self.app.app_offset_var = tk.StringVar(value="0x42000")
-        
+
         # 预设选项
         app_preset_frame = tk.Frame(app_offset_container, bg="#ecf0f1")
         app_preset_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
+
         self.app_radio_0 = tk.Radiobutton(
             app_preset_frame,
             text="0x0000 (0字节)",
@@ -387,7 +387,7 @@ class FlashTab:
             activebackground="#ecf0f1"
         )
         self.app_radio_0.pack(side=tk.LEFT, padx=(0, 8))
-        
+
         self.app_radio_42000 = tk.Radiobutton(
             app_preset_frame,
             text="0x42000 (270336字节)",
@@ -398,7 +398,7 @@ class FlashTab:
             activebackground="#ecf0f1"
         )
         self.app_radio_42000.pack(side=tk.LEFT, padx=(0, 8))
-        
+
         self.app_radio_custom = tk.Radiobutton(
             app_preset_frame,
             text="自定义",
@@ -410,7 +410,7 @@ class FlashTab:
             command=lambda: self.app.app_offset_entry.focus()
         )
         self.app_radio_custom.pack(side=tk.LEFT)
-        
+
         # 自定义输入框
         self.app.app_offset_entry = tk.Entry(
             app_preset_frame,
@@ -420,10 +420,10 @@ class FlashTab:
         )
         self.app.app_offset_entry.pack(side=tk.LEFT, padx=(5, 0))
         self.app.app_offset_entry.insert(0, "0x")
-        
+
         # 初始化偏移量控件状态（默认禁用，所以设为灰色）
         self.toggle_offset_controls()
-        
+
         # --- 烧录操作区 ---
         flash_frame = tk.LabelFrame(
             left_col,
@@ -435,7 +435,7 @@ class FlashTab:
             pady=10
         )
         flash_frame.pack(fill=tk.X, pady=(0, 10))
-        
+
         # 完整烧录按钮
         tk.Button(
             flash_frame,
@@ -450,11 +450,11 @@ class FlashTab:
             cursor="hand2",
             activebackground="#229954"
         ).pack(fill=tk.X, pady=(0, 5))
-        
+
         # 单独烧录按钮（三列：仅SBL、仅应用固件、停止烧录）
         single_flash_frame = tk.Frame(flash_frame, bg="#ecf0f1")
         single_flash_frame.pack(fill=tk.X)
-        
+
         tk.Button(
             single_flash_frame,
             text="🔥 仅SBL",
@@ -467,7 +467,7 @@ class FlashTab:
             pady=6,
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
-        
+
         tk.Button(
             single_flash_frame,
             text="🔥 仅应用固件",
@@ -480,7 +480,7 @@ class FlashTab:
             pady=6,
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 2))
-        
+
         tk.Button(
             single_flash_frame,
             text="🛑 停止",
@@ -493,7 +493,7 @@ class FlashTab:
             pady=6,
             cursor="hand2"
         ).pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
-        
+
         # --- 端口管理（整合端口设置、串口监视和端口管理）---
         port_mgmt_frame = tk.LabelFrame(
             left_col,
@@ -505,17 +505,17 @@ class FlashTab:
             pady=10
         )
         port_mgmt_frame.pack(fill=tk.X)
-        
+
         # 端口配置区
         port_config_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
         port_config_frame.pack(fill=tk.X, pady=(0, 8))
-        
+
         # 配置grid列权重
         port_config_frame.columnconfigure(0, weight=0)  # 标签列
         port_config_frame.columnconfigure(1, weight=0)  # 端口选择列
         port_config_frame.columnconfigure(2, weight=0)  # 波特率标签列
         port_config_frame.columnconfigure(3, weight=0)  # 波特率选择列
-        
+
         # 烧录端口（COM3 - User UART）
         self.flash_port_label = tk.Label(
             port_config_frame,
@@ -526,7 +526,7 @@ class FlashTab:
             anchor="w"
         )
         self.flash_port_label.grid(row=0, column=0, sticky=tk.W, pady=5, padx=(0, 5))
-        
+
         self.app.flash_port_combo = ttk.Combobox(
             port_config_frame,
             width=8,
@@ -547,7 +547,7 @@ class FlashTab:
             self.app.sbl_port.set(port)
             self.app.app_port.set(port)  # App也同步
         self.app.flash_port_combo.bind('<<ComboboxSelected>>', sync_flash_port)
-        
+
         # App波特率
         tk.Label(
             port_config_frame,
@@ -557,7 +557,7 @@ class FlashTab:
             fg="#2c3e50",
             anchor="w"
         ).grid(row=0, column=2, sticky=tk.W, pady=5, padx=(0, 5))
-        
+
         self.app.app_baudrate_combo = ttk.Combobox(
             port_config_frame,
             width=10,
@@ -567,7 +567,7 @@ class FlashTab:
         )
         self.app.app_baudrate_combo.grid(row=0, column=3, sticky=tk.W, pady=5)
         self.app.app_baudrate_combo.set("115200")  # 默认115200
-        
+
         # 数据输出端口（COM4 - Auxiliary Data Port）
         self.debug_port_label = tk.Label(
             port_config_frame,
@@ -578,7 +578,7 @@ class FlashTab:
             anchor="w"
         )
         self.debug_port_label.grid(row=1, column=0, sticky=tk.W, pady=5, padx=(0, 5))
-        
+
         self.app.debug_port_combo = ttk.Combobox(
             port_config_frame,
             width=8,
@@ -588,7 +588,7 @@ class FlashTab:
         self.app.debug_port_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(0, 15))
         self.app.debug_port_combo.set("COM4")
         # 不同步到app_port - 调试口仅用于数据输出，不用于烧录
-        
+
         # Data波特率
         tk.Label(
             port_config_frame,
@@ -598,7 +598,7 @@ class FlashTab:
             fg="#2c3e50",
             anchor="w"
         ).grid(row=1, column=2, sticky=tk.W, pady=5, padx=(0, 5))
-        
+
         self.app.data_baudrate_combo = ttk.Combobox(
             port_config_frame,
             width=10,
@@ -608,11 +608,11 @@ class FlashTab:
         )
         self.app.data_baudrate_combo.grid(row=1, column=3, sticky=tk.W, pady=5)
         self.app.data_baudrate_combo.set("125000")  # 默认125000
-        
+
         # 端口操作按钮行（刷新 + 测试）
         port_action_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
         port_action_frame.pack(fill=tk.X, pady=(0, 8))
-        
+
         tk.Button(
             port_action_frame,
             text="🔄 刷新",
@@ -625,7 +625,7 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
-        
+
         tk.Button(
             port_action_frame,
             text="🔍 测试",
@@ -638,11 +638,11 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
-        
+
         # 板载SBL固件存在性检测（单独一行）
         sbl_check_frame = tk.Frame(port_mgmt_frame, bg="#ecf0f1")
         sbl_check_frame.pack(fill=tk.X, pady=(0, 8))
-        
+
         tk.Button(
             sbl_check_frame,
             text="🔎 板载SBL固件存在性检测\n(SOP调整为功能模式非烧录模式并重启)",
@@ -656,9 +656,9 @@ class FlashTab:
             cursor="hand2",
             justify=tk.CENTER
         ).pack(fill=tk.X, expand=True)
-        
+
         # ============= 右列：日志输出 =============
-        
+
         # 日志标题
         tk.Label(
             right_col,
@@ -667,11 +667,11 @@ class FlashTab:
             bg="#ecf0f1",
             fg="#2c3e50"
         ).pack(pady=(0, 10))
-        
+
         # 日志框架
         log_frame = tk.Frame(right_col, bg="#ecf0f1")
         log_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         # 日志文本框
         self.app.log_text = scrolledtext.ScrolledText(
             log_frame,
@@ -683,32 +683,32 @@ class FlashTab:
             state=tk.DISABLED
         )
         self.app.log_text.pack(fill=tk.BOTH, expand=True)
-        
+
         # 创建右键菜单
         self.log_context_menu = tk.Menu(self.app.log_text, tearoff=0)
         self.log_context_menu.add_command(label="📋 复制选中内容", command=self.copy_selected_log)
         self.log_context_menu.add_command(label="📋 复制全部日志", command=self.copy_all_log)
         self.log_context_menu.add_separator()
         self.log_context_menu.add_command(label="🗑️ 清空日志", command=self.clear_log)
-        
+
         # 绑定右键菜单
         self.app.log_text.bind("<Button-3>", self.show_log_context_menu)
-        
+
         # 配置日志颜色标签
         self.app.log_text.tag_config("INFO", foreground="#3498db")
         self.app.log_text.tag_config("SUCCESS", foreground="#27ae60")
         self.app.log_text.tag_config("WARN", foreground="#f39c12")
         self.app.log_text.tag_config("ERROR", foreground="#e74c3c")
-        
+
         # 进度条和时间显示区域
         progress_container = tk.Frame(log_frame, bg="#1a1a2e")
         progress_container.pack(fill=tk.X, pady=(5, 0))
-        
+
         # 进度条显示区域（独立Label，解决Text widget渲染问题）- 左侧占70%
         progress_frame = tk.Frame(progress_container, bg="#1a1a2e", height=50)
         progress_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         progress_frame.pack_propagate(False)
-        
+
         self.app.progress_label = tk.Label(
             progress_frame,
             text="",
@@ -719,12 +719,12 @@ class FlashTab:
             justify=tk.LEFT
         )
         self.app.progress_label.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
-        
+
         # 总执行时间实时显示区域 - 右侧占30%
         time_frame = tk.Frame(progress_container, bg="#1a1a2e", height=50, width=200)
         time_frame.pack(side=tk.RIGHT, fill=tk.Y)
         time_frame.pack_propagate(False)
-        
+
         self.app.total_time_label = tk.Label(
             time_frame,
             text="⏱️ 总时间: 0秒",
@@ -735,7 +735,7 @@ class FlashTab:
             justify=tk.CENTER
         )
         self.app.total_time_label.pack(fill=tk.BOTH, expand=True, padx=5, pady=8)
-        
+
         # 清除日志按钮
         tk.Button(
             log_frame,
@@ -749,10 +749,10 @@ class FlashTab:
             pady=4,
             cursor="hand2"
         ).pack(pady=(5, 0))
-        
+
         # 初始化时刷新一次端口，更新Label显示
         self.frame.after(100, self.app.refresh_com_ports)
-    
+
     def update_port_list(self, sbl_ports, app_ports):
         """更新端口列表"""
         # 更新烧录端口候选
@@ -773,7 +773,7 @@ class FlashTab:
                     self.flash_port_label.config(text=f"烧录端口 - XDS110 Class Application/User UART ({values_sbl[0]}):")
         except Exception:
             pass
-        
+
         # 更新调试端口候选
         try:
             current_app = self.app.debug_port_combo.get() if hasattr(self.app, 'debug_port_combo') else None
@@ -792,7 +792,7 @@ class FlashTab:
                     self.debug_port_label.config(text=f"测试数据端口 - XDS110 Class Auxiliary Data Port ({values_app[0]}):")
         except Exception:
             pass
-    
+
     def log(self, message, tag=None):
         """添加日志消息"""
         if hasattr(self.app, 'log_text'):
@@ -803,7 +803,7 @@ class FlashTab:
                 self.app.log_text.insert(tk.END, message)
             self.app.log_text.see(tk.END)
             self.app.log_text.config(state=tk.DISABLED)
-    
+
     def show_log_context_menu(self, event):
         """显示日志右键菜单"""
         try:
@@ -812,18 +812,18 @@ class FlashTab:
                 self.log_context_menu.entryconfig(0, state=tk.NORMAL)  # 启用"复制选中内容"
             else:
                 self.log_context_menu.entryconfig(0, state=tk.DISABLED)  # 禁用"复制选中内容"
-            
+
             # 显示菜单
             self.log_context_menu.post(event.x_root, event.y_root)
         except Exception as e:
             print(f"显示右键菜单失败: {e}")
-    
+
     def copy_selected_log(self):
         """复制选中的日志内容"""
         try:
             # 临时启用文本框以获取选中内容
             self.app.log_text.config(state=tk.NORMAL)
-            
+
             # 检查是否有选中内容
             if self.app.log_text.tag_ranges(tk.SEL):
                 selected_text = self.app.log_text.get(tk.SEL_FIRST, tk.SEL_LAST)
@@ -831,18 +831,18 @@ class FlashTab:
                 self.app.log_text.clipboard_clear()
                 self.app.log_text.clipboard_append(selected_text)
                 self.log("✅ 已复制选中日志到剪贴板", "SUCCESS")
-            
+
             self.app.log_text.config(state=tk.DISABLED)
         except Exception as e:
             self.app.log_text.config(state=tk.DISABLED)
             self.log(f"❌ 复制失败: {e}", "ERROR")
-    
+
     def copy_all_log(self):
         """复制全部日志内容"""
         try:
             # 临时启用文本框以获取全部内容
             self.app.log_text.config(state=tk.NORMAL)
-            
+
             all_text = self.app.log_text.get(1.0, tk.END)
             if all_text.strip():
                 # 复制到剪贴板
@@ -851,28 +851,28 @@ class FlashTab:
                 self.log("✅ 已复制全部日志到剪贴板", "SUCCESS")
             else:
                 self.log("⚠️ 日志为空，无内容可复制", "WARN")
-            
+
             self.app.log_text.config(state=tk.DISABLED)
         except Exception as e:
             self.app.log_text.config(state=tk.DISABLED)
             self.log(f"❌ 复制失败: {e}", "ERROR")
-    
+
     def clear_log(self):
         """清空日志"""
         if hasattr(self.app, 'log_text'):
             self.app.log_text.config(state=tk.NORMAL)
             self.app.log_text.delete(1.0, tk.END)
             self.app.log_text.config(state=tk.DISABLED)
-    
+
     def check_sbl(self):
         """检测SBL是否存在"""
         port = self.app.flash_port_combo.get()
-        
+
         if not port:
             from tkinter import messagebox
             messagebox.showwarning("警告", "请先选择烧录端口（COM3）")
             return
-        
+
         # 导入SBLCheckDialog
         import sys
         import os
@@ -880,7 +880,7 @@ class FlashTab:
         flash_tool_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if flash_tool_dir not in sys.path:
             sys.path.insert(0, flash_tool_dir)
-        
+
         # 动态导入（因为SBLCheckDialog在flash_tool.py中）
         try:
             import flash_tool
@@ -889,39 +889,46 @@ class FlashTab:
         except Exception as e:
             from tkinter import messagebox
             messagebox.showerror("错误", f"无法打开SBL检测对话框：{str(e)}")
-    
+
     def _init_tool_options(self):
         """初始化烧录工具选项"""
         import os
+        import sys
         from pathlib import Path
-        
+
         # 工具选项字典 {显示名称: 完整路径}
         self.tool_options = {}
-        
+
         # 选项1: 项目内工具（动态路径）
         try:
-            # 获取当前脚本的父目录（5-Scripts）
-            script_dir = Path(__file__).parent.parent
+            # 获取基础目录 - EXE模式下使用exe所在目录，脚本模式下使用脚本目录的父目录
+            if getattr(sys, 'frozen', False):
+                # PyInstaller EXE模式：使用exe所在目录
+                base_dir = Path(sys.executable).parent
+            else:
+                # 脚本模式：使用tabs目录的父目录(5-Scripts)的父目录
+                base_dir = Path(__file__).parent.parent.parent
+
             # 构建相对路径到3-Tools
-            project_tool = script_dir / ".." / "3-Tools" / "arprog_cmdline_6844.exe"
+            project_tool = base_dir / "3-Tools" / "arprog_cmdline_6844.exe"
             project_tool = project_tool.resolve()
-            
+
             if project_tool.exists():
                 self.tool_options["📦 项目内工具 (推荐)"] = str(project_tool)
         except Exception as e:
             print(f"项目内工具路径解析失败: {e}")
-        
+
         # 选项2: SDK工具
         sdk_tool = Path(r"C:\ti\MMWAVE_L_SDK_06_01_00_01\tools\FlashingTool\arprog_cmdline_6844.exe")
         if sdk_tool.exists():
             self.tool_options["🔧 SDK工具"] = str(sdk_tool)
-        
+
         # 选项3: 自定义工具（如果已设置）
         if hasattr(self.app, 'flash_tool_path') and self.app.flash_tool_path:
             custom_path = Path(self.app.flash_tool_path)
             if custom_path.exists() and str(custom_path) not in self.tool_options.values():
                 self.tool_options["✨ 自定义工具"] = str(custom_path)
-        
+
         # 更新下拉框
         if self.tool_options:
             self.app.tool_combo['values'] = list(self.tool_options.keys())
@@ -933,23 +940,23 @@ class FlashTab:
             self.app.tool_combo['values'] = ["❌ 未找到可用工具"]
             self.app.tool_combo.current(0)
             self.app.tool_path_label.config(text="未找到烧录工具，请手动选择", fg="red")
-    
+
     def _on_tool_selected(self, event):
         """工具选择变更时的回调"""
         selected_name = self.app.tool_combo.get()
-        
+
         if selected_name in self.tool_options:
             tool_path = self.tool_options[selected_name]
-            
+
             # 更新主程序的工具路径
             self.app.flash_tool_path = tool_path
-            
+
             # 更新路径显示
             self.app.tool_path_label.config(
                 text=tool_path,
                 fg="#27ae60"  # 绿色表示有效
             )
-            
+
             # 更新日志（如果log_text已创建）
             if hasattr(self.app, 'log_text'):
                 self.app.log_text.insert(
@@ -957,28 +964,28 @@ class FlashTab:
                     f"[INFO] 已选择烧录工具: {selected_name}\n      路径: {tool_path}\n",
                     "info"
                 )
-    
+
     def toggle_offset_controls(self):
         """切换Flash偏移量控件的启用/禁用状态"""
         enabled = self.app.offset_enabled_var.get()
-        
+
         state = "normal" if enabled else "disabled"
         fg_color = "#2c3e50" if enabled else "#95a5a6"
-        
+
         # 控制SBL偏移量控件
         self.sbl_offset_label.config(fg=fg_color)
         self.sbl_radio_0.config(state=state)
         self.sbl_radio_2000.config(state=state)
         self.sbl_radio_custom.config(state=state)
         self.app.sbl_offset_entry.config(state=state)
-        
+
         # 控制App偏移量控件
         self.app_offset_label.config(fg=fg_color)
         self.app_radio_0.config(state=state)
         self.app_radio_42000.config(state=state)
         self.app_radio_custom.config(state=state)
         self.app.app_offset_entry.config(state=state)
-        
+
         # 更新提示信息
         if enabled:
             self.offset_hint_label.config(
@@ -990,7 +997,7 @@ class FlashTab:
                 text="（禁用时烧录命令无偏移参数）",
                 fg="#e74c3c"
             )
-    
+
     def _adjust_sash_position(self):
         """动态调整分隔条位置为3:7比例"""
         try:
